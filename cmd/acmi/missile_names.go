@@ -25,12 +25,17 @@ const (
 )
 
 type missileModelInfo struct {
-	WeaponID     uint32
-	HasWeaponID  bool
-	Model        string
-	InternalName string
-	Source       string
-	Confidence   string
+	WeaponID          uint32
+	HasWeaponID       bool
+	LeadingULEB       uint64
+	HasLeadingULEB    bool
+	Model             string
+	InternalName      string
+	Source            string
+	Confidence        string
+	ModelCandidates   []string
+	ModelConflict     string
+	ModelTableApplied bool
 }
 
 type missileNameKill struct {
@@ -202,12 +207,24 @@ var missileWeaponAliases = map[string]missileWeaponAlias{
 }
 
 func missileWeaponAliasFor(name string) (missileWeaponAlias, bool) {
+	return missileWeaponAliasForWithTable(name, nil)
+}
+
+func missileWeaponAliasForWithTable(name string, aliases map[string]missileWeaponAlias) (missileWeaponAlias, bool) {
+	key := normalizeMissileWeaponAliasKey(name)
+	if alias, ok := missileWeaponAliases[key]; ok {
+		return alias, true
+	}
+	alias, ok := aliases[key]
+	return alias, ok
+}
+
+func normalizeMissileWeaponAliasKey(name string) string {
 	key := strings.ToLower(strings.TrimSpace(name))
 	for strings.HasSuffix(key, "_default") {
 		key = strings.TrimSuffix(key, "_default")
 	}
-	alias, ok := missileWeaponAliases[key]
-	return alias, ok
+	return key
 }
 
 func missileWeaponIDFromLeading(leading uint64) (uint32, bool) {
@@ -256,6 +273,10 @@ type missileNameGroupEvidence struct {
 }
 
 func applyMissileModelNames(tracks []*track, kills *missileNameKillParser) {
+	applyMissileModelNamesWithAliases(tracks, kills, nil)
+}
+
+func applyMissileModelNamesWithAliases(tracks []*track, kills *missileNameKillParser, aliases map[string]missileWeaponAlias) {
 	infos := make(map[*missileNameTrack]*missileModelInfo)
 	descriptors := make([]*missileNameTrack, 0)
 	for _, tr := range tracks {
@@ -287,11 +308,15 @@ func applyMissileModelNames(tracks []*track, kills *missileNameKillParser) {
 			WeaponID: d.weaponID, HasWeaponID: d.hasWeaponID,
 			Source: "Unknown", Confidence: "Unknown",
 		}
+		if d.source != nil {
+			infos[d].LeadingULEB = d.source.LeadingULEB
+			infos[d].HasLeadingULEB = true
+		}
 		descriptors = append(descriptors, d)
 	}
 
 	if kills != nil && len(kills.Kills) > 0 && len(descriptors) > 0 {
-		evidence, groups := correlateMissileNameKills(kills.Kills, descriptors)
+		evidence, groups := correlateMissileNameKillsWithAliases(kills.Kills, descriptors, aliases)
 		byParent := make(map[uint64][]*missileNameEvidence)
 		for _, ev := range evidence {
 			if len(ev.candidates) == 0 {
@@ -368,6 +393,10 @@ func applyMissileModelNames(tracks []*track, kills *missileNameKillParser) {
 }
 
 func correlateMissileNameKills(kills []missileNameKill, tracks []*missileNameTrack) ([]*missileNameEvidence, map[missileNamePropagationKey]*missileNameGroupEvidence) {
+	return correlateMissileNameKillsWithAliases(kills, tracks, nil)
+}
+
+func correlateMissileNameKillsWithAliases(kills []missileNameKill, tracks []*missileNameTrack, aliases map[string]missileWeaponAlias) ([]*missileNameEvidence, map[missileNamePropagationKey]*missileNameGroupEvidence) {
 	groups := make(map[missileNamePropagationKey]*missileNameGroupEvidence)
 	result := make([]*missileNameEvidence, 0)
 	tracksByParent := make(map[uint64][]*missileNameTrack)
@@ -384,7 +413,7 @@ func correlateMissileNameKills(kills []missileNameKill, tracks []*missileNameTra
 	seen := make(map[killKey]bool)
 
 	for _, kill := range kills {
-		alias, ok := missileWeaponAliasFor(kill.Weapon)
+		alias, ok := missileWeaponAliasForWithTable(kill.Weapon, aliases)
 		if !ok {
 			continue
 		}
@@ -486,7 +515,7 @@ func missileModelProperties(tr *track) []string {
 		return nil
 	}
 	model := tr.missileModel
-	props := make([]string, 0, 5)
+	props := make([]string, 0, 9)
 	if model.HasWeaponID {
 		props = append(props, "WT_WeaponID="+strconv.FormatUint(uint64(model.WeaponID), 10))
 	}
@@ -496,12 +525,23 @@ func missileModelProperties(tr *track) []string {
 		"WT_MissileModelSource="+missileNameSource(model.Source),
 		"WT_MissileModelConfidence="+missileNameConfidence(model.Confidence),
 	)
+	if model.ModelTableApplied {
+		if model.HasLeadingULEB {
+			props = append(props, "WT_LeadingULEB="+strconv.FormatUint(model.LeadingULEB, 10))
+		}
+		if len(model.ModelCandidates) > 0 {
+			props = append(props, "WT_MissileModelCandidates="+escapeACMIValue(strings.Join(model.ModelCandidates, " / ")))
+		}
+		if model.ModelConflict != "" {
+			props = append(props, "WT_MissileModelConflict="+escapeACMIValue(model.ModelConflict))
+		}
+	}
 	return props
 }
 
 func missileNameSource(source string) string {
 	switch source {
-	case "KillReportMatched", "ReplayWeaponIDFromKillReport":
+	case "KillReportMatched", "ReplayWeaponIDFromKillReport", "ReplayWeaponIDFromModelTable":
 		return source
 	default:
 		return "Unknown"
@@ -510,7 +550,7 @@ func missileNameSource(source string) string {
 
 func missileNameConfidence(confidence string) string {
 	switch confidence {
-	case "Matched", "Inferred":
+	case "Matched", "Inferred", "confirmed", "high", "medium", "low":
 		return confidence
 	default:
 		return "Unknown"

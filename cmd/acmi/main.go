@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"math"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/maxsupermanhd/wrpl-inspector/v3/internal/terrainmap"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet"
 	packetecs2 "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/ecs2"
@@ -27,18 +29,81 @@ import (
 var (
 	inPath               = flag.String("in", "", "input .wrpl replay")
 	outPath              = flag.String("out", "", "output .acmi (default: input name with .acmi)")
-	lat0                 = flag.Float64("lat", 0, "reference latitude in degrees")
-	lon0                 = flag.Float64("lon", 0, "reference longitude in degrees")
-	alt0                 = flag.Float64("alt", 0, "reference altitude in meters")
-	centerX              = flag.Float64("center-x", 0, "local X coordinate of the map origin")
-	centerZ              = flag.Float64("center-z", 0, "local Z coordinate of the map origin")
+	mapIDOverride        = flag.String("map-id", "", "explicit Tacview map id: canonical name or WarThunder.<name>")
+	terrainLayoutName    = flag.String("terrain-layout", "atlas", "terrain placement: atlas (default) or legacy")
+	lat0                 = flag.Float64("lat", 0, "legacy reference latitude in degrees")
+	lon0                 = flag.Float64("lon", 0, "legacy reference longitude in degrees")
+	alt0                 = flag.Float64("alt", 0, "altitude offset in meters")
+	centerX              = flag.Float64("center-x", 0, "legacy local X coordinate of the map origin")
+	centerZ              = flag.Float64("center-z", 0, "legacy local Z coordinate of the map origin")
 	hashPath             = flag.String("ecshashes", "data/ecshashes.json", "ECS component hash map (empty to disable)")
 	namesPath            = flag.String("names", "", "optional JSON map: air:<uid> / ground:<eid> / missile:<eid> -> display name")
 	listPath             = flag.String("list", "", "optional CSV listing of tracks and current names")
 	missileFlightLogPath = flag.String("missile-flight-log", "", "optional CSV of missile flight parameters and raw motion evidence")
+	missileModelsSpec    = flag.String("missile-models", "embedded", "missile model table: embedded (default), off, or a schema-1 JSON path")
+	missileGuidanceSpec  = flag.String("missile-guidance", "embedded", "missile guidance table: embedded (default), off, or a schema-1 JSON path")
 	countermeasures      = flag.Bool("countermeasures", true, "export aircraft countermeasure releases as Misc+Decoy events and tracks (real sync, or an estimated short trajectory when no sync exists)")
 	countermeasureLog    = flag.String("countermeasure-log", "", "optional CSV of every trigger-14 countermeasure construction")
 )
+
+type terrainLayout string
+
+const (
+	terrainLayoutAtlas  terrainLayout = "atlas"
+	terrainLayoutLegacy terrainLayout = "legacy"
+)
+
+func parseTerrainLayout(value string) (terrainLayout, error) {
+	switch layout := terrainLayout(strings.ToLower(strings.TrimSpace(value))); layout {
+	case terrainLayoutAtlas, terrainLayoutLegacy:
+		return layout, nil
+	default:
+		return "", fmt.Errorf("invalid -terrain-layout %q: use atlas or legacy", value)
+	}
+}
+
+func currentTerrainLayout() (terrainLayout, error) {
+	return parseTerrainLayout(*terrainLayoutName)
+}
+
+func validateAtlasOverrideFlags(layout terrainLayout, visited []string) error {
+	if layout != terrainLayoutAtlas {
+		return nil
+	}
+	var conflicts []string
+	for _, name := range visited {
+		switch name {
+		case "lat", "lon", "center-x", "center-z":
+			conflicts = append(conflicts, "-"+name)
+		}
+	}
+	if len(conflicts) == 0 {
+		return nil
+	}
+	return fmt.Errorf("%s cannot override map placement with -terrain-layout atlas; use -terrain-layout legacy",
+		strings.Join(conflicts, ", "))
+}
+
+func visitedFlagNames() []string {
+	var names []string
+	flag.Visit(func(f *flag.Flag) {
+		names = append(names, f.Name)
+	})
+	return names
+}
+
+func applyAtlasReference(layout terrainLayout, mapID string) error {
+	if layout != terrainLayoutAtlas || mapID == "" {
+		return nil
+	}
+	latitude, longitude, ok := terrainmap.AtlasReference(mapID)
+	if !ok {
+		return fmt.Errorf("atlas reference missing for map %q", mapID)
+	}
+	*lat0, *lon0 = latitude, longitude
+	*centerX, *centerZ = 0, 0
+	return nil
+}
 
 type trackKey struct {
 	air     bool
@@ -81,6 +146,7 @@ type track struct {
 	hasEnd           bool
 	projectileSource *projectiles.Projectile
 	missileModel     *missileModelInfo
+	missileGuidance  *missileGuidanceInfo
 	// estimated marks a countermeasure track reconstructed from a release
 	// point and the parent aircraft velocity, not from WeaponSync telemetry.
 	estimated         bool
@@ -89,6 +155,29 @@ type track struct {
 
 func main() {
 	flag.Parse()
+	guidance, err := loadMissileGuidance(*missileGuidanceSpec)
+	if err != nil {
+		fatal(err)
+	}
+	missileModelTable, err := loadMissileModels(*missileModelsSpec)
+	if err != nil {
+		fatal(err)
+	}
+	layout, err := parseTerrainLayout(*terrainLayoutName)
+	if err != nil {
+		fatal(err)
+	}
+	*terrainLayoutName = string(layout)
+	if err := validateAtlasOverrideFlags(layout, visitedFlagNames()); err != nil {
+		fatal(err)
+	}
+	if *mapIDOverride != "" {
+		normalized, err := terrainmap.NormalizeMapID(*mapIDOverride)
+		if err != nil {
+			fatal(err)
+		}
+		*mapIDOverride = normalized
+	}
 	if *inPath == "" && flag.NArg() > 0 {
 		*inPath = flag.Arg(0)
 	}
@@ -99,6 +188,13 @@ func main() {
 	if *outPath == "" {
 		ext := filepath.Ext(*inPath)
 		*outPath = filepath.Base(strings.TrimSuffix(*inPath, ext)) + ".acmi"
+	}
+	replaySHA := ""
+	if (guidance != nil && len(guidance.Replays) > 0) || (missileModelTable != nil && len(missileModelTable.Replays) > 0) {
+		replaySHA, err = hashMissileGuidanceReplay(*inPath)
+		if err != nil {
+			fatal(err)
+		}
 	}
 
 	f, err := os.Open(*inPath)
@@ -111,6 +207,19 @@ func main() {
 		fatal(err)
 	}
 	defer replay.Close()
+
+	resolvedMapID, err := resolveReplayMapID(replay.Header, *mapIDOverride)
+	if err != nil {
+		fatal(err)
+	}
+	if err := applyAtlasReference(layout, resolvedMapID); err != nil {
+		fatal(err)
+	}
+	if resolvedMapID == "" && layout == terrainLayoutAtlas {
+		fmt.Fprintln(os.Stderr, "warning: replay map id is unknown; no terrain reference, T uses local coordinates (use -map-id or -terrain-layout legacy)")
+	} else if resolvedMapID == "" {
+		fmt.Fprintln(os.Stderr, "warning: replay map id is unknown; output has no MapId (use -map-id to override)")
+	}
 
 	chms, err := readHashes(*hashPath)
 	if err != nil {
@@ -130,6 +239,7 @@ func main() {
 	paths := packetmovement.NewPositionRetainerParser()
 	missilePositions := projectiles.NewPositionParser()
 	missileNames := newMissileNameKillParser()
+	aircraftDeaths := newAircraftDestructionParser()
 	parsers := []packet.PacketParser{}
 	if ecs != nil {
 		parsers = append(parsers, ecs)
@@ -138,16 +248,19 @@ func main() {
 	if missileMetadata != nil {
 		parsers = append(parsers, missileMetadata)
 	}
-	parsers = append(parsers, missilePositions, missileNames)
+	parsers = append(parsers, missilePositions, missileNames, aircraftDeaths)
 	if _, err := packet.ParsePackets(packet.NewPacketStreamReader(replay.PacketStream), parsers); err != nil {
 		fatal(err)
 	}
 
 	tracks := collectTracks(fm, paths, mgr, slot)
 	tracks = appendMissileTracks(tracks, decodedMissileTracks(missileMetadata, missilePositions))
-	applyMissileModelNames(tracks, missileNames)
+	applyMissileModelNamesWithAliases(tracks, missileNames, missileModelTable.killAliases())
+	applyMissileModelsForReplay(tracks, missileModelTable, replaySHA)
+	applyMissileGuidanceForReplay(tracks, guidance, replaySHA)
 	cmExport := prepareCountermeasures(missileMetadata, missilePositions, tracks, *countermeasures)
 	tracks = cmExport.Tracks
+	destroyedAircraft := applyAircraftDestructions(tracks, aircraftDeaths)
 	if *missileFlightLogPath != "" {
 		if err := writeMissileFlightLog(*missileFlightLogPath, tracks); err != nil {
 			fatal(err)
@@ -173,7 +286,7 @@ func main() {
 		}
 		fmt.Printf("wrote track list %s\n", *listPath)
 	}
-	if err := writeACMIWithEvents(*outPath, replay.Header, tracks, slot, names, cmExport.Events); err != nil {
+	if err := writeACMIWithEventsMapID(*outPath, replay.Header, tracks, slot, names, cmExport.Events, resolvedMapID); err != nil {
 		fatal(err)
 	}
 	samples := 0
@@ -183,7 +296,11 @@ func main() {
 	decoys, decoySamples := 0, 0
 	estimatedDecoys, estimatedSamples := 0, 0
 	for _, tr := range tracks {
-		samples += len(tr.samples)
+		sampleCount := len(tr.samples)
+		if tr.key.air && tr.hasEnd {
+			sampleCount = sort.Search(len(tr.samples), func(i int) bool { return tr.samples[i].t > tr.end })
+		}
+		samples += sampleCount
 		if tr.key.missile {
 			missiles++
 			missileSamples += len(tr.samples)
@@ -208,6 +325,7 @@ func main() {
 	}
 	fmt.Printf("wrote %s: %d tracks, %d samples\n", *outPath, len(tracks), samples)
 	fmt.Printf("aircraft names identified: %d/%d\n", identified, aircraft)
+	fmt.Printf("aircraft removed after destruction: %d\n", destroyedAircraft)
 	fmt.Printf("missiles exported: %d (%d recorded positions)\n", missiles, missileSamples)
 	fmt.Printf("missile models identified: %d/%d\n", missileModels, missiles)
 	fmt.Printf("countermeasures exported: %d tracks (%d recorded positions), %d release events, %d construction records\n",
@@ -234,6 +352,20 @@ func readHashes(path string) (*packetecs2.ComponentHashMaps, error) {
 		return nil, err
 	}
 	return packetecs2.ReadComponentHashMaps(bytes.NewReader(data))
+}
+
+func resolveReplayMapID(header wrpl.WRPLHeader, override string) (string, error) {
+	if override != "" {
+		return terrainmap.NormalizeMapID(override)
+	}
+	mapID, err := terrainmap.ResolveReplay(
+		terrainmap.HeaderString(header.Raw_Level[:]),
+		terrainmap.HeaderString(header.Raw_LocName[:]),
+	)
+	if errors.Is(err, terrainmap.ErrUnknown) {
+		return "", nil
+	}
+	return mapID, err
 }
 
 func collectTracks(fm *packetfm.PacketFlightModelParser, paths *packetmovement.PositionRetainerParser, mgr *packetecs2.EntityManager, slot *packetslot.PacketSlotParser) []*track {
@@ -388,6 +520,20 @@ func writeACMI(path string, header wrpl.WRPLHeader, tracks []*track, slot *packe
 }
 
 func writeACMIWithEvents(path string, header wrpl.WRPLHeader, tracks []*track, slot *packetslot.PacketSlotParser, names map[string]string, events []acmiEvent) error {
+	return writeACMIWithEventsMapID(path, header, tracks, slot, names, events, "")
+}
+
+func writeACMIWithEventsMapID(path string, header wrpl.WRPLHeader, tracks []*track, slot *packetslot.PacketSlotParser, names map[string]string, events []acmiEvent, mapID string) error {
+	layout, err := currentTerrainLayout()
+	if err != nil {
+		return err
+	}
+	if mapID != "" {
+		mapID, err = terrainmap.NormalizeMapID(mapID)
+		if err != nil {
+			return err
+		}
+	}
 	if dir := filepath.Dir(path); dir != "." && dir != "" {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
@@ -420,10 +566,22 @@ func writeACMIWithEvents(path string, header wrpl.WRPLHeader, tracks []*track, s
 	fmt.Fprintln(w, "FileType=text/acmi/tacview")
 	fmt.Fprintln(w, "FileVersion=2.1")
 	fmt.Fprintf(w, "0,ReferenceTime=%s\n", ref.Format("2006-01-02T15:04:05Z"))
-	fmt.Fprintf(w, "0,ReferenceLongitude=%.7f\n", *lon0)
-	fmt.Fprintf(w, "0,ReferenceLatitude=%.7f\n", *lat0)
-	fmt.Fprintf(w, "0,ReferenceAltitude=%.1f\n", *alt0)
+	// T is already absolute longitude, latitude, and altitude. Keeping the
+	// global reference at zero prevents Tacview from adding the anchor twice.
+	fmt.Fprintln(w, "0,ReferenceLongitude=0.0000000")
+	fmt.Fprintln(w, "0,ReferenceLatitude=0.0000000")
+	fmt.Fprintln(w, "0,ReferenceAltitude=0.0")
 	fmt.Fprintln(w, "0,DataSource=War Thunder replay via wrpl-inspector")
+	if mapID != "" {
+		if layout == terrainLayoutAtlas {
+			fmt.Fprintf(w, "0,MapId=%s\n", terrainmap.FormatAtlasMapID(mapID))
+		} else {
+			fmt.Fprintf(w, "0,MapId=%s\n", terrainmap.FormatMapID(mapID))
+		}
+	}
+	if layout == terrainLayoutAtlas {
+		fmt.Fprintln(w, "0,WT_TerrainLayout=AtlasV1")
+	}
 
 	ids := map[trackKey]string{}
 	for i, tr := range tracks {
@@ -516,11 +674,22 @@ func writeACMIWithEvents(path string, header wrpl.WRPLHeader, tracks []*track, s
 			continue
 		}
 		for _, s := range tr.samples {
+			if tr.key.air && tr.hasEnd && s.t > tr.end {
+				break
+			}
 			if !timesSeen[s.t] {
 				timesSeen[s.t] = true
 				times = append(times, s.t)
 			}
 			updates[s.t] = append(updates[s.t], fmt.Sprintf("%s,T=%s", id, acmiPositionValue(s)))
+		}
+		if tr.key.air && tr.hasEnd {
+			if !timesSeen[tr.end] {
+				timesSeen[tr.end] = true
+				times = append(times, tr.end)
+			}
+			updates[tr.end] = append(updates[tr.end], "0,Event=Destroyed|"+id)
+			deletions[tr.end] = append(deletions[tr.end], "-"+id)
 		}
 	}
 	for _, event := range events {
@@ -632,6 +801,7 @@ func acmiTrackProperties(tr *track, slot *packetslot.PacketSlotParser, names map
 	}
 	if tr.key.missile {
 		props = append(props, missileModelProperties(tr)...)
+		props = append(props, missileGuidanceProperties(tr)...)
 	}
 	return props
 }
@@ -711,7 +881,16 @@ func writeTrackList(path string, tracks []*track, slot *packetslot.PacketSlotPar
 	defer f.Close()
 	qw := csv.NewWriter(f)
 	defer qw.Flush()
-	if err := qw.Write([]string{"object_id", "kind", "player", "team", "current_name", "start_sec", "end_sec", "samples", "class_name", "parent_source"}); err != nil {
+	header := []string{"object_id", "kind", "player", "team", "current_name", "start_sec", "end_sec", "samples", "class_name", "parent_source"}
+	modelColumns := tracksHaveMissileModelColumns(tracks)
+	if modelColumns {
+		header = append(header, "weapon_id", "model", "model_source", "model_confidence", "candidates")
+	}
+	guidanceColumns := tracksHaveMissileGuidance(tracks)
+	if guidanceColumns {
+		header = append(header, "guidance_type", "guidance_source", "guidance_confidence", "guidance_candidates")
+	}
+	if err := qw.Write(header); err != nil {
 		return err
 	}
 	for _, tr := range tracks {
@@ -728,6 +907,10 @@ func writeTrackList(path string, tracks []*track, slot *packetslot.PacketSlotPar
 		start := tr.samples[0].t
 		end := tr.samples[len(tr.samples)-1].t
 		sampleCount := len(tr.samples)
+		if tr.key.air && tr.hasEnd {
+			end = tr.end
+			sampleCount = sort.Search(len(tr.samples), func(i int) bool { return tr.samples[i].t > end })
+		}
 		if tr.key.missile {
 			var ok bool
 			end, ok = missileTrackEnd(tr)
@@ -752,7 +935,7 @@ func writeTrackList(path string, tracks []*track, slot *packetslot.PacketSlotPar
 		if (tr.key.missile || tr.key.decoy) && tr.parent != nil {
 			parentSource = fmt.Sprintf("air:%d", tr.parent.key.id)
 		}
-		if err := qw.Write([]string{
+		row := []string{
 			fmt.Sprintf("%s:%d", kind, tr.key.id),
 			kind,
 			player,
@@ -763,7 +946,22 @@ func writeTrackList(path string, tracks []*track, slot *packetslot.PacketSlotPar
 			strconv.Itoa(sampleCount),
 			className,
 			parentSource,
-		}); err != nil {
+		}
+		if modelColumns {
+			if tr.key.missile {
+				row = append(row, missileModelCSVValues(tr)...)
+			} else {
+				row = append(row, "", "", "", "", "")
+			}
+		}
+		if guidanceColumns {
+			if tr.key.missile {
+				row = append(row, missileGuidanceCSVValues(tr)...)
+			} else {
+				row = append(row, "", "", "", "")
+			}
+		}
+		if err := qw.Write(row); err != nil {
 			return err
 		}
 	}
@@ -782,6 +980,11 @@ func trackName(tr *track, slot *packetslot.PacketSlotParser, names map[string]st
 		return countermeasureDisplayName
 	}
 	if tr.key.missile && strings.TrimSpace(tr.name) != "" {
+		if tr.name == "AAM (unknown)" {
+			if name := missileGuidanceFallbackName(tr); name != "" {
+				return name
+			}
+		}
 		return tr.name
 	}
 	if tr.entity != nil {

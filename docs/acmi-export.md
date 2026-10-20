@@ -16,10 +16,10 @@ POSIX shell 的等价命令是 `CGO_ENABLED=0 go build ./cmd/acmi`。这里保�
 
 ## 运行
 
-Windows Release 运行包解压后，可直接把 `.wrpl` 拖到包内的 `run.bat`。脚本以自身目录为工作目录，输出文件使用输入文件名并把扩展名改为 `.acmi`。也可显式指定路径和参考经纬度：
+Windows Release 运行包解压后，可直接把 `.wrpl` 拖到包内的 `run.bat`。脚本以自身目录为工作目录，输出文件使用输入文件名并把扩展名改为 `.acmi`。也可显式指定输入与输出路径：
 
 ```powershell
-.\wrpl-acmi.exe -in "replay.wrpl" -out "replay.acmi" -lat 0 -lon 0
+.\wrpl-acmi.exe -in "replay.wrpl" -out "replay.acmi"
 ```
 
 主要参数如下：
@@ -28,8 +28,11 @@ Windows Release 运行包解压后，可直接把 `.wrpl` 拖到包内的 `run.b
 | --- | --- | --- |
 | `-in` | 输入 `.wrpl`；也可用一个位置参数给出 | 必填 |
 | `-out` | 输出 `.acmi` | 输入文件基本名加 `.acmi`，写入当前目录 |
-| `-lat` | 转换局部 Z 坐标时使用的参考纬度，单位为度 | `0` |
-| `-lon` | 转换局部 X 坐标时使用的参考经度，单位为度 | `0` |
+| `-terrain-layout` | `atlas` 自动匹配独立地图位置；`legacy` 使用人工参考 | `atlas` |
+| `-map-id` | 无法自动识别地图时显式指定已知地图 ID | 自动识别 |
+| `-lat` / `-lon` | 仅 legacy 模式的人工参考纬度/经度 | `0` |
+| `-missile-models` | `embedded`、`off` 或型号表 JSON 路径 | `embedded` |
+| `-missile-guidance` | `embedded`、`off` 或制导表 JSON 路径 | `embedded` |
 
 默认读取 `data/ecshashes.json`。该 ECS 组件哈希表提供实体类名、对象资料、导弹构造和位置解析所需的映射；缺少它时，导出器只能降级运行，实体类名、队伍、飞行员关联、导弹构造及型号信息可能缺失或无法识别。不要把 EXE 单独移出运行包后误删 `data`。`-lat`/`-lon` 只是人工参考点，不应被当作地图真实定位。
 
@@ -55,13 +58,13 @@ Windows Release 运行包解压后，可直接把 `.wrpl` 拖到包内的 `run.b
 
 无效时刻、非有限坐标、异常跳跃和过长采样间隔不会用于相应差分；缺失估计会清空上一帧的 `WT_` 数值。没有可靠记录时，不补造连续姿态或速度。
 
-## 导弹型号
+## 导弹型号与制导
 
-型号只从当前回放的证据关联，不把某次回放的编号当成跨回放固定表。唯一击杀报告中与导弹销毁时刻接近、发射者一致的记录可直接匹配型号；同一回放内再按 `Leading` 武器 ID 与 `Template` 组合沿用，冲突或歧义时回退未知。
+型号优先使用当前回放的击杀报告关联；新增精确内部名别名可识别红外/半主动雷达型号，并在同回放内按 weapon ID 和模板传播。额外 ID 表只在完整 WRPL SHA256 匹配时启用。已有击杀型号优先，高置信表项可补具体名称，中低置信只写候选，手工 `-names` 仍具有最高显示优先级。
 
-当前样例的 104 枚导弹中识别出 74 枚：20 枚来自唯一击杀报告关联，54 枚来自同回放、同 `Leading`、同模板的沿用，其余 30 枚保持 `unknown`。样例分布为 PL-12 46 枚、R-77 (RVV-AE) 14 枚、AIM-120A 7 枚、AIM-120C-5 2 枚、AAM-4 4 枚、RB 99 1 枚。关联结果写入 `Name`/`CallSign`，审计字段包括 `WT_MissileModel`、`WT_MissileModelSource` 和 `WT_MissileModelConfidence`。
+研究样例的型号覆盖从 74/104 提高到 81/104；另一个独立回放因 AAM-3 的击杀内部名新增识别，从 10/106 提高到 11/106。数字 ID 不作为全局型号编号。详情和关闭开关见 [ACMI_MODELS.md](ACMI_MODELS.md)，证据见 [evidence/missile-models.md](evidence/missile-models.md)。
 
-模板本身不能可靠区分所有导引方式，因此未识别时使用 `AAM (ARH)`、`AAM (unknown)` 或 `AGM (unknown)` 一类回退名称，不按飞机型号或低位槽号猜型号。
+每枚导弹首帧还写 `WT_GuidanceType`、来源和置信度，有歧义时写 IR/SARH 候选。研究样例为 90 ARH、2 IR、12 Unknown；普通 `rocket` 模板不能直接当作 IR。静态制导类型不代表该帧已锁定或进入末制导。见 [ACMI_GUIDANCE.md](ACMI_GUIDANCE.md)。
 
 ## INS 标签
 
@@ -75,14 +78,16 @@ Windows Release 运行包解压后，可直接把 `.wrpl` 拖到包内的 `run.b
 
 当前样例得到 1,022 条最长 3 秒的估算干扰物轨迹，共 16,166 个合成位置点，同时保留 1,022 条释放事件。统一模型不能区分热焰弹与箔条，也不能用于判断真实干扰效果。`-countermeasures=false` 可完全关闭干扰物对象和事件。
 
-## 已知坐标问题
+## 地图坐标与 Atlas
 
-**当前版本尚未修复地理经纬度叠加问题。** 导出器先用局部 `X/Z` 与人工 `-lat`/`-lon` 做近似平面换算，把结果写入各对象的 `T`；文件头又写入同样的 `ReferenceLongitude`/`ReferenceLatitude`。支持参考点的查看器会把这两部分再次叠加，导致轨迹出现重复偏移。
+默认 `-terrain-layout atlas` 从关卡识别地图，使用内嵌的 68 图固定参考表，并写 `MapId=WarThunder.Atlas1.<id>`。每张地图的区域互不重叠，避免全部地形叠在 0/0 附近。它们是技术摆放坐标，不是游戏地图的真实地球位置。
 
-默认 `-lat 0 -lon 0` 能避免参考点二次叠加，但得到的仍是以 `(0, 0)` 为人工原点的相对地理形状，**不是地图中的真实定位**。换算还使用固定的 111,320 米/度近似，未处理地图投影、地形或真实基准点。在修复前，不应把输出坐标称为真实地图坐标，也不应把任意一组人工参考纬度/经度示例当作“真实地图位置”。
+`T` 已含绝对经纬度/高度，三个全局 Reference 均为 0，已修复旧版非零参考点被重复叠加的问题。人工 `-lat/-lon/-center-x/-center-z` 必须配合 `-terrain-layout legacy`。安装器、旧 ACMI 工具及限制见 [terrain-atlas.md](terrain-atlas.md)。
+
+被可靠击毁事件匹配的飞机会在其生命期结束后输出 ACMI 删除记录；无法确认的单位不根据短暂数据缺失猜测删除。
 
 ## 资源边界与发布包
 
 源码对 ECS 分配数量、字符串和压缩块大小、组件嵌套深度、击杀记录数量及坏包做了显式限界，目的是降低畸形回放造成的分配放大和 OOM 风险。普通 `wrpl-acmi.exe` **没有内置强制 Job Object 2 GiB 硬限制**；Release 验证若另用 2 GiB 包装器，那是验证环境的限额，不代表每个用户运行时都有同样硬限。大回放仍可能占用较多内存或因限界报错退出。
 
-发布包含三个 zip：source（源码与构建文件）、runtime（Windows 可执行文件、`run.bat`、`data/ecshashes.json`、说明和许可证）以及 examples（ACMI 回放与 CSV 数据样例）。本地发布目录保留已解压的 runtime 及其 EXE，便于直接运行和复核。
+历史 `acmi-2026.10.20` 发布包含三个 zip：source（源码与构建文件）、runtime（Windows 可执行文件、`run.bat`、`data/ecshashes.json`、说明和许可证）以及 examples（ACMI 回放与 CSV 数据样例）。本地发布目录保留已解压的 runtime 及其 EXE，便于直接运行和复核。

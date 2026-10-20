@@ -1,0 +1,338 @@
+{
+  "schema": 1,
+  "generated_from": [
+    "deliverable/handoff-missile-models-cm.md",
+    "report/missile-model-names.md",
+    "deliverable/missile-names/missile-name-map.csv",
+    "deliverable/missile-names/probe-output.json",
+    "deliverable/missile-names/unit-storage-fields.json",
+    "outputs/missile-guidance/missile_guidance.json"
+  ],
+  "aliases": {
+    "cn_pl12": {
+      "model": "PL-12",
+      "internal_name": "cn_pl12",
+      "confidence": "confirmed",
+      "source": "datamine cn_pl12.blkx: guidanceType=radar, radarSeeker.active=true; kill cn_pl12"
+    },
+    "su_rvv_ae": {
+      "model": "R-77 (RVV-AE)",
+      "internal_name": "su_rvv_ae",
+      "confidence": "confirmed",
+      "source": "datamine su_rvv_ae.blkx: guidanceType=radar, radarSeeker.active=true; kill su_rvv_ae"
+    },
+    "us_aim_120a": {
+      "model": "AIM-120A",
+      "internal_name": "us_aim_120a",
+      "confidence": "confirmed",
+      "source": "datamine us_aim_120a.blkx: guidanceType=radar, radarSeeker.active=true; kill us_aim_120a"
+    },
+    "us_aim_120c_5": {
+      "model": "AIM-120C-5",
+      "internal_name": "us_aim_120c_5",
+      "confidence": "confirmed",
+      "source": "datamine us_aim_120c_5.blkx: guidanceType=radar, radarSeeker.active=true; kill us_aim_120c_5"
+    },
+    "jp_aam4": {
+      "model": "AAM-4",
+      "internal_name": "jp_aam4",
+      "confidence": "confirmed",
+      "source": "datamine jp_aam4.blkx: guidanceType=radar, radarSeeker.active=true; kill jp_aam4"
+    },
+    "swd_rb99": {
+      "model": "RB 99",
+      "internal_name": "swd_rb99",
+      "confidence": "confirmed",
+      "source": "datamine swd_rb99.blkx: guidanceType=radar, radarSeeker.active=true; kill swd_rb99"
+    },
+    "jp_aam3": {
+      "model": "AAM-3",
+      "internal_name": "jp_aam3",
+      "confidence": "confirmed",
+      "source": "datamine jp_aam3.blkx: guidanceType=optical, opticalSeeker (IR AAM)"
+    },
+    "pl_5e2": {
+      "model": "PL-5E II",
+      "internal_name": "pl_5e2",
+      "confidence": "confirmed",
+      "source": "datamine su_pl5e2.blkx: bulletName=pl_5e2, guidanceType=optical, opticalSeeker (IR AAM)"
+    },
+    "su_pl5e2": {
+      "model": "PL-5E II",
+      "internal_name": "su_pl5e2",
+      "confidence": "confirmed",
+      "source": "datamine su_pl5e2.blkx: bulletName=pl_5e2, guidanceType=optical, opticalSeeker (IR AAM)"
+    },
+    "us_aim9l_sidewinder": {
+      "model": "AIM-9L",
+      "internal_name": "us_aim9l_sidewinder",
+      "confidence": "confirmed",
+      "source": "datamine us_aim9l_sidewinder.blkx: guidanceType=optical, opticalSeeker (IR AAM)"
+    },
+    "us_aim9m_sidewinder": {
+      "model": "AIM-9M",
+      "internal_name": "us_aim9m_sidewinder",
+      "confidence": "confirmed",
+      "source": "datamine us_aim9m_sidewinder.blkx: guidanceType=optical, opticalSeeker (IR AAM)"
+    },
+    "su_r_27et": {
+      "model": "R-27ET",
+      "internal_name": "su_r_27et",
+      "confidence": "confirmed",
+      "source": "datamine su_r_27et.blkx: guidanceType=optical, opticalSeeker (IR AAM)"
+    },
+    "su_r_73": {
+      "model": "R-73",
+      "internal_name": "su_r_73",
+      "confidence": "confirmed",
+      "source": "datamine su_r_73.blkx: guidanceType=optical, opticalSeeker (IR AAM)"
+    },
+    "su_r_27er": {
+      "model": "R-27ER",
+      "internal_name": "su_r_27er",
+      "confidence": "confirmed",
+      "source": "datamine su_r_27er.blkx: guidanceType=radar, radarSeeker.active absent (SARH); same pattern as R-27R/AIM-7M"
+    },
+    "us_aim_120c_5_default": {
+      "model": "AIM-120C-5",
+      "internal_name": "us_aim_120c_5_default",
+      "confidence": "confirmed",
+      "source": "datamine us_aim_120c_5.blkx: guidanceType=radar, radarSeeker.active=true; kill us_aim_120c_5; exact kill-report alias observed in probe-output.json kills[].weapon"
+    },
+    "us_aim_120a_default": {
+      "model": "AIM-120A",
+      "internal_name": "us_aim_120a_default",
+      "confidence": "confirmed",
+      "source": "datamine us_aim_120a.blkx: guidanceType=radar, radarSeeker.active=true; kill us_aim_120a; exact kill-report alias observed in probe-output.json kills[].weapon"
+    },
+    "cn_pl12_default": {
+      "model": "PL-12",
+      "internal_name": "cn_pl12_default",
+      "confidence": "confirmed",
+      "source": "datamine cn_pl12.blkx: guidanceType=radar, radarSeeker.active=true; kill cn_pl12; exact kill-report alias observed in probe-output.json kills[].weapon"
+    },
+    "swd_rb99_default": {
+      "model": "RB 99",
+      "internal_name": "swd_rb99_default",
+      "confidence": "confirmed",
+      "source": "datamine swd_rb99.blkx: guidanceType=radar, radarSeeker.active=true; kill swd_rb99; exact kill-report alias observed in probe-output.json kills[].weapon"
+    }
+  },
+  "replays": {
+    "c0fcd26febf9f0ec75765337a841c1d55d089cd13b45740f0cbd41c190f418b2": {
+      "weapon_ids": {
+        "32": {
+          "model": "PL-12",
+          "internal_name": "cn_pl12",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (10 missiles; 击杀报告: cn_pl12)",
+          "candidates": []
+        },
+        "35": {
+          "model": "PL-12",
+          "internal_name": "cn_pl12",
+          "source": "unit-storage-fields.json uid414 field67 contains pl12_slot3/4/5/6/7/8 and no other ARH slot; same UID weaponID 32 is kill-confirmed PL-12",
+          "confidence": "high",
+          "candidates": []
+        },
+        "41": {
+          "model": "R-77 (RVV-AE)",
+          "internal_name": "su_rvv_ae",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (14 missiles; 击杀报告: su_rvv_ae)",
+          "candidates": []
+        },
+        "53": {
+          "confidence": "medium",
+          "internal_name": "swd_rb99",
+          "candidates": [
+            "RB 99"
+          ],
+          "source": "unit-storage-fields.json uid431 field67 contains rb99_bol/rb99_default_bol, while field51 contains swd_rb99; no direct slot-to-weaponID binding, so candidate only",
+          "model": ""
+        },
+        "60": {
+          "model": "PL-5E II",
+          "internal_name": "cn_pl5e2",
+          "source": "unit-storage-fields.json uid436 field67 contains pl5e_2/pl5e_2_default; missile-guidance maps cn_pl5e2 to PL-5E II",
+          "confidence": "high",
+          "candidates": []
+        },
+        "61": {
+          "model": "PL-12",
+          "internal_name": "cn_pl12",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (12 missiles; 击杀报告: cn_pl12)",
+          "candidates": []
+        },
+        "69": {
+          "model": "AIM-120A",
+          "internal_name": "us_aim_120a",
+          "source": "unit-storage-fields.json uid423 field67 contains aim_120a_default/aim_120a_wingtip_slot1/aim_120a_wingtip_slot10 and no other ARH slot",
+          "confidence": "high",
+          "candidates": []
+        },
+        "70": {
+          "model": "AIM-120A",
+          "internal_name": "us_aim_120a",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (2 missiles; 击杀报告: us_aim_120a_default)",
+          "candidates": []
+        },
+        "85": {
+          "model": "PL-12",
+          "internal_name": "cn_pl12",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (22 missiles; 击杀报告: cn_pl12)",
+          "candidates": []
+        },
+        "94": {
+          "confidence": "low",
+          "internal_name": "",
+          "candidates": [
+            "R-27ET",
+            "R-73",
+            "R-27ER"
+          ],
+          "source": "unit-storage-fields.json uid427 field67 contains r73, r27er and r27et slots; multiple IR/SARH candidates cannot be separated by launch order",
+          "model": ""
+        },
+        "95": {
+          "confidence": "low",
+          "internal_name": "",
+          "candidates": [
+            "R-27ET",
+            "R-73",
+            "R-27ER"
+          ],
+          "source": "unit-storage-fields.json uid425/427 field67 contains mixed r73 and r27er plus r27et on uid427; no ID-to-slot binding",
+          "model": ""
+        },
+        "96": {
+          "confidence": "low",
+          "internal_name": "",
+          "candidates": [
+            "R-27ET",
+            "R-73",
+            "R-27ER"
+          ],
+          "source": "unit-storage-fields.json uid427 field67 contains r73, r27er and r27et slots; no ID-to-slot binding",
+          "model": ""
+        },
+        "99": {
+          "confidence": "medium",
+          "internal_name": "us_aim_120c_5",
+          "candidates": [
+            "AIM-120C-5"
+          ],
+          "source": "unit-storage-fields.json uid435 field67 is empty (8 bits); field51 contains us_aim_120b_c. Same UID weaponID 100 is kill-confirmed AIM-120C-5, but that does not bind ID 99",
+          "model": ""
+        },
+        "100": {
+          "model": "AIM-120C-5",
+          "internal_name": "us_aim_120c_5",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (2 missiles; 击杀报告: us_aim_120c_5_default)",
+          "candidates": []
+        },
+        "122": {
+          "model": "RB 99",
+          "internal_name": "swd_rb99",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (1 missiles; 击杀报告: swd_rb99_default)",
+          "candidates": []
+        },
+        "133": {
+          "model": "AIM-120A",
+          "internal_name": "us_aim_120a",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (3 missiles; 击杀报告: us_aim_120a)",
+          "candidates": []
+        },
+        "134": {
+          "model": "AIM-120A",
+          "internal_name": "us_aim_120a",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (2 missiles; 击杀报告: us_aim_120a_default)",
+          "candidates": []
+        },
+        "137": {
+          "confidence": "low",
+          "internal_name": "",
+          "candidates": [
+            "PL-12",
+            "R-77 (RVV-AE)"
+          ],
+          "source": "unit-storage-fields.json uid417 field67 contains both pl12_slot6/7 and r77_slot3/5/8/10; no ID-to-slot binding",
+          "model": ""
+        },
+        "143": {
+          "confidence": "low",
+          "internal_name": "",
+          "candidates": [
+            "AIM-9L",
+            "AIM-9M",
+            "AAM-3",
+            "AIM-7M"
+          ],
+          "source": "unit-storage-fields.json uid410 field67 contains jp_aam3 and aim_7m; field51 also contains us_aim_9l/us_aim_9m/jp_aam3. No ID-to-slot binding",
+          "model": ""
+        },
+        "145": {
+          "confidence": "low",
+          "internal_name": "",
+          "candidates": [
+            "AIM-9L",
+            "AIM-9M",
+            "AAM-3",
+            "AIM-7M"
+          ],
+          "source": "unit-storage-fields.json uid410 field67 contains jp_aam3 and aim_7m; field51 also contains us_aim_9l/us_aim_9m/jp_aam3. No ID-to-slot binding",
+          "model": ""
+        },
+        "146": {
+          "confidence": "low",
+          "internal_name": "",
+          "candidates": [
+            "AIM-9L",
+            "AIM-9M",
+            "AAM-3",
+            "AIM-7M"
+          ],
+          "source": "unit-storage-fields.json uid410 field67 contains jp_aam3 and aim_7m; field51 also contains us_aim_9l/us_aim_9m/jp_aam3. No ID-to-slot binding",
+          "model": ""
+        },
+        "155": {
+          "model": "PL-12",
+          "internal_name": "cn_pl12",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (2 missiles; 击杀报告: cn_pl12_default)",
+          "candidates": []
+        },
+        "157": {
+          "model": "AAM-3",
+          "internal_name": "jp_aam3",
+          "source": "unit-storage-fields.json uid416 field67 contains aam3_slot1/aam3_slot11; missile-guidance confirms jp_aam3 as IR",
+          "confidence": "high",
+          "candidates": []
+        },
+        "159": {
+          "confidence": "medium",
+          "internal_name": "us_aim_120a",
+          "candidates": [
+            "AIM-120A"
+          ],
+          "source": "unit-storage-fields.json uid416 field67 has aim_120a_slot3/9 plus four aam4 slots; counts agree with 2x159 and 4x160, but count agreement is not an ID-to-slot binding",
+          "model": ""
+        },
+        "160": {
+          "model": "AAM-4",
+          "internal_name": "jp_aam4",
+          "confidence": "high",
+          "source": "kill-confirmed in missile-name-map.csv (4 missiles; 击杀报告: jp_aam4)",
+          "candidates": []
+        }
+      }
+    }
+  }
+}

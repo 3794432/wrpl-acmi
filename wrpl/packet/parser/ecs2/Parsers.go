@@ -2,7 +2,7 @@ package packetecs2
 
 import (
 	"encoding/binary"
-
+	"fmt"
 	"unsafe"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/danet"
@@ -20,6 +20,9 @@ func EidParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
 
 func GenericParser[T any](r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
 	var n T
+	if binary.Size(n) < 0 {
+		return nil, fmt.Errorf("ECS generic parser type %T has unknown binary size at bit offset %d (data length %d bytes)", n, r.BitOffset, len(r.Data))
+	}
 	err = binary.Read(r, binary.LittleEndian, &n)
 	if err != nil {
 		return nil, err
@@ -28,12 +31,24 @@ func GenericParser[T any](r *danet.BitReader, ctx *PacketECSParser) (ret any, er
 }
 
 func GenericListParser[T any](r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
-	count, err := r.ReadCompressed()
+	count, err := readECSCompressed(r)
 	if err != nil {
 		return nil, err
 	}
-	n := make([]T, count)
-	for i := 0; i < int(count); i++ {
+	var sample T
+	size := binary.Size(sample)
+	if size < 0 {
+		return nil, fmt.Errorf("ECS generic list type %T has unknown binary size at bit offset %d (data length %d bytes)", sample, r.BitOffset, len(r.Data))
+	}
+	if uint64(size) > ^uint64(0)/8 {
+		return nil, fmt.Errorf("ECS generic list type %T element size %d is too large at bit offset %d (data length %d bytes)", sample, size, r.BitOffset, len(r.Data))
+	}
+	countInt, err := ecsCheckListCount(r, "generic list", count, uint64(size)*8)
+	if err != nil {
+		return nil, err
+	}
+	n := make([]T, countInt)
+	for i := 0; i < countInt; i++ {
 		peid, err := GenericParser[T](r, ctx)
 		if err != nil {
 			return nil, err
@@ -45,11 +60,15 @@ func GenericListParser[T any](r *danet.BitReader, ctx *PacketECSParser) (ret any
 
 func StorageParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
 	var n UnitStorage
-	blockSize, err := r.ReadCompressed()
+	blockSize, err := readECSCompressed(r)
 	if err != nil {
 		return nil, err
 	}
-	n.Raw, err = r.ReadBits(int(blockSize))
+	blockBits, err := ecsCheckListCount(r, "storage bit block", blockSize, 1)
+	if err != nil {
+		return nil, err
+	}
+	n.Raw, err = r.ReadBits(blockBits)
 	if err != nil {
 		return nil, err
 	}
@@ -58,16 +77,19 @@ func StorageParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error
 
 func read_string(r *danet.BitReader, ctx *PacketECSParser) (ret string, err error) {
 	var n []byte
-	var temp byte
-	temp, err = r.ReadByte()
-	for temp != 0 {
+	for {
+		temp, readErr := r.ReadByte()
+		if readErr != nil {
+			return "", readErr
+		}
+		if temp == 0 {
+			return string(n), nil
+		}
+		if len(n) >= ecsMaxAllocationCount {
+			return "", fmt.Errorf("ECS string length exceeds hard allocation limit %d at bit offset %d (data length %d bytes)", ecsMaxAllocationCount, r.BitOffset, len(r.Data))
+		}
 		n = append(n, temp)
-		temp, err = r.ReadByte()
 	}
-	if err != nil {
-		return "", err
-	}
-	return string(n), nil
 }
 
 func StringParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
@@ -92,12 +114,16 @@ func BoolParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
 }
 
 func BoolListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
-	count, err := r.ReadCompressed()
+	count, err := readECSCompressed(r)
 	if err != nil {
 		return nil, err
 	}
-	n := make([]bool, count)
-	for i := 0; i < int(count); i++ {
+	countInt, err := ecsCheckListCount(r, "bool list", count, 1)
+	if err != nil {
+		return nil, err
+	}
+	n := make([]bool, countInt)
+	for i := 0; i < countInt; i++ {
 		peid, err := ReadBool(r, ctx)
 		if err != nil {
 			return nil, err
@@ -121,13 +147,16 @@ func DmPartIdParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err erro
 }
 
 func DmPartIdListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
-	count, err := r.ReadCompressed()
+	count, err := readECSCompressed(r)
 	if err != nil {
 		return nil, err
 	}
-	count <<= 3 // dunno why
-	n := make([]PartId, count)
-	for i := 0; i < int(count); i++ {
+	countInt, err := ecsCheckPartIDListCount(r, count)
+	if err != nil {
+		return nil, err
+	}
+	n := make([]PartId, countInt)
+	for i := 0; i < countInt; i++ {
 		n[i], err = readPartId(r)
 		if err != nil {
 			return nil, err
@@ -138,12 +167,16 @@ func DmPartIdListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err 
 }
 
 func StringListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
-	count, err := r.ReadCompressed()
+	count, err := readECSCompressed(r)
 	if err != nil {
 		return nil, err
 	}
-	n := make([]string, count)
-	for i := 0; i < int(count); i++ {
+	countInt, err := ecsCheckListCount(r, "string list", count, 8)
+	if err != nil {
+		return nil, err
+	}
+	n := make([]string, countInt)
+	for i := 0; i < countInt; i++ {
 		pstr, err := StringParser(r, ctx)
 		if err != nil {
 			return nil, err
@@ -155,12 +188,16 @@ func StringListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err er
 }
 
 func EidListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
-	count, err := r.ReadCompressed()
+	count, err := readECSCompressed(r)
 	if err != nil {
 		return nil, err
 	}
-	n := make([]uint64, count)
-	for i := 0; i < int(count); i++ {
+	countInt, err := ecsCheckListCount(r, "EID list", count, 16)
+	if err != nil {
+		return nil, err
+	}
+	n := make([]uint64, countInt)
+	for i := 0; i < countInt; i++ {
 		peid, err := EidParser(r, ctx)
 		if err != nil {
 			return nil, err
@@ -171,15 +208,23 @@ func EidListParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error
 }
 
 func ArrayParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
-	count, err := r.ReadCompressed()
+	count, err := readECSCompressed(r)
 	if err != nil {
 		return nil, err
 	}
-	n := make([]Component, count)
-	for i := 0; i < int(count); i++ {
+	countInt, err := ecsCheckListCount(r, "array component", count, 32)
+	if err != nil {
+		return nil, err
+	}
+	n := make([]Component, countInt)
+	for i := 0; i < countInt; i++ {
 		pcomp, err := deserialize_child_component(r, ctx)
 		if err != nil {
 			return nil, err
+		}
+		if pcomp == nil {
+			n[i] = Component{}
+			continue
 		}
 		n[i] = *pcomp
 	}
@@ -224,11 +269,15 @@ func IStringParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error
 
 func ObjectParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
 	var n Object
-	count, err := r.ReadCompressed()
+	count, err := readECSCompressed(r)
 	if err != nil {
 		return nil, err
 	}
-	for i := 0; i < int(count); i++ {
+	countInt, err := ecsCheckListCount(r, "object component", count, 41)
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < countInt; i++ {
 		name, err := read_istring(r, ctx)
 		if err != nil {
 			return nil, err
@@ -468,7 +517,7 @@ var (
 		"ecs::Int64List":                     ComponentParserFunc(GenericListParser[int64]),
 		"dm::PartIdList":                     ComponentParserFunc(DmPartIdListParser),
 		"uint8_t":                            ComponentParserFunc(GenericParser[uint8]),
-		"uint16_t":                           ComponentParserFunc(GenericListParser[uint16]),
+		"uint16_t":                           ComponentParserFunc(GenericParser[uint16]),
 		"dm::PartId":                         ComponentParserFunc(DmPartIdParser),
 		"Payload":                            ComponentParserFunc(RocketSerializer),
 		"Bomb":                               ComponentParserFunc(RocketSerializer),

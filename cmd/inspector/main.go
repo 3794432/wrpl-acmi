@@ -110,6 +110,7 @@ func replayProcessor(rpl *inspector.LoadedReplay) ([]packet.PacketParser, []insp
 		Ecs:          &ecs.Mgr,
 		Players:      slot,
 		Paths:        paths,
+		AirPaths:     fmp,
 		CameraAngles: cameraAngles,
 		TankMapsPath: "../../data/tankmaps",
 		DataminePath: "../../../War-Thunder-Datamine/",

@@ -9,6 +9,7 @@ import (
 	"math"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AllenDang/cimgui-go/backend"
@@ -17,12 +18,17 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/inspector"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/inspector/imui"
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl"
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/game"
 	packetcameraangles "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/cameraAnglesParser"
 	packetecs2 "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/ecs2"
+	packetfm "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/fm"
 	packetkill "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/kill"
 	packetmovement "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/movement"
 	packetslot "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/slot"
 )
+
+const airPathKeyFlag uint64 = 1 << 63
 
 type MapViewTab struct {
 	Backend      backend.Backend[glfwbackend.GLFWWindowFlags]
@@ -31,6 +37,7 @@ type MapViewTab struct {
 	Ecs          *packetecs2.EntityManager
 	Players      *packetslot.PacketSlotParser
 	Paths        *packetmovement.PositionRetainerParser
+	AirPaths     *packetfm.PacketFlightModelParser
 	CameraAngles *packetcameraangles.PacketCameraAnglesParser
 
 	TankMapsPath string
@@ -87,11 +94,11 @@ func (tab *MapViewTab) Init() {
 	tab.rLevel = string(bytes.Trim(tab.Rpl.Header.Raw_Level[:], "\x00"))
 	tab.rLevelSettings = string(bytes.Trim(tab.Rpl.Header.Raw_LevelSettings[:], "\x00"))
 	tab.rBattleType = string(bytes.Trim(tab.Rpl.Header.Raw_BattleType[:], "\x00"))
+	tab.rBattleType = resolveBattleType(tab.Rpl, tab.rBattleType)
 
 	tankmapImage, err := levelToTankmap(tab.TankMapsPath, tab.rLevel)
 	if err != nil {
-		tankmapImage = image.NewRGBA(image.Rect(0, 0, 2048, 2048))
-		tab.initErr = fmt.Errorf("levelToTankmap: %w", err)
+		tankmapImage = fallbackTankmap()
 	}
 	tab.tankmapTextureW = tankmapImage.Rect.Dx()
 	tab.tankmapTextureH = tankmapImage.Rect.Dy()
@@ -120,12 +127,14 @@ func (tab *MapViewTab) Init() {
 
 	mainArea, mainAreaName, err := findMainBattleArea(areas, tab.rBattleType, tab.Rpl.Header.Difficulty)
 	if err != nil {
-		tab.initErr = fmt.Errorf("findMainBattleArea: %w", err)
-		return
+		tab.rMainAreaName = "full map"
+		tab.rImageArea = image.Rect(0, 0, 2048, 2048)
+	} else {
+		tab.rMainAreaName = mainAreaName
+		mainAreaX, mainAreaZ, mainAreaW, mainAreaH := calcDrawArea(offsets, mainArea, false)
+		tab.rImageArea = image.Rect(int(mainAreaX), int(mainAreaZ), int(mainAreaX+mainAreaW), int(mainAreaZ+mainAreaH))
 	}
-	tab.rMainAreaName = mainAreaName
-	mainAreaX, mainAreaZ, mainAreaW, mainAreaH := calcDrawArea(offsets, mainArea, false)
-	tab.rImageArea = image.Rect(int(mainAreaX), int(mainAreaZ), int(mainAreaX+mainAreaW), int(mainAreaZ+mainAreaH))
+	tab.mergeAirPaths()
 
 	caps, err := findCaps(areas, tab.rBattleType, tab.Rpl.Header.Difficulty)
 	if err != nil {
@@ -275,19 +284,16 @@ func (tab *MapViewTab) DrawView() {
 	showEverything := tab.pbCurrentTime <= tab.Rpl.Packets[0].CurrentTime
 	for _, eid := range tab.cachePathEidsSorted {
 		path := tab.Paths.Paths[eid]
-		eid2 := ((uint64(uint64(eid)&0xff) << uint64(0x16)) | (uint64(eid) >> uint64(0x8))) & 0x7FF
-		eid2 = uint64(packetecs2.EntityID(uint32(eid2)).Index())
-		e := tab.Ecs.Entities[uint32(eid2)]
-		if e == nil {
-			continue
-		}
+		e := tab.entityForPathKey(eid)
 		foundDeath := -1
-		for i := range tab.Kills.Kills {
-			if tab.Kills.Kills[i].ResolvedVictim != e {
-				continue
+		if e != nil {
+			for i := range tab.Kills.Kills {
+				if tab.Kills.Kills[i].ResolvedVictim != e {
+					continue
+				}
+				foundDeath = i
+				break
 			}
-			foundDeath = i
-			break
 		}
 		if showEverything {
 			coords := imgui.Vec2{}
@@ -475,8 +481,10 @@ func (tab *MapViewTab) runPaths() {
 		isAnythingHovered := false
 		for _, eid := range tab.cachePathEidsSorted {
 			path := tab.Paths.Paths[eid]
-			eid2 := ((uint64(uint64(eid)&0xff) << uint64(0x16)) | (uint64(eid) >> uint64(0x8))) & 0x7FF
-			eid2 = uint64(packetecs2.EntityID(uint32(eid2)).Index())
+			keyLabel := strconv.FormatUint(eid, 10)
+			if eid&airPathKeyFlag != 0 {
+				keyLabel = "air:" + strconv.FormatUint(eid&^airPathKeyFlag, 10)
+			}
 
 			imgui.TableNextRow()
 			isRowSelected := tab.highlightPath == eid
@@ -485,7 +493,7 @@ func (tab *MapViewTab) runPaths() {
 			}
 
 			imgui.TableNextColumn()
-			if imgui.SelectableBoolV(strconv.FormatUint(eid, 10), isRowSelected, imgui.SelectableFlagsSpanAllColumns, imgui.Vec2{}) {
+			if imgui.SelectableBoolV(keyLabel, isRowSelected, imgui.SelectableFlagsSpanAllColumns, imgui.Vec2{}) {
 				tab.highlightPath = eid
 			}
 			if imgui.IsItemHovered() {
@@ -503,7 +511,7 @@ func (tab *MapViewTab) runPaths() {
 			imgui.TextUnformatted((time.Duration(path[len(path)-1].Time) * time.Millisecond).String())
 
 			imgui.TableNextColumn()
-			e := tab.Ecs.Entities[uint32(eid2)]
+			e := tab.entityForPathKey(eid)
 			if e == nil {
 				imgui.TextUnformatted("unresolved entity")
 				continue
@@ -578,6 +586,79 @@ func (tab *MapViewTab) Close() {
 	if tab.tankmapTexture != nil {
 		tab.Backend.DeleteTexture(*tab.tankmapTexture)
 	}
+}
+
+func (tab *MapViewTab) mergeAirPaths() {
+	if tab.AirPaths == nil || tab.Paths == nil {
+		return
+	}
+	for _, frame := range tab.AirPaths.Results {
+		for _, entry := range frame.Entries {
+			if entry.Data == nil {
+				continue
+			}
+			key := airPathKeyFlag | (entry.UID & 0x7ff)
+			tab.Paths.Paths[key] = append(tab.Paths.Paths[key], game.SpaceTime{
+				Time: frame.CurrentTime,
+				X:    float64(entry.Data.PosX),
+				Y:    float64(entry.Data.PosY),
+				Z:    float64(entry.Data.PosZ),
+			})
+		}
+	}
+	for key, path := range tab.Paths.Paths {
+		tab.Paths.Paths[key] = downsamplePath(path, 160)
+	}
+}
+
+func downsamplePath(path []game.SpaceTime, maxPoints int) []game.SpaceTime {
+	if len(path) <= maxPoints || maxPoints < 2 {
+		return path
+	}
+	out := make([]game.SpaceTime, 0, maxPoints)
+	step := float64(len(path)-1) / float64(maxPoints-1)
+	for i := 0; i < maxPoints; i++ {
+		idx := int(math.Round(float64(i) * step))
+		if idx >= len(path) {
+			idx = len(path) - 1
+		}
+		out = append(out, path[idx])
+	}
+	return out
+}
+
+func (tab *MapViewTab) entityForPathKey(key uint64) *packetecs2.Entity {
+	if tab.Ecs == nil {
+		return nil
+	}
+	if key&airPathKeyFlag != 0 {
+		return tab.Ecs.Uid_lookup[int32(key&^airPathKeyFlag)]
+	}
+	eid := ((uint64(uint64(key)&0xff) << uint64(0x16)) | (uint64(key) >> uint64(0x8))) & 0x7FF
+	eid = uint64(packetecs2.EntityID(uint32(eid)).Index())
+	return tab.Ecs.Entities[uint32(eid)]
+}
+
+func resolveBattleType(rpl *inspector.LoadedReplay, raw string) string {
+	switch battleTypeToken(raw) {
+	case "bttl", "dom", "conq":
+		return raw
+	}
+	if len(rpl.Settings) > 0 {
+		if settings, err := wrpl.ParseBlk(rpl.Settings); err == nil {
+			if t, ok := settings["type"].(string); ok {
+				switch strings.ToLower(t) {
+				case "domination":
+					return "dom"
+				case "battle":
+					return "bttl"
+				case "conquest":
+					return "conq1"
+				}
+			}
+		}
+	}
+	return raw
 }
 
 func ImSliderVec2(label string, v *imgui.Vec2, min, max float32) bool {

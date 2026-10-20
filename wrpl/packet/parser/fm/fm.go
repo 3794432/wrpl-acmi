@@ -796,7 +796,7 @@ func readUnk5(r *danet.BitReader) (*FMDataUnk5, error) {
 	return ret, nil
 }
 
-func unpackEuler(packed uint32) (heading, attitude, bank float32) {
+func UnpackEuler(packed uint32) (heading, attitude, bank float32) {
 	heading = float32((packed>>19)&((1<<10)-1)) * float32(3.1415926535) / float32((1<<10)-1)
 	attitude = float32((packed>>10)&((1<<9)-1)) * float32(1.570796326794895) / float32((1<<9)-1)
 	bank = float32(packed&((1<<10)-1)) * float32(3.1415926535) / float32((1<<10)-1)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/color"
 	"image/draw"
 	"image/png"
 	"io"
@@ -55,4 +56,28 @@ func levelToTankmap(tankmapsPath, level string) (*image.RGBA, error) {
 		draw.Draw(im2, im2.Bounds(), im, im.Bounds().Min, draw.Src)
 	}
 	return im2, nil
+}
+
+func fallbackTankmap() *image.RGBA {
+	const size = 2048
+	im := image.NewRGBA(image.Rect(0, 0, size, size))
+	bg := color.RGBA{R: 22, G: 26, B: 30, A: 255}
+	minor := color.RGBA{R: 48, G: 57, B: 66, A: 255}
+	major := color.RGBA{R: 82, G: 96, B: 110, A: 255}
+	for y := 0; y < size; y++ {
+		for x := 0; x < size; x++ {
+			im.SetRGBA(x, y, bg)
+		}
+	}
+	for i := 0; i <= size; i += 128 {
+		c := minor
+		if i%512 == 0 {
+			c = major
+		}
+		for p := 0; p < size; p++ {
+			im.SetRGBA(p, i, c)
+			im.SetRGBA(i, p, c)
+		}
+	}
+	return im
 }

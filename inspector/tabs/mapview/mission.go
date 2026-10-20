@@ -80,6 +80,8 @@ func missionLoad(dataminePath, missionPath string) (*MissionDef, error) {
 type levelDef struct {
 	TankMapCoord0 []float64 `json:"tankMapCoord0"`
 	TankMapCoord1 []float64 `json:"tankMapCoord1"`
+	MapCoord0     []float64 `json:"mapCoord0"`
+	MapCoord1     []float64 `json:"mapCoord1"`
 }
 
 func getLevelCoords(dataminePath, levelPath string) (*levelDef, error) {
@@ -93,6 +95,15 @@ func getLevelCoords(dataminePath, levelPath string) (*levelDef, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parsing level %q: %w", levelPath, err)
 	}
+	if len(level.TankMapCoord0) < 2 && len(level.MapCoord0) >= 2 {
+		level.TankMapCoord0 = level.MapCoord0
+	}
+	if len(level.TankMapCoord1) < 2 && len(level.MapCoord1) >= 2 {
+		level.TankMapCoord1 = level.MapCoord1
+	}
+	if len(level.TankMapCoord0) < 2 || len(level.TankMapCoord1) < 2 {
+		return nil, errors.New("level has no usable map coordinates")
+	}
 	return &level, nil
 }
 
@@ -105,12 +116,7 @@ func findCaps(areas map[string]AreaDef, bttlType string, difficulty byte) (map[i
 	if areas == nil {
 		return nil, errors.New("nil areas")
 	}
-	lastUnderscore := strings.LastIndex(bttlType, "_")
-	if lastUnderscore == -1 {
-		return nil, fmt.Errorf("underscore not found in %q", bttlType)
-	}
-	bttlType = strings.ToLower(bttlType[lastUnderscore:])
-	bttlType = strings.Trim(bttlType, "_")
+	bttlType = battleTypeToken(bttlType)
 	difficultyStr := snailDifficultyToStr(difficulty)
 	ret := map[int]AreaDef{}
 	var found *AreaDef
@@ -202,12 +208,7 @@ func findMainBattleArea(areas map[string]AreaDef, bttlType string, difficulty by
 	if areas == nil {
 		return nil, "", errors.New("findMainBattleArea: nil areas")
 	}
-	lastUnderscore := strings.LastIndex(bttlType, "_")
-	if lastUnderscore == -1 {
-		return nil, "", fmt.Errorf("underscore not found in %q", bttlType)
-	}
-	bttlType = strings.ToLower(bttlType[lastUnderscore:])
-	bttlType = strings.Trim(bttlType, "_")
+	bttlType = battleTypeToken(bttlType)
 	bttlType = strings.TrimRight(bttlType, "01234")
 	difficultyStr := ""
 	switch difficulty >> 2 & 3 {
@@ -293,4 +294,14 @@ func calcDrawArea(offsets *levelDef, area *AreaDef, makeSquare bool) (x, z, w, h
 
 func snailDifficultyToStr(difficulty byte) string {
 	return []string{"arcade", "realistic", "hardcore"}[(difficulty>>2)&3]
+}
+
+func battleTypeToken(bttlType string) string {
+	if lastUnderscore := strings.LastIndex(bttlType, "_"); lastUnderscore != -1 {
+		bttlType = bttlType[lastUnderscore:]
+	}
+	bttlType = strings.ToLower(bttlType)
+	bttlType = strings.Trim(bttlType, "_")
+	bttlType = strings.TrimRight(bttlType, "01234")
+	return bttlType
 }

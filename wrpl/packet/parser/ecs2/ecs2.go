@@ -73,12 +73,17 @@ type HashedComponent struct {
 }
 
 type PacketECSParser struct {
-	TemplateDefs    map[TemplateIdx]*Template
-	ComponentDefs   map[ComponentIdx]*HashedComponent
-	Messages        []ParsedPacketECS
-	InternedStrings map[uint16]string
-	Mgr             EntityManager
-	Maps            ComponentHashMaps
+	// Replay 0x00018C1C inserts a reserved zero byte between the template
+	// definition/reference and construction component count. Opt in explicitly
+	// so older replays keep their original wire layout.
+	ConstructionReservedByte bool
+	TemplateDefs             map[TemplateIdx]*Template
+	ComponentDefs            map[ComponentIdx]*HashedComponent
+	Messages                 []ParsedPacketECS
+	InternedStrings          map[uint16]string
+	Mgr                      EntityManager
+	Maps                     ComponentHashMaps
+	componentParseDepth      int
 }
 
 func NewPacketECSParser(m ComponentHashMaps) *PacketECSParser { // I removed parsers because that data will not change across iterations, so no need to reload it
@@ -156,7 +161,11 @@ func (p *PacketECSParser) ParseECSTemplate(r *danet.BitReader) (*Template, error
 	if err != nil {
 		return nil, fmt.Errorf("reading num components: %w", err)
 	}
-	for range numComponents {
+	componentCount, err := ecsCheckListCount(r, "template component", uint64(numComponents), 8)
+	if err != nil {
+		return nil, fmt.Errorf("reading num components: %w", err)
+	}
+	for i := 0; i < componentCount; i++ {
 		compIDl, err := r.ReadCompressed()
 		if err != nil {
 			return nil, fmt.Errorf("reading component id: %w", err)
@@ -191,16 +200,20 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 		}
 		compCount = uint64(temp)
 	} else {
-		compCount, err = r.ReadCompressed()
+		compCount, err = readECSCompressed(r)
 		if err != nil {
 			return nil, err
 		}
+	}
+	componentCount, err := ecsCheckListCount(r, "construction component", compCount, 8)
+	if err != nil {
+		return nil, err
 	}
 	var comp uint16
 	comp = 0
 	var Payload Entity
 	Payload.Template = templ.Name
-	for i := uint16(0); i < uint16(compCount); i++ {
+	for i := 0; i < componentCount; i++ {
 		var ofs uint64 // actualy uint16
 		if templateComponentsCount < 256 {
 			temp, err := r.ReadByte()
@@ -252,11 +265,15 @@ func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (ret *Mes
 	if err != nil {
 		return ret, fmt.Errorf("reading eid: %w", err)
 	}
-	blockSize, err := r.ReadCompressed()
+	blockSize, err := readECSCompressed(r)
 	if err != nil {
 		return ret, fmt.Errorf("reading compressed block size: %w", err)
 	}
-	ret.Data = make([]byte, blockSize)
+	blockBytes, err := ecsCheckByteBlock(r, "construction block", blockSize)
+	if err != nil {
+		return ret, fmt.Errorf("reading compressed block size: %w", err)
+	}
+	ret.Data = make([]byte, blockBytes)
 	_, err = r.Read(ret.Data)
 	if err != nil {
 		return ret, fmt.Errorf("reading block (size %d): %w", blockSize, err)
@@ -267,6 +284,15 @@ func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (ret *Mes
 		return ret, fmt.Errorf("reading template: %w", err)
 	}
 	ret.Template = templ.ID
+	if p.ConstructionReservedByte {
+		reserved, readErr := br.ReadByte()
+		if readErr != nil {
+			return ret, fmt.Errorf("reading construction reserved byte: %w", readErr)
+		}
+		if reserved != 0 {
+			return ret, fmt.Errorf("unsupported construction reserved byte: 0x%02x", reserved)
+		}
+	}
 	entitiy, err := p.deserializeConstruction(br, templ)
 	if err != nil {
 		return ret, fmt.Errorf("parsing entity: %w", err)
@@ -290,7 +316,11 @@ func (p *PacketECSParser) Parse(pk *packet.Packet) (any, error) {
 	}
 
 	if dat.Control == 0x25 {
-		decomp := make([]byte, (len(pk.PacketPayload)-1)*8)
+		decompSize, err := ecsLimitedLZ4BufferSize(len(pk.PacketPayload) - 1)
+		if err != nil {
+			return nil, fmt.Errorf("sizing compressed ecs output: %w", err)
+		}
+		decomp := make([]byte, decompSize)
 		dat.DecompressSize, err = lz4.UncompressBlock(pk.PacketPayload[1:], decomp)
 		if err != nil {
 			dat.DecompressFailed = true
@@ -308,7 +338,11 @@ func (p *PacketECSParser) Parse(pk *packet.Packet) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		for range uint64(dat.MessageCount) + 1 {
+		messageLoopCount, err := ecsCheckListCount(r, "construction message", uint64(dat.MessageCount)+1, 24)
+		if err != nil {
+			return nil, err
+		}
+		for i := 0; i < messageLoopCount; i++ {
 			msg, err := p.ParseECSConstructMessage(r)
 			if err != nil {
 				return nil, fmt.Errorf("reading ecs construct message: %w", err)
@@ -324,6 +358,13 @@ func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParse
 	if comp_type == 0 {
 		return nil, nil
 	}
+	if mgr.componentParseDepth >= ecsMaxComponentNesting {
+		return nil, fmt.Errorf("ECS component nesting exceeds maximum depth %d at bit offset %d (data length %d bytes)", ecsMaxComponentNesting, r.BitOffset, len(r.Data))
+	}
+	mgr.componentParseDepth++
+	defer func() {
+		mgr.componentParseDepth--
+	}()
 	var serializer ComponentParser
 	if datacomp_type != 0 { // if we have a datacomp, use that, else use the component serializer
 		serializer, _ = mgr.Maps.DataComponentParsers[datacomp_type]

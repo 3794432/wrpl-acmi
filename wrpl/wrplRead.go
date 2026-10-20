@@ -28,7 +28,24 @@ import (
 	"slices"
 
 	"github.com/klauspost/compress/zlib"
+	"github.com/klauspost/compress/zstd"
 )
+
+const (
+	replayHeaderSize       = 1234
+	replayVersionZstd      = 0x00018C1C
+	newSettingsSizeOffset  = 748
+	newResultsOffsetOffset = 684
+)
+
+type zstdReadCloser struct {
+	*zstd.Decoder
+}
+
+func (z zstdReadCloser) Close() error {
+	z.Decoder.Close()
+	return nil
+}
 
 // type Player struct {
 // 	Name    string
@@ -141,7 +158,11 @@ func OpenPartedReplay(replayBytes [][]byte) (ret *ReplayReader, err error) {
 // If openPackets is true then Replay will have zlib-backed io that needs to be closed via Close
 func OpenReplay(r io.ReadSeeker, readSettings, openPackets, readResults bool) (ret *ReplayReader, err error) {
 	ret = &ReplayReader{}
-	err = binary.Read(r, binary.LittleEndian, &ret.Header)
+	headerBytes := make([]byte, replayHeaderSize)
+	if _, err = io.ReadFull(r, headerBytes); err != nil {
+		return nil, fmt.Errorf("reading header: %w", err)
+	}
+	err = binary.Read(bytes.NewReader(headerBytes), binary.LittleEndian, &ret.Header)
 	if err != nil {
 		return nil, fmt.Errorf("parsing header: %w", err)
 	}
@@ -149,16 +170,36 @@ func OpenReplay(r io.ReadSeeker, readSettings, openPackets, readResults bool) (r
 		return nil, fmt.Errorf("wrong magic (got %v)", ret.Header.Magic)
 	}
 
-	if ret.Header.SettingsBLKSize > 0 && readSettings {
-		ret.Settings = make([]byte, ret.Header.SettingsBLKSize)
+	// Version 0x00018C1C moved some header fields and switched the packet
+	// stream to zstd. Keep the old layout for older replays.
+	settingsSize := ret.Header.SettingsBLKSize
+	resultsOffset := ret.Header.ResultsBlkOffset
+	if ret.Header.Version == replayVersionZstd {
+		settingsSize = binary.LittleEndian.Uint16(headerBytes[newSettingsSizeOffset : newSettingsSizeOffset+2])
+		resultsOffset = int32(binary.LittleEndian.Uint32(headerBytes[newResultsOffsetOffset : newResultsOffsetOffset+4]))
+		ret.Header.SettingsBLKSize = settingsSize
+		ret.Header.ResultsBlkOffset = resultsOffset
+	}
+	settingsOffset := int64(replayHeaderSize)
+	if ret.Header.Version != replayVersionZstd {
+		// Legacy replays place the settings block directly after the encoded
+		// header struct (binary.Size), while the full header reserves 8 more bytes.
+		settingsOffset = int64(binary.Size(ret.Header))
+	}
+
+	if settingsSize > 0 && readSettings {
+		if _, err := r.Seek(settingsOffset, io.SeekStart); err != nil {
+			return ret, fmt.Errorf("seeking for settings blk: %w", err)
+		}
+		ret.Settings = make([]byte, settingsSize)
 		_, err := io.ReadFull(r, ret.Settings)
 		if err != nil {
 			return ret, fmt.Errorf("reading settings blk: %w", err)
 		}
 	}
 
-	if ret.Header.ResultsBlkOffset > 0 && readResults {
-		_, err := r.Seek(int64(ret.Header.ResultsBlkOffset), io.SeekStart)
+	if resultsOffset > 0 && readResults {
+		_, err := r.Seek(int64(resultsOffset), io.SeekStart)
 		if err != nil {
 			return ret, fmt.Errorf("seeking for results blk")
 		}
@@ -169,13 +210,45 @@ func OpenReplay(r io.ReadSeeker, readSettings, openPackets, readResults bool) (r
 	}
 
 	if openPackets {
-		_, err := r.Seek(int64(ret.Header.SettingsBLKSize)+1234, io.SeekStart)
-		if err != nil {
-			return ret, fmt.Errorf("seeking for packets")
+		streamOffset := int64(replayHeaderSize) + int64(settingsSize)
+		streamLength := int64(1 << 62)
+		if endOffset, seekErr := r.Seek(0, io.SeekEnd); seekErr == nil && endOffset > streamOffset {
+			streamLength = endOffset - streamOffset
+			if resultsOffset > 0 && int64(resultsOffset) > streamOffset && int64(resultsOffset) <= endOffset {
+				streamLength = int64(resultsOffset) - streamOffset
+			}
 		}
-		ret.PacketStream, err = zlib.NewReader(r)
-		if err != nil {
-			return ret, fmt.Errorf("opening zlib packets stream: %w", err)
+
+		var src io.Reader
+		magic := make([]byte, 4)
+		if ra, ok := r.(io.ReaderAt); ok {
+			if _, err := ra.ReadAt(magic, streamOffset); err != nil {
+				return ret, fmt.Errorf("reading packet stream magic: %w", err)
+			}
+			src = io.NewSectionReader(ra, streamOffset, streamLength)
+		} else {
+			if _, err := r.Seek(streamOffset, io.SeekStart); err != nil {
+				return ret, fmt.Errorf("seeking for packets: %w", err)
+			}
+			if _, err := io.ReadFull(r, magic); err != nil {
+				return ret, fmt.Errorf("reading packet stream magic: %w", err)
+			}
+			if _, err := r.Seek(streamOffset, io.SeekStart); err != nil {
+				return ret, fmt.Errorf("rewinding packet stream: %w", err)
+			}
+			src = r
+		}
+		if bytes.Equal(magic, []byte{0x28, 0xb5, 0x2f, 0xfd}) {
+			dec, err := zstd.NewReader(src)
+			if err != nil {
+				return ret, fmt.Errorf("opening zstd packets stream: %w", err)
+			}
+			ret.PacketStream = zstdReadCloser{dec}
+		} else {
+			ret.PacketStream, err = zlib.NewReader(src)
+			if err != nil {
+				return ret, fmt.Errorf("opening zlib packets stream: %w", err)
+			}
 		}
 	}
 

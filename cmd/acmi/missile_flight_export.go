@@ -91,6 +91,10 @@ func writeMissileFlightLog(path string, tracks []*track) error {
 	header = append(header, missileFlightFields...)
 	header = append(header, "recorded_sample_json", "creation_evidence_json")
 	header = append(header, "WT_SeekerTimer", "WT_InertialTime", "WT_InertialTimeValid")
+	guidanceColumns := tracksHaveMissileGuidance(tracks)
+	if guidanceColumns {
+		header = append(header, "guidance_type", "guidance_source", "guidance_confidence", "guidance_candidates")
+	}
 	if err := w.Write(header); err != nil {
 		return err
 	}
@@ -123,6 +127,9 @@ func writeMissileFlightLog(path string, tracks []*track) error {
 			}
 			row = append(row, raw, creation)
 			row = append(row, ins.seekerTimerValue(), ins.inertialTimeValue(), ins.validValue())
+			if guidanceColumns {
+				row = append(row, missileGuidanceCSVValues(tr)...)
+			}
 			if err := w.Write(row); err != nil {
 				return err
 			}

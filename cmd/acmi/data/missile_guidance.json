@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "generated_from": [
+    "gszabi99/War-Thunder-Datamine@master: aces.vromfs.bin_u/gamedata/weapons/rocketguns/*.blkx (raw JSON snapshots)",
+    "report/ir-vs-radar-missile.md",
+    "report/missile-model-names.md",
+    "deliverable/missile-names/missile-name-map.csv",
+    "deliverable/missile-names/probe-output.json"
+  ],
+  "models": {
+    "cn_pl12": {
+      "guidance": "ARH",
+      "source": "datamine cn_pl12.blkx: guidanceType=radar, radarSeeker.active=true; kill cn_pl12",
+      "confidence": "confirmed"
+    },
+    "su_rvv_ae": {
+      "guidance": "ARH",
+      "source": "datamine su_rvv_ae.blkx: guidanceType=radar, radarSeeker.active=true; kill su_rvv_ae",
+      "confidence": "confirmed"
+    },
+    "us_aim_120a": {
+      "guidance": "ARH",
+      "source": "datamine us_aim_120a.blkx: guidanceType=radar, radarSeeker.active=true; kill us_aim_120a",
+      "confidence": "confirmed"
+    },
+    "us_aim_120c_5": {
+      "guidance": "ARH",
+      "source": "datamine us_aim_120c_5.blkx: guidanceType=radar, radarSeeker.active=true; kill us_aim_120c_5",
+      "confidence": "confirmed"
+    },
+    "jp_aam4": {
+      "guidance": "ARH",
+      "source": "datamine jp_aam4.blkx: guidanceType=radar, radarSeeker.active=true; kill jp_aam4",
+      "confidence": "confirmed"
+    },
+    "swd_rb99": {
+      "guidance": "ARH",
+      "source": "datamine swd_rb99.blkx: guidanceType=radar, radarSeeker.active=true; kill swd_rb99",
+      "confidence": "confirmed"
+    },
+    "jp_aam3": {
+      "guidance": "IR",
+      "source": "datamine jp_aam3.blkx: guidanceType=optical, opticalSeeker (IR AAM)",
+      "confidence": "confirmed"
+    },
+    "pl_5e2": {
+      "guidance": "IR",
+      "source": "datamine su_pl5e2.blkx: bulletName=pl_5e2, guidanceType=optical, opticalSeeker (IR AAM)",
+      "confidence": "confirmed"
+    },
+    "su_pl5e2": {
+      "guidance": "IR",
+      "source": "datamine su_pl5e2.blkx: bulletName=pl_5e2, guidanceType=optical, opticalSeeker (IR AAM)",
+      "confidence": "confirmed"
+    },
+    "cn_pl5e2": {
+      "guidance": "IR",
+      "source": "J-10A loadout cn_pl5e2 = datamine su_pl5e2.blkx bulletName pl_5e2, opticalSeeker (IR AAM)",
+      "confidence": "high"
+    },
+    "us_aim9l_sidewinder": {
+      "guidance": "IR",
+      "source": "datamine us_aim9l_sidewinder.blkx: guidanceType=optical, opticalSeeker (IR AAM)",
+      "confidence": "confirmed"
+    },
+    "us_aim_9l": {
+      "guidance": "IR",
+      "source": "loadout us_aim_9l = datamine us_aim9l_sidewinder.blkx, guidanceType=optical, opticalSeeker (IR AAM)",
+      "confidence": "high"
+    },
+    "us_aim9m_sidewinder": {
+      "guidance": "IR",
+      "source": "datamine us_aim9m_sidewinder.blkx: guidanceType=optical, opticalSeeker (IR AAM)",
+      "confidence": "confirmed"
+    },
+    "us_aim_9m": {
+      "guidance": "IR",
+      "source": "loadout us_aim_9m = datamine us_aim9m_sidewinder.blkx, guidanceType=optical, opticalSeeker (IR AAM)",
+      "confidence": "high"
+    },
+    "su_r_27et": {
+      "guidance": "IR",
+      "source": "datamine su_r_27et.blkx: guidanceType=optical, opticalSeeker (IR AAM)",
+      "confidence": "confirmed"
+    },
+    "su_r_73": {
+      "guidance": "IR",
+      "source": "datamine su_r_73.blkx: guidanceType=optical, opticalSeeker (IR AAM)",
+      "confidence": "confirmed"
+    },
+    "su_r_27er": {
+      "guidance": "SARH",
+      "source": "datamine su_r_27er.blkx: guidanceType=radar, radarSeeker.active absent (SARH); same pattern as R-27R/AIM-7M",
+      "confidence": "confirmed"
+    }
+  },
+  "replays": {
+    "c0fcd26febf9f0ec75765337a841c1d55d089cd13b45740f0cbd41c190f418b2": {
+      "weapon_ids": {
+        "60": {
+          "guidance": "IR",
+          "source": "probe-output J-10A uid436 preset pl5e_2; datamine su_pl5e2 opticalSeeker; report J-10A IR=PL-5E II",
+          "confidence": "high"
+        },
+        "157": {
+          "guidance": "IR",
+          "source": "probe-output F-15J uid416 preset aam3_slot11/aam3_slot1; datamine jp_aam3 opticalSeeker",
+          "confidence": "high"
+        }
+      }
+    }
+  }
+}

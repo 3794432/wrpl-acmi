@@ -18,14 +18,17 @@ In the replay set checked by the project, model and team evidence was linked for
 ## Quick start
 
 ```
-.\wrpl-acmi.exe -in "replay.wrpl" -out "replay.acmi"
-.\wrpl-acmi.exe -in ".\server-replays\session-id"
+cd .\dist\wrpl-acmi
+.\run.bat -in "C:\Replays\replay.wrpl" -out "C:\Replays\replay.acmi"
+.\run.bat -in "C:\Replays\server-session" -out "C:\Replays\server-session.acmi"
 ```
+
+You can also run `wrpl-acmi.exe` directly from the package directory. The package's `run.bat` keeps the working directory inside `dist\wrpl-acmi`, so the bundled `data/ecshashes.json` and `run.bat` defaults are found.
 
 Go's `flag` parser stops at the first positional argument, so flags go before the file. A single positional path also works:
 
 ```
-.\wrpl-acmi.exe -out "replay.acmi" "replay.wrpl"
+.\wrpl-acmi.exe -out "C:\Replays\replay.acmi" "C:\Replays\replay.wrpl"
 ```
 
 Do not combine `-in` with a positional path. For a server replay, put the shards from one match in a directory. Passing one server shard as a file is rejected.
@@ -36,15 +39,31 @@ By default the exporter reads `data/ecshashes.json`. If it is missing, the progr
 
 ## Build from current dev
 
-`go.mod` requires Go 1.25.6. The headless exporter does not need GUI dependencies; build with CGO disabled:
+The exporter needs Go 1.25.6 or newer (`go.mod` currently declares Go 1.25.6). Terrain conversion additionally needs 64-bit Python 3.12, Git, and War Thunder's local client files. The package build copies the repository's runtime data and, with `-WithTerrain`, converts terrain from the local game before adding it to the package.
 
-```
-$env:CGO_ENABLED = "0"
-go build -o .\wrpl-acmi.exe ./cmd/acmi
-go test ./cmd/acmi ./wrpl/...
+From a clean PowerShell session, these commands fetch the current `dev` branch, prepare the converter environment, and build the package:
+
+```powershell
+git clone --branch dev --single-branch https://github.com/3794432/wrpl-acmi.git
+Set-Location .\wrpl-acmi
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r .\tools\terrain\converter\requirements.txt
+git clone --depth 1 --filter=blob:none --no-checkout https://github.com/gszabi99/War-Thunder-Datamine.git .\War-Thunder-Datamine
+git -C .\War-Thunder-Datamine fetch --depth 1 origin f7952e4291e9fd7b6fe38e84020dddef925c3457
+git -C .\War-Thunder-Datamine sparse-checkout init --cone
+git -C .\War-Thunder-Datamine sparse-checkout set aces.vromfs.bin_u/levels
+git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
+.\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
 ```
 
-On a POSIX shell the equivalent build is `CGO_ENABLED=0 go build -o wrpl-acmi ./cmd/acmi`. An older release may lag behind `dev`; build from the current branch when you need its behavior.
+The sparse checkout selects only `aces.vromfs.bin_u/levels`; a full Datamine clone is not required. The converter validates the 69 target configurations listed in `AtlasReferences.json`. `tools/terrain/converter/requirements.txt` pins NumPy 2.3.5, Pillow 12.3.0, pyooz 0.0.8, and zstandard 0.25.0.
+
+Use an actual 64-bit Python 3.12 interpreter for `-Python`; `python` is the default. `-OutputRoot` defaults to `dist\wrpl-acmi`. Omit `-WithTerrain`, `-GameRoot`, and `-DatamineRoot` for an exporter-only build. The build does not install terrain into Tacview. If terrain conversion is interrupted, rerun with the same parameters plus `-ResumeTerrain`; a repeated `-WithTerrain` build rejects the existing nonempty terrain directory unless that switch is present.
+
+The default result contains `wrpl-acmi.exe`, `acmi-mapid.exe`, `acmi-atlas.exe`, `run.bat`, `data/ecshashes.json`, terrain sources and installers under `tools/terrain`, and, when `-WithTerrain` succeeds, the converted `terrain/` directory with all 69 maps. The binaries are built with CGO disabled. An older release may lag behind `dev`; build from the current branch when you need its behavior.
+
+The [source-build workflow](https://github.com/3794432/wrpl-acmi/blob/dev/.github/workflows/source-build.yml) runs the Go tests, synthetic Python decoder tests, PowerShell installer tests, and an exporter-only package build. CI does not convert real terrain because that requires locally installed game files.
 
 ## Maps and terrain
 
@@ -55,15 +74,12 @@ Terrain elevation XML and aircraft, missile, bomb, ground-unit, and countermeasu
 Install terrain with (the converted output must contain GeoReferences.json):
 
 ```
-.\tools\terrain\Install-All-Terrains.cmd -SourceRoot "<converted-terrain-output>" -AtlasReferences .\tools\terrain\AtlasReferences.json
+.\dist\wrpl-acmi\tools\terrain\Install-All-Terrains.cmd -SourceRoot .\dist\wrpl-acmi\terrain -AtlasReferences .\dist\wrpl-acmi\tools\terrain\AtlasReferences.json
 ```
 
 Use `-AtlasOnly` with the same installer for the matching Atlas layout. Map `.data` files are not tracked in Git and terrain assets are not bundled; see the [terrain tool guide](tools/terrain/README.md) for installation and directory requirements.
 
-Terrain heights come from an installed War Thunder client's `levels/*.bin`, not from
-[War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine). That repository supplies level configuration such as map bounds and water level; it does not supply the compiled level geometry needed by this conversion. Geographic placement metadata is a separate input from WT-MAP-ANALYZE.
-
-**This repository currently includes the terrain installers, not the full terrain extraction/conversion toolchain.** Cloning Datamine or building `cmd/acmi` does not create a terrain package. `-SourceRoot` must point to an already converted package, not the Datamine checkout or the game's `levels` directory. The installer validates and installs `.data`, metadata and XML; it does not decode `.bin` files. See [input sources and the required package layout](tools/terrain/README.md#input-sources--输入来源).
+Terrain heights and geometry come from the installed War Thunder client's `levels/*.bin`. [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) supplies level configuration such as map bounds and water level; Datamine alone does not contain the compiled heights. The conversion workflow is pinned to Datamine commit `f7952e4291e9fd7b6fe38e84020dddef925c3457`. Geographic placement metadata is a separate MIT-licensed estimate from WT-MAP-ANALYZE. See the [terrain tool guide](tools/terrain/README.md#input-sources-and-licensing) for the full toolchain, source roles, package layout, and licensing details.
 
 ## Documentation
 

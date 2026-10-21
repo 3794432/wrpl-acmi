@@ -1,0 +1,4 @@
+numpy==2.3.5
+Pillow==12.3.0
+pyooz==0.0.8
+zstandard==0.25.0

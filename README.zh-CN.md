@@ -18,14 +18,17 @@
 ## 快速开始
 
 ```
-.\wrpl-acmi.exe -in "replay.wrpl" -out "replay.acmi"
-.\wrpl-acmi.exe -in ".\server-replays\session-id"
+cd .\dist\wrpl-acmi
+.\run.bat -in "C:\Replays\replay.wrpl" -out "C:\Replays\replay.acmi"
+.\run.bat -in "C:\Replays\server-session" -out "C:\Replays\server-session.acmi"
 ```
+
+也可以直接运行包目录中的 `wrpl-acmi.exe`。包内的 `run.bat` 会先切换到 `dist\wrpl-acmi`，以便找到随包提供的 `data/ecshashes.json` 和默认路径。
 
 Go 的 `flag` 解析在首个位置参数处停止，因此参数要放在文件前；也可以只给一个位置参数：
 
 ```
-.\wrpl-acmi.exe -out "replay.acmi" "replay.wrpl"
+.\wrpl-acmi.exe -out "C:\Replays\replay.acmi" "C:\Replays\replay.wrpl"
 ```
 
 不要同时使用 `-in` 和位置参数。服务器回放要把同一场的分片放在一个目录中读取；单个分片直接作为输入会被拒绝。
@@ -36,15 +39,31 @@ Go 的 `flag` 解析在首个位置参数处停止，因此参数要放在文件
 
 ## 从当前 dev 构建
 
-`go.mod` 要求 Go 1.25.6。无界面导出器不需要 GUI 依赖，关闭 CGO 构建：
+导出器要求 Go 1.25.6 或更高版本（`go.mod` 当前声明 Go 1.25.6）。构建地形还需要 Git、64 位 Python 3.12，以及本机《战争雷霆》客户端文件。构建包会复制仓库中的运行数据；指定 `-WithTerrain` 时会先从本机游戏转换地形，再加入构建包。
 
-```
-$env:CGO_ENABLED = "0"
-go build -o .\wrpl-acmi.exe ./cmd/acmi
-go test ./cmd/acmi ./wrpl/...
+在全新的 PowerShell 会话中，以下命令获取当前 `dev` 分支、准备转换环境并构建完整包：
+
+```powershell
+git clone --branch dev --single-branch https://github.com/3794432/wrpl-acmi.git
+Set-Location .\wrpl-acmi
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r .\tools\terrain\converter\requirements.txt
+git clone --depth 1 --filter=blob:none --no-checkout https://github.com/gszabi99/War-Thunder-Datamine.git .\War-Thunder-Datamine
+git -C .\War-Thunder-Datamine fetch --depth 1 origin f7952e4291e9fd7b6fe38e84020dddef925c3457
+git -C .\War-Thunder-Datamine sparse-checkout init --cone
+git -C .\War-Thunder-Datamine sparse-checkout set aces.vromfs.bin_u/levels
+git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
+.\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
 ```
 
-POSIX shell 中等价于 `CGO_ENABLED=0 go build -o wrpl-acmi ./cmd/acmi`。历史 release 可能落后于当前 `dev`；需要最新行为时请从当前分支构建。
+稀疏检出只选取 `aces.vromfs.bin_u/levels`，不需要完整克隆 Datamine。转换器会校验 `AtlasReferences.json` 中列出的 69 个目标配置。`tools/terrain/converter/requirements.txt` 固定 NumPy 2.3.5、Pillow 12.3.0、pyooz 0.0.8 与 zstandard 0.25.0。
+
+`-Python` 请使用实际的 64 位 Python 3.12 解释器；默认值为 `python`。`-OutputRoot` 默认为 `dist\wrpl-acmi`。只构建导出器时省略 `-WithTerrain`、`-GameRoot` 和 `-DatamineRoot`。构建过程不会自动向 Tacview 安装地形。地形转换中断后，可用同样参数加上 `-ResumeTerrain` 继续；再次使用 `-WithTerrain` 时，若已有非空 `terrain` 目录且没有该开关，构建会拒绝覆盖。
+
+默认产物包含 `wrpl-acmi.exe`、`acmi-mapid.exe`、`acmi-atlas.exe`、`run.bat`、`data/ecshashes.json`、`tools/terrain` 下的地形源码与安装器；`-WithTerrain` 成功后还会包含带全部 69 张地图的转换目录 `terrain/`。这些程序均以关闭 CGO 的方式构建。历史 release 可能落后于当前 `dev`；需要最新行为时请从当前分支构建。
+
+[源码构建工作流](https://github.com/3794432/wrpl-acmi/blob/dev/.github/workflows/source-build.yml)会运行 Go 测试、Python 解码器的合成输入测试、PowerShell 安装器测试，并构建不含地形的导出器包。真实地形转换依赖本机安装的游戏文件，因此不在 CI 中执行。
 
 ## 地图与地形
 
@@ -55,15 +74,12 @@ POSIX shell 中等价于 `CGO_ENABLED=0 go build -o wrpl-acmi ./cmd/acmi`。历�
 地形安装命令（转换产物需带 GeoReferences.json，可从 tools/terrain 复制）：
 
 ```
-.\tools\terrain\Install-All-Terrains.cmd -SourceRoot "<地形转换产物目录>" -AtlasReferences .\tools\terrain\AtlasReferences.json
+.\dist\wrpl-acmi\tools\terrain\Install-All-Terrains.cmd -SourceRoot .\dist\wrpl-acmi\terrain -AtlasReferences .\dist\wrpl-acmi\tools\terrain\AtlasReferences.json
 ```
 
-Atlas 配套安装使用同一工具的 `-AtlasOnly`。地图 `.data` 不纳入 Git，仓库不附带地形资产；安装和目录要求见 [地形工具说明](tools/terrain/README.md)。
+Atlas 配套安装使用同一工具的 `-AtlasOnly`。地图 `.data` 不纳入 Git，仓库不附带地形资产；安装和目录要求见 [地形工具说明](tools/terrain/README.zh-CN.md)。
 
-高程来自本机已安装游戏的 `levels/*.bin`，并非来自
-[War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine)。该仓库提供地图边界、水位等关卡配置，不提供此转换所需的编译后关卡地形；经纬度定位元数据则另行参考 WT-MAP-ANALYZE。
-
-**当前仓库包含地形安装器，尚未包含完整的高程提取/转换工具链。** 克隆 Datamine 或构建 `cmd/acmi` 都不会生成地形包。`-SourceRoot` 必须指向已转换的产物，不能指向 Datamine 克隆目录或游戏 `levels` 目录。安装器只校验和安装 `.data`、metadata 与 XML，不负责解码 `.bin`。详见[输入来源与目录要求](tools/terrain/README.md#input-sources--输入来源)。
+高程和地形几何来自本机已安装游戏的 `levels/*.bin`。[War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) 提供地图边界、水位等关卡配置；只有 Datamine 并不能得到编译后的高度。转换流程固定在 Datamine 提交 `f7952e4291e9fd7b6fe38e84020dddef925c3457`。经纬度定位是另一项来自 WT-MAP-ANALYZE 的 MIT 许可估算。完整工具链、各项输入的作用、目录结构和许可见[地形工具说明](tools/terrain/README.zh-CN.md#输入来源与许可)。
 
 ## 文档
 

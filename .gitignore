@@ -7,3 +7,10 @@
 /tools/terrain/smalltests/runtime/
 /tools/terrain/smalltests/geographic/runtime/
 /tools/terrain/smalltests/geographic/fixture/
+
+/.venv/
+/War-Thunder-Datamine/
+**/__pycache__/
+*.pyc
+/tools/terrain/converter/catalog.json
+/tools/terrain/converter/map-configs/

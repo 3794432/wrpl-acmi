@@ -1,82 +1,118 @@
-# Terrain installation / 地形安装
+# Terrain extraction, conversion, and installation
 
-The source repository contains installation tools and coordinate metadata, not War Thunder terrain assets.
-本源码仓库仅包含安装器与坐标元数据，不包含游戏高程资产。准备已从自己的游戏资产转换的目录，
-其中必须有 69 个 `maps/<id>/<id>.data`、`metadata.json` 和零点 `CustomHeightmapList.xml`。
-不能直接把游戏 `levels/*.bin` 当作 `.data`。
+[简体中文](README.zh-CN.md) · [Project README](../../README.md)
 
-## Input sources / 输入来源
+The source tree includes the converter and the installer. The converter reads compiled terrain from a local War Thunder installation and level configuration from a pinned Datamine checkout. It writes a 69-map package that the installer validates and copies to Tacview. No game terrain assets are stored in Git.
 
-| Input / 输入 | Source / 来源 | Purpose / 用途 |
-| --- | --- | --- |
-| Compiled terrain / 编译后地形 | Your installed game's `levels/<id>.bin` / 本机游戏文件 | Actual terrain heights and geometry / 高程与地形几何 |
-| Level configuration / 关卡配置 | [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine), e.g. `aces.vromfs.bin_u/levels/<id>.blkx` | Bounds (`mapCoord0`, `mapCoord1`), water level and related settings / 地图边界、水位等 |
-| Geographic placement / 地理定位 | Reviewed [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE) estimates in `GeoReferences.json` | Place both terrain and replay tracks / 同步摆放高程与回放 |
+## Prerequisites
 
-For example, the pinned [Sinai configuration](https://github.com/gszabi99/War-Thunder-Datamine/blob/f7952e4291e9fd7b6fe38e84020dddef925c3457/aces.vromfs.bin_u/levels/avg_egypt_sinai.blkx)
-provides `mapCoord0`, `mapCoord1` and `water_level`; it is not the compiled `avg_egypt_sinai.bin` or a Tacview height raster.
-例如，上述西奈 `.blkx` 提供边界和水位，不是游戏编译后的地形文件，也不是 Tacview 高程栅格。
-Use configuration compatible with your game assets; a changing Datamine checkout does not identify the version of your local `.bin` files.
-配置应与游戏资产版本匹配，Datamine 的当前版本不能替代本地地形文件的版本核对。
+- Windows and PowerShell.
+- Go 1.25.6 or newer to build `wrpl-acmi` (`go.mod` currently declares Go 1.25.6).
+- 64-bit Python 3.12 and the converter's pip requirements.
+- Git and a local War Thunder client whose `levels/*.bin` files contain the terrain heights and geometry.
+- A Datamine checkout at the compatible commit `f7952e4291e9fd7b6fe38e84020dddef925c3457`.
+- Tacview only when installing the converted terrain.
 
-**Datamine alone cannot build this terrain package.** Cloning it does not provide the compiled terrain required here.
-The current Git repository publishes installation scripts and coordinate tables, but not the complete `.bin` decoder/rasterizer
-used to create the local terrain package. There is currently no from-scratch terrain build command in this repository.
-`go build ./cmd/acmi` builds the replay exporter only.
+## Build from scratch
 
-**不能仅从 Datamine 构建此地形包。** 当前 Git 仓库发布的是安装器和坐标表，尚未发布生成本地地形包所用的完整
-`.bin` 解码与栅格化工具，因而没有可直接执行的从零高程构建命令；`go build ./cmd/acmi` 只构建回放导出器。
-从游戏文件生成高程需要另有提取/转换工具，将实际高度图或地形网格写成下述安装格式。
-
-## Converted package / 转换产物
-
-`-SourceRoot` is the converted output directory, **not** the Datamine checkout, a game installation directory, or a directory of raw `.bin` files.
-`-SourceRoot` 指向转换后的目录，不能直接使用 Datamine 克隆目录、游戏安装目录或原始 `.bin` 目录。
-
-```text
-converted-war-thunder-terrain/
-  GeoReferences.json
-  maps/
-    <map-id>/                       # all 69 supported maps / 全部 69 张支持的地图
-      <map-id>.data
-      metadata.json
-      CustomHeightmapList.xml
-```
-
-`.data` is a signed little-endian 16-bit raster in metres, ordered north-to-south and west-to-east.
-`metadata.json` records its dimensions, sample bounds and SHA-256; the source XML is the zero-origin template expected by the installer.
-Renaming a `.bin` or `.blkx` to `.data` does not convert it. Synthetic `smalltests` fixtures test installation only and are not playable terrain.
-
-`.data` 为米制、16 位有符号小端高程，按从北到南、从西到东排列；metadata 记录尺寸、采样边界及 SHA-256，
-源 XML 使用安装器要求的零点模板。改扩展名不能完成转换；`smalltests` 中的合成数据只用于安装测试，不是真实地图。
-
-## Install converted terrain / 安装已有高程包
-
-Run from the repository root / 从仓库根目录执行：
+The following PowerShell commands clone the current `dev` branch, create the Python environment, install the converter dependencies, pin Datamine, build the replay exporter together with all 69 converted maps, and put the result under `dist/wrpl-acmi`:
 
 ```powershell
-Copy-Item .\tools\terrain\GeoReferences.json "D:\converted-war-thunder-terrain\GeoReferences.json"
-.\tools\terrain\Install-All-Terrains.cmd -SourceRoot "D:\converted-war-thunder-terrain" -AtlasReferences .\tools\terrain\AtlasReferences.json
+git clone --branch dev --single-branch https://github.com/3794432/wrpl-acmi.git
+Set-Location .\wrpl-acmi
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r .\tools\terrain\converter\requirements.txt
+git clone --depth 1 --filter=blob:none --no-checkout https://github.com/gszabi99/War-Thunder-Datamine.git .\War-Thunder-Datamine
+git -C .\War-Thunder-Datamine fetch --depth 1 origin f7952e4291e9fd7b6fe38e84020dddef925c3457
+git -C .\War-Thunder-Datamine sparse-checkout init --cone
+git -C .\War-Thunder-Datamine sparse-checkout set aces.vromfs.bin_u/levels
+git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
+.\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
 ```
 
-Default placement is geographic: 14 reviewed estimated WGS84 placements and 55 Atlas fallbacks.
-默认使用经纬度同步：14 张地图采用审核后的估算地理定位，55 张使用技术坐标；不保证旧 ACMI 兼容。
-The installer updates the 69 XMLs in place, preserves raster bytes and validates hashes and non-overlap.
-安装器更新原位置的 69 张地图配置，复用高程数据，并校验哈希与范围不重叠。安装后重启 Tacview 并重新导出。
-These commands install existing rasters; they do not extract heights from the game or Datamine.
-上述命令安装已有高程，不从游戏或 Datamine 提取地形。
+The sparse checkout selects only `aces.vromfs.bin_u/levels`; the converter needs the 69 target `.blkx` files listed in `AtlasReferences.json` from the pinned revision, not a full Datamine checkout. `requirements.txt` pins NumPy 2.3.5, Pillow 12.3.0, pyooz 0.0.8, and zstandard 0.25.0.
 
-Use `-AtlasOnly` with exporter `-terrain-layout atlas` only when deliberately choosing technical coordinates.
-For hand placement use installer `-LegacyCoordinates` and exporter `-terrain-layout legacy` with matching parameters.
-Details: [TERRAIN_GEOGRAPHIC.md](../../docs/TERRAIN_GEOGRAPHIC.md), [coverage](georeference/coverage.json).
+`build.ps1` accepts `-OutputRoot`, which defaults to `dist\wrpl-acmi`, plus `-WithTerrain`, `-ResumeTerrain`, `-GameRoot`, `-DatamineRoot`, and `-Python` (default `python`). With `-WithTerrain`, the script calls `tools/terrain/build-terrain.ps1` and includes its converted maps in `dist/wrpl-acmi/terrain`. The build does not install anything into Tacview. Use the explicit venv interpreter for `-Python` when that is not the default `python` on `PATH`.
 
-Source-only installer tests / 不读取真实游戏资产的安装测试：
+If conversion stops partway through, rerun the same command with `-ResumeTerrain`; the flag requires `-WithTerrain` and is passed to the converter. Without it, a repeated terrain build refuses the existing nonempty output directory.
+
+To build only the terrain package, invoke the converter wrapper directly after installing the requirements:
+
+```powershell
+.\tools\terrain\build-terrain.ps1 -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -OutputRoot ".\converted-terrain" -Python ".\.venv\Scripts\python.exe"
+```
+
+`-ValidateOnly` checks all inputs without writing output. After an interrupted run, use `-Resume` with the same output directory. `-Resolution` defaults to 4096 pixels and `-TimeoutSeconds` defaults to 1200 per map.
+
+The artifact contains:
+
+```text
+dist/wrpl-acmi/
+  wrpl-acmi.exe
+  acmi-mapid.exe
+  acmi-atlas.exe
+  run.bat
+  README.md
+  README.zh-CN.md
+  LICENSE
+  build-manifest.json
+  data/ecshashes.json
+  docs/
+  tools/terrain/                 # converter, installer, metadata and license notices
+  terrain/                       # present after a successful -WithTerrain build
+    GeoReferences.json
+    maps/<id>/<id>.data
+    maps/<id>/metadata.json
+    maps/<id>/CustomHeightmapList.xml
+```
+
+The complete package contains 69 map directories. The raster is signed little-endian 16-bit metres, ordered north-to-south and west-to-east; `metadata.json` records dimensions, sampling bounds, and SHA-256. The XML starts from the zero-origin template expected by the installer. Synthetic `smalltests` terrain is only for installer tests.
+
+## Input sources and licensing
+
+| Input | Role | Source and license |
+| --- | --- | --- |
+| Compiled client terrain | Actual heights and geometry, including `levels/<id>.bin` | The user's War Thunder installation. Game assets belong to Gaijin Entertainment and are not distributed by this repository. |
+| Datamine level configuration | Map bounds, water level, and related `.blkx` settings | [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) at commit `f7952e4291e9fd7b6fe38e84020dddef925c3457`; repo data, no license file was found at that revision. Used locally as conversion input and not distributed. |
+| Geographic references | Reviewed WGS84 estimates placed in `GeoReferences.json` | [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE) commit `c26c0069558079df6597a7bc147cb91391509f89`; MIT. See `georeference/UPSTREAM-NOTICE.md` and `georeference/UPSTREAM-MIT.txt`. |
+| Python modules | Decoding and raster work | NumPy 2.3.5 is BSD-3-Clause; pyooz 0.0.8 is GPL-3.0-or-later; zstandard 0.25.0 is BSD-3-Clause; Pillow 12.3.0 is HPND. |
+
+This project's code is AGPL-3.0. Each dependency and upstream source keeps its own license. Datamine supplies configuration only; the actual terrain heights must come from the installed game's compiled level files. Renaming a `.bin` or `.blkx` file to `.data` does not convert it.
+
+The GPL-3.0-or-later `ooz` decoder shipped by pyooz handles the Oodle-compressed terrain streams. A fresh pip environment needs no proprietary Oodle DLL or key.
+
+## Install converted terrain
+
+Run from the repository root after a successful `-WithTerrain` build:
+
+```powershell
+.\dist\wrpl-acmi\tools\terrain\Install-All-Terrains.cmd -SourceRoot .\dist\wrpl-acmi\terrain -AtlasReferences .\dist\wrpl-acmi\tools\terrain\AtlasReferences.json
+```
+
+The installer validates all map metadata and hashes, rewrites the XML placement, and reuses the raster bytes. Its default destination is Tacview's `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`. `-Destination` can select another install location. The default geographic layout uses 14 reviewed estimates and 55 Atlas fallbacks; old ACMI coordinate compatibility is not guaranteed.
+
+Use `-AtlasOnly` with exporter `-terrain-layout atlas` only when deliberately choosing technical coordinates. For hand placement, use installer `-LegacyCoordinates -Latitude ... -Longitude ... -CenterX ... -CenterZ ...` with exporter `-terrain-layout legacy -lat ... -lon ... -center-x ... -center-z ...` and a registration you have checked. Full details are in [TERRAIN_GEOGRAPHIC.md](../../docs/TERRAIN_GEOGRAPHIC.md), [terrain-atlas.md](../../docs/terrain-atlas.md), and [coverage](georeference/coverage.json).
+
+Restart Tacview after installation and re-export old WRPL files with the current exporter.
+
+## Export
+
+From the repository root:
+
+```powershell
+.\dist\wrpl-acmi\run.bat -in "C:\Replays\replay.wrpl" -out "C:\Replays\replay.acmi"
+.\dist\wrpl-acmi\run.bat -in "C:\Replays\server-session" -out "C:\Replays\server-session.acmi"
+```
+
+`run.bat` keeps its working directory inside the package so `data/ecshashes.json` and packaged defaults are found. The exporter reads a client `.wrpl` or one match's server shard directory. It writes Tacview ACMI 2.1; it does not extract or install terrain by itself.
+
+## Installer checks
+
+These tests use synthetic fixtures and do not read game assets:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-install-all-terrains.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\geographic\New-Fixture.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\geographic\test-install-geographic-terrains.ps1
 ```
-
-Upstream geographic evidence: WT-MAP-ANALYZE commit c26c0069558079df6597a7bc147cb91391509f89.
-Coordinate fit is estimated, not replay GPS; altitude remains game height. Attribution is in georeference/.

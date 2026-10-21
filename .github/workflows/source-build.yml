@@ -1,0 +1,46 @@
+name: Source build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Install converter dependencies
+        run: python -m pip install -r tools/terrain/converter/requirements.txt
+      - name: Test replay exporter
+        shell: pwsh
+        run: |
+          $env:CGO_ENABLED = '0'
+          go test ./cmd/acmi ./cmd/acmi-atlas ./cmd/acmi-mapid ./internal/terrainmap ./wrpl/...
+      - name: Test terrain decoders with synthetic input
+        working-directory: tools/terrain/converter
+        run: python -m unittest discover -s tests
+      - name: Test terrain installers
+        shell: powershell
+        run: |
+          & ./tools/terrain/smalltests/test-install-all-terrains.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./tools/terrain/smalltests/geographic/New-Fixture.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./tools/terrain/smalltests/geographic/test-install-geographic-terrains.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build runtime package without local game assets
+        shell: pwsh
+        run: ./build.ps1
+      - name: Upload runtime package
+        uses: actions/upload-artifact@v4
+        with:
+          name: wrpl-acmi-windows-amd64
+          path: dist/wrpl-acmi/

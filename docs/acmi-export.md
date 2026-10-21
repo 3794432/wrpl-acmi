@@ -2,9 +2,10 @@
 
 本页对应当前 `dev` 的 `cmd/acmi`。地形定位见 [地理地形](TERRAIN_GEOGRAPHIC.md)，Atlas 与 legacy 的对照见 [terrain-atlas.md](terrain-atlas.md)。
 
-`cmd/acmi` 只转换回放，不提取地形。地图高程须从本机游戏 `levels/*.bin` 经另行转换后安装；
-War-Thunder-Datamine 仅提供配置参数。当前 Git 仓库尚未包含完整高程转换工具，不能仅克隆 Datamine
-就执行地形安装。详见[输入来源与安装前提](../tools/terrain/README.md#input-sources--输入来源)。
+`cmd/acmi` 只转换回放，不提取或安装地形。仓库中的地形转换器读取本机游戏 `levels/*.bin` 的实际高度与几何，
+再从固定提交 `f7952e4291e9fd7b6fe38e84020dddef925c3457` 的 War-Thunder-Datamine 取得地图边界、水位等配置；
+只有 Datamine 不能生成地形包。完整的从零构建、安装和导出命令见 [项目说明](../README.zh-CN.md)，
+输入作用与许可见[地形工具说明](../tools/terrain/README.zh-CN.md#输入来源与许可)。
 
 ## 输入
 
@@ -18,9 +19,9 @@ War-Thunder-Datamine 仅提供配置参数。当前 Git 仓库尚未包含完整
 ## 命令与输出
 
 ```
-.\wrpl-acmi.exe -in "replay.wrpl" -out "replay.acmi"
-.\wrpl-acmi.exe -in ".\server-replays\session-id"
-.\wrpl-acmi.exe -out "replay.acmi" "replay.wrpl"
+.\wrpl-acmi.exe -in "C:\Replays\replay.wrpl" -out "C:\Replays\replay.acmi"
+.\wrpl-acmi.exe -in "C:\Replays\server-session" -out "C:\Replays\server-session.acmi"
+.\wrpl-acmi.exe -out "C:\Replays\replay.acmi" "C:\Replays\replay.wrpl"
 ```
 
 参数要放在位置参数之前，或统一使用 `-in`。不能同时提供 `-in` 和位置参数，也不能给多个位置参数。
@@ -74,11 +75,17 @@ War-Thunder-Datamine 仅提供配置参数。当前 Git 仓库尚未包含完整
 
 当前版本不保证旧 ACMI 的绝对坐标兼容；旧文件应从 WRPL 重新导出。`-terrain-layout atlas` 与安装器的 `-AtlasOnly` 配对，属于显式技术摆放；`-terrain-layout legacy` 才允许人工经纬度和中心点。详见 [地理地形](TERRAIN_GEOGRAPHIC.md) 与 [Atlas / legacy](terrain-atlas.md)。
 
-地图 `.data` 不纳入 Git，源码仓库不附带地形资产。安装工具入口为 `tools/terrain/Install-All-Terrains.cmd`，目录与选项见 [tools/terrain/README.md](../tools/terrain/README.md)。
+地图 `.data` 不纳入 Git，软件仓库不附带地形资产。`-WithTerrain` 构建会把 69 张地图放进 `dist/wrpl-acmi/terrain`；安装工具入口为 `dist/wrpl-acmi/tools/terrain/Install-All-Terrains.cmd`，目录与选项见 [地形工具说明](../tools/terrain/README.zh-CN.md)。
 
 ## 构建与检查
 
-`go.mod` 要求 Go 1.25.6。无界面导出器可关闭 CGO 构建：
+完整运行包（可带转换地形）从仓库根目录构建；详细依赖和全新克隆命令见[项目说明](../README.zh-CN.md)：
+
+```powershell
+.\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
+```
+
+只检查无界面导出器时，需要 Go 1.25.6 或更高版本（`go.mod` 当前声明 1.25.6），可用关闭 CGO 的单程序构建：
 
 ```
 $env:CGO_ENABLED = "0"

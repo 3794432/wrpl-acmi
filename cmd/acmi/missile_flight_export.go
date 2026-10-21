@@ -11,7 +11,7 @@ import (
 // Preserve native horizontal coordinates for Tacview's trajectory calculations.
 // Unknown body attitude is omitted instead of being asserted to be zero.
 func acmiMissilePositionValue(s acmiSample) string {
-	lat, lon := localToLatLon(s.x, s.z, *centerX, *centerZ, *lat0, *lon0)
+	lat, lon := terrainPosition(s.x, s.z)
 	return fmt.Sprintf("%.7f|%.7f|%.2f|%.3f|%.3f", lon, lat, *alt0+s.y, s.x, s.z)
 }
 

@@ -3,6 +3,7 @@ package packetecs2
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"unsafe"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/danet"
@@ -291,45 +292,64 @@ func ObjectParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error)
 	return n, nil
 }
 
-// this function is a critical case of I want to do it right or not at all
-// if you where to go look at the TransformSerializer in my cpp parser (which can properly turn this into a TMatrix)
-// its FUCKEDFUCKEDFUCKEDFUCKED so I dont feel like doing that
-// currently this is just basically a copy of my python reader without any of the data saving
 func TransformParser(r *danet.BitReader, ctx *PacketECSParser) (ret any, err error) {
+	if r == nil {
+		return nil, fmt.Errorf("transform parser received a nil bit reader")
+	}
 	isOrthoUni, err := ReadBool(r, ctx)
 	if err != nil {
 		return nil, err
 	}
 	if isOrthoUni {
-		r.IgnoreBits(62)
-		// _, err := r.ReadBits(62)
-		// if err != nil {
-		// 	return nil, err
-		// }
+		// The quaternion remains opaque until its quantized rotation is decoded.
+		// Read it rather than advancing the offset so truncated input is rejected.
+		var quantizedQuat [8]byte
+		if _, err := r.ReadBitsInto(62, quantizedQuat[:]); err != nil {
+			return nil, fmt.Errorf("reading transform quaternion at bit offset %d: %w", r.BitOffset, err)
+		}
 		hasScale, err := ReadBool(r, ctx)
 		if err != nil {
 			return nil, err
 		}
 		if hasScale {
-			r.IgnoreBits(4 * 8)
-			// _, err = r.ReadBits(4 * 8)
-			// if err != nil {
-			// 	return nil, err
-			// }
+			var rawScale [4]byte
+			if _, err := r.ReadBytesInto(len(rawScale), rawScale[:]); err != nil {
+				return nil, fmt.Errorf("reading transform scale at bit offset %d: %w", r.BitOffset, err)
+			}
+			scale := math.Float32frombits(binary.LittleEndian.Uint32(rawScale[:]))
+			if math.IsNaN(float64(scale)) || math.IsInf(float64(scale), 0) {
+				return nil, fmt.Errorf("transform scale is not finite at bit offset %d", r.BitOffset-32)
+			}
 		}
 	} else {
-		r.IgnoreBits(4 * 9 * 8)
-		// _, err = r.ReadBits(4 * 9 * 8)
-		// if err != nil {
-		// 	return nil, err
-		// }
+		var basis [9 * 4]byte
+		if _, err := r.ReadBytesInto(len(basis), basis[:]); err != nil {
+			return nil, fmt.Errorf("reading transform basis at bit offset %d: %w", r.BitOffset, err)
+		}
+		for i := 0; i < 9; i++ {
+			value := math.Float32frombits(binary.LittleEndian.Uint32(basis[i*4 : i*4+4]))
+			if math.IsNaN(float64(value)) || math.IsInf(float64(value), 0) {
+				return nil, fmt.Errorf("transform basis element %d is not finite at bit offset %d", i, r.BitOffset-len(basis)*8+i*32)
+			}
+		}
 	}
-	r.IgnoreBits(4 * 3 * 8)
-	// _, err = r.ReadBits(4 * 3 * 8)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	var n TMatrix // empty matrix :(
+	var rawPosition [3 * 4]byte
+	if _, err := r.ReadBytesInto(len(rawPosition), rawPosition[:]); err != nil {
+		return nil, fmt.Errorf("reading transform position at bit offset %d: %w", r.BitOffset, err)
+	}
+	var n TMatrix
+	n.V4 = Point3{
+		X: math.Float32frombits(binary.LittleEndian.Uint32(rawPosition[0:4])),
+		Y: math.Float32frombits(binary.LittleEndian.Uint32(rawPosition[4:8])),
+		Z: math.Float32frombits(binary.LittleEndian.Uint32(rawPosition[8:12])),
+	}
+	if math.IsNaN(float64(n.V4.X)) || math.IsInf(float64(n.V4.X), 0) ||
+		math.IsNaN(float64(n.V4.Y)) || math.IsInf(float64(n.V4.Y), 0) ||
+		math.IsNaN(float64(n.V4.Z)) || math.IsInf(float64(n.V4.Z), 0) {
+		return nil, fmt.Errorf("transform position is not finite at bit offset %d", r.BitOffset-len(rawPosition)*8)
+	}
+	// V1..V3 remain zero because the rotation is deliberately undecoded.
+	// V4 is the serializer's unquantized float32 translation.
 	return n, nil
 }
 

@@ -1,93 +1,91 @@
-# Headless ACMI 导出
+# wrpl-acmi ACMI 导出指南
 
-`cmd/acmi` 从 `.wrpl` 生成 Tacview 可读的文本 ACMI 2.1 文件。当前输出包括飞机、地面目标、导弹、导弹运动学估计、INS 标签、干扰措施及释放事件。它用于检查和可视化回放记录，不等同于游戏内部物理遥测。
+本页对应当前 `dev` 的 `cmd/acmi`。地形定位见 [地理地形](TERRAIN_GEOGRAPHIC.md)，Atlas 与 legacy 的对照见 [terrain-atlas.md](terrain-atlas.md)。
 
-## 构建
+## 输入
 
-使用 Go 1.25.6，并在仓库根目录关闭 CGO 构建：
+- 客户端回放：单个 `.wrpl` 文件。
+- 服务器回放：同一场的分片目录。目录按分片头排序，文件名不需要手工改序；不要混入其他场次。服务器回放的单片文件不能直接作为输入。
+- 尾片缺失：默认 `-allow-incomplete=true`，导出已下载部分并写入不完整标记；设置 `-allow-incomplete=false` 可恢复严格拒绝。
+- 中间分片缺失、分片 0 缺失、重复分片、场次混杂或压缩数据损坏会报错。输入文件不会被改写。
 
-```powershell
-go version
-$env:CGO_ENABLED = "0"
-go build -o .\wrpl-acmi.exe .\cmd\acmi
+目录读取逐片打开和解压，不把所有原始分片同时装进内存；最终内存仍取决于整场轨迹规模。
+
+## 命令与输出
+
 ```
-
-POSIX shell 的等价命令是 `CGO_ENABLED=0 go build ./cmd/acmi`。这里保留现有 module 路径 `github.com/maxsupermanhd/wrpl-inspector/v3`；构建的包路径是 `./cmd/acmi`，无需改 module 名称。
-
-## 运行
-
-Windows Release 运行包解压后，可直接把 `.wrpl` 拖到包内的 `run.bat`。脚本以自身目录为工作目录，输出文件使用输入文件名并把扩展名改为 `.acmi`。也可显式指定输入与输出路径：
-
-```powershell
 .\wrpl-acmi.exe -in "replay.wrpl" -out "replay.acmi"
+.\wrpl-acmi.exe -in ".\server-replays\session-id"
+.\wrpl-acmi.exe -out "replay.acmi" "replay.wrpl"
 ```
 
-主要参数如下：
+参数要放在位置参数之前，或统一使用 `-in`。不能同时提供 `-in` 和位置参数，也不能给多个位置参数。
 
-| 参数 | 含义 | 默认值 |
-| --- | --- | --- |
-| `-in` | 输入 `.wrpl`；也可用一个位置参数给出 | 必填 |
-| `-out` | 输出 `.acmi` | 输入文件基本名加 `.acmi`，写入当前目录 |
-| `-terrain-layout` | `atlas` 自动匹配独立地图位置；`legacy` 使用人工参考 | `atlas` |
-| `-map-id` | 无法自动识别地图时显式指定已知地图 ID | 自动识别 |
-| `-lat` / `-lon` | 仅 legacy 模式的人工参考纬度/经度 | `0` |
-| `-missile-models` | `embedded`、`off` 或型号表 JSON 路径 | `embedded` |
-| `-missile-guidance` | `embedded`、`off` 或制导表 JSON 路径 | `embedded` |
+未指定 `-out` 时，输出写到当前工作目录：普通文件使用 `<输入基本名>.acmi`；完整分片目录使用 `<目录名>.acmi`；尾片缺失的分片目录使用 `<目录名>.partial.acmi`。把单个文件或单个目录拖到 EXE 也遵循这条规则；一次只拖一个输入。runtime 包中的 `run.bat` 会先切换到包目录。
 
-默认读取 `data/ecshashes.json`。该 ECS 组件哈希表提供实体类名、对象资料、导弹构造和位置解析所需的映射；缺少它时，导出器只能降级运行，实体类名、队伍、飞行员关联、导弹构造及型号信息可能缺失或无法识别。不要把 EXE 单独移出运行包后误删 `data`。`-lat`/`-lon` 只是人工参考点，不应被当作地图真实定位。
+默认读取 `data/ecshashes.json`，也会尝试 EXE 同目录下的相对路径。该表缺失时导出器会降级，实体类名、型号、队伍、飞行员和导弹构造信息可能缺失。
 
-## 轨迹与姿态
+## 主要参数
 
-飞机从飞行模型包读取时间、局部 XYZ 位置和姿态。ACMI 的 `T` 值为 `经度|纬度|高度|滚转|俯仰|航向`；游戏模型的滚转符号取反以匹配 Tacview，航向顺时针补偿 90°，再归一化到 `[0°, 360°)`。这里的航向是可显示的兼容值，不应再按原飞行模型轴解释。
+| 参数 | 含义 |
+| --- | --- |
+| `-in` | 输入 `.wrpl` 或服务器分片目录 |
+| `-out` | 输出 `.acmi` 路径 |
+| `-allow-incomplete` | 是否允许尾片缺失；默认 `true` |
+| `-terrain-layout` | `geographic`（默认）、`atlas` 或 `legacy` |
+| `-map-id` | 无法自动识别地图时显式指定地图 ID |
+| `-lat` / `-lon` / `-center-x` / `-center-z` | 仅 `legacy` 布局可用的人工参考参数 |
+| `-alt` | 高度偏移，单位米 |
+| `-missile-models` | `embedded`、`off` 或型号表 JSON 路径 |
+| `-missile-guidance` | `embedded`、`off` 或制导表 JSON 路径 |
+| `-countermeasures` | 是否导出干扰物；默认 `true` |
+| `-radar-locks` | 是否写雷达目标指定；默认 `true` |
+| `-ground-units` | 是否导出地面位置同步；默认 `true` |
+| `-ground-models` | 是否按显式回放证据识别地面型号与派生范围；默认 `true` |
+| `-list` | 可选，写出轨迹与当前名称的 CSV 清单 |
+| `-names` | 可选，用 JSON 覆盖 `air:`、`ground:`、`missile:` 等显示名 |
 
-机型名称从 ECS 的 `unit__className` 映射到内置显示名，无法映射时保留回放类名或回退为 `air:<UID>`。玩家信息单独写入 `Pilot`，`Name`/`CallSign` 用于机型或轨迹名称。队伍写入 `Coalition`/`Color`。地面目标使用精确移动轨迹，并按相邻轨迹点计算航向；它没有飞机的飞行模型姿态。
+默认布局下传入 `-lat`、`-lon`、`-center-x` 或 `-center-z` 会报错，避免把手动参考点悄悄叠加到地理布局。需要人工参考时显式使用 `-terrain-layout legacy`。
 
-## 导弹位置与运动学
+## 导出内容
 
-样例回放含 104 枚导弹和 11,152 个去重位置样本。`T` 写成 `经度|纬度|高度|U|V`，其中 `U`/`V` 保留原始局部平面坐标。导弹没有可信的回放机体姿态，因此不写滚转、俯仰、航向三列，也不会填成零。Tacview 可根据轨迹推测显示朝向，但该朝向不是回放记录的真实弹体姿态。
+飞机使用回放位置和飞行模型姿态；地面单位使用精确位置轨迹，并按显式 UID、型号和队伍证据关联。可确认的击毁事件会结束对应对象，缺失证据时不猜测销毁时刻。
 
-`WT_` 前缀是自定义扩展字段，主要包含：
+导弹轨迹保留实际位置。速度、加速度、转向率和 G 值来自位置序列的时间差分，不是游戏内部逐帧物理量。首帧可带型号候选和静态制导类型，INS 秒数显示为 `INS x.xx s`。
 
-- `VelocityX/Y/Z`、`Speed`、`GroundSpeed`、`ClimbRate`：局部 XYZ 速度、三维速度、水平速度和升降率，单位为 m/s。
-- `Course`、`FlightPath`：航迹方向和爬升角，单位为度。
-- `AccelerationX/Y/Z`、`Acceleration`、`TurnRate`：局部加速度、模长和水平转向率。
-- `KinematicG`、`NormalAccelerationG`：位置差分得到的运动学估计，以标准重力归一化。
-- `WT_FlightSource=PositionDifferenceLocalFit`、`WT_FlightValid=1/0`：来源与当前样本是否有有效估计。
+炸弹有真实同步时导出轨迹；只有构造记录时导出带 `Release position only` 的投放位置标记。干扰物优先使用真实同步位置，否则生成明确标记的估算短轨迹。雷达目标指定写入原生 `LockedTarget` 系列属性。
 
-这些数值来自实际同步位置的时间差分；记录足够时使用短窗口局部二次拟合，记录不足时退回三点或两点估计。它们不是游戏内部逐帧物理量，也不是真实机体载荷：`KinematicG`/`NormalAccelerationG` 没有计入推力、完整气动力、质量、燃料或机体轴姿态。`Speed` 也不是真空速 TAS，不能据此推断马赫数、发动机状态、战斗部载荷、目标锁定或制导模式。
+各部分的证据和开关说明：
 
-无效时刻、非有限坐标、异常跳跃和过长采样间隔不会用于相应差分；缺失估计会清空上一帧的 `WT_` 数值。没有可靠记录时，不补造连续姿态或速度。
+- [服务器分片](ACMI_SERVER_REPLAYS.md)
+- [地面单位](ACMI_GROUND_UNITS.md)
+- [炸弹](ACMI_BOMBS.md)
+- [雷达锁定](ACMI_RADAR_LOCKS.md)
+- [防空静态范围](ACMI_AIR_DEFENCE_RANGES.md)
+- [导弹型号](ACMI_MODELS.md) · [制导证据](ACMI_GUIDANCE.md)
 
-## 导弹型号与制导
+## 地图与地形
 
-型号优先使用当前回放的击杀报告关联；新增精确内部名别名可识别红外/半主动雷达型号，并在同回放内按 weapon ID 和模板传播。额外 ID 表只在完整 WRPL SHA256 匹配时启用。已有击杀型号优先，高置信表项可补具体名称，中低置信只写候选，手工 `-names` 仍具有最高显示优先级。
+默认 `-terrain-layout geographic`。地图目录共 69 张：14 张使用审核后的 WGS84 估算位置，55 张回退 Atlas 技术坐标；高程 XML 与所有轨迹共用同一份 GeoReferences 变换。已知定位错误的 Sinai、Grand Canyon、Israel 不采用上游坐标。
 
-研究样例的型号覆盖从 74/104 提高到 81/104；另一个独立回放因 AAM-3 的击杀内部名新增识别，从 10/106 提高到 11/106。数字 ID 不作为全局型号编号。详情和关闭开关见 [ACMI_MODELS.md](ACMI_MODELS.md)，证据见 [evidence/missile-models.md](evidence/missile-models.md)。
+当前版本不保证旧 ACMI 的绝对坐标兼容；旧文件应从 WRPL 重新导出。`-terrain-layout atlas` 与安装器的 `-AtlasOnly` 配对，属于显式技术摆放；`-terrain-layout legacy` 才允许人工经纬度和中心点。详见 [地理地形](TERRAIN_GEOGRAPHIC.md) 与 [Atlas / legacy](terrain-atlas.md)。
 
-每枚导弹首帧还写 `WT_GuidanceType`、来源和置信度，有歧义时写 IR/SARH 候选。研究样例为 90 ARH、2 IR、12 Unknown；普通 `rocket` 模板不能直接当作 IR。静态制导类型不代表该帧已锁定或进入末制导。见 [ACMI_GUIDANCE.md](ACMI_GUIDANCE.md)。
+地图 `.data` 不纳入 Git，源码仓库不附带地形资产。安装工具入口为 `tools/terrain/Install-All-Terrains.cmd`，目录与选项见 [tools/terrain/README.md](../tools/terrain/README.md)。
 
-## INS 标签
+## 构建与检查
 
-标准 `Label` 当前只显示 `INS x.xx s`；没有有效计时器时显示 `INS -- s`，并在自定义字段中清空上一帧的值。原始 `seekerValue` float 本身已是秒值，**不要再除以 48**。48 Hz 只描述推断出的源量化频率，不把秒值换成 tick。
+`go.mod` 要求 Go 1.25.6。无界面导出器可关闭 CGO 构建：
 
-`WT_SeekerTimer` 保留原始 float，`WT_InertialTime` 直接使用秒值，`WT_InertialTimeValid` 表示当前样本是否有效。`WT_InertialTimeSource=SeekerTimer48HzInferred` 明示语义是推断：游戏内部命名和受控实验尚未确证它，因此不能把它解释成累计惯导时间、导引头开机状态或系统开机时长。原值回零就显示 0，不从上一段累计；缺值也不按回放时间自动续走。
+```
+$env:CGO_ENABLED = "0"
+go build -o .\wrpl-acmi.exe ./cmd/acmi
+go test ./cmd/acmi ./wrpl/...
+```
 
-## 干扰措施
+POSIX shell 等价命令为 `CGO_ENABLED=0 go build -o wrpl-acmi ./cmd/acmi`。历史发布物可能落后于当前 `dev`；需要最新行为时从当前分支构建。
 
-默认导出干扰措施对象和释放事件。存在真实 WeaponSync 位置样本时直接使用；没有位置样本时，从释放点和载机速度出发，以统一阻力、重力模型估算轨迹，采样间隔 0.2 秒，最长 3 秒。这些样本明确标记为估算：名称通常为 `Countermeasure (estimated)`，并带 `WT_Estimated=1`、`WT_TrajectorySource=EstimatedFromRelease` 等属性。
+## 证据边界
 
-当前样例得到 1,022 条最长 3 秒的估算干扰物轨迹，共 16,166 个合成位置点，同时保留 1,022 条释放事件。统一模型不能区分热焰弹与箔条，也不能用于判断真实干扰效果。`-countermeasures=false` 可完全关闭干扰物对象和事件。
+导弹运动学是同步位置的时间差分估计，未计入完整气动力、推力、质量、燃料或机体轴姿态。静态型号和制导类型不代表某一帧已锁定或进入末制导。无位置记录的干扰物与仅有构造记录的炸弹均已明确标注为估算或位置标记。防空范围是固定资料版本的静态参考，不是回放中的雷达状态或实时可击杀包线。
 
-## 地图坐标与 Atlas
-
-默认 `-terrain-layout atlas` 从关卡识别地图，使用内嵌的 68 图固定参考表，并写 `MapId=WarThunder.Atlas1.<id>`。每张地图的区域互不重叠，避免全部地形叠在 0/0 附近。它们是技术摆放坐标，不是游戏地图的真实地球位置。
-
-`T` 已含绝对经纬度/高度，三个全局 Reference 均为 0，已修复旧版非零参考点被重复叠加的问题。人工 `-lat/-lon/-center-x/-center-z` 必须配合 `-terrain-layout legacy`。安装器、旧 ACMI 工具及限制见 [terrain-atlas.md](terrain-atlas.md)。
-
-被可靠击毁事件匹配的飞机会在其生命期结束后输出 ACMI 删除记录；无法确认的单位不根据短暂数据缺失猜测删除。
-
-## 资源边界与发布包
-
-源码对 ECS 分配数量、字符串和压缩块大小、组件嵌套深度、击杀记录数量及坏包做了显式限界，目的是降低畸形回放造成的分配放大和 OOM 风险。普通 `wrpl-acmi.exe` **没有内置强制 Job Object 2 GiB 硬限制**；Release 验证若另用 2 GiB 包装器，那是验证环境的限额，不代表每个用户运行时都有同样硬限。大回放仍可能占用较多内存或因限界报错退出。
-
-历史 `acmi-2026.10.20` 发布包含三个 zip：source（源码与构建文件）、runtime（Windows 可执行文件、`run.bat`、`data/ecshashes.json`、说明和许可证）以及 examples（ACMI 回放与 CSV 数据样例）。本地发布目录保留已解压的 runtime 及其 EXE，便于直接运行和复核。
+Tacview 中的实际渲染效果未作为本次验收项。

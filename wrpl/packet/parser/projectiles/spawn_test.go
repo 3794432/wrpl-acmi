@@ -17,6 +17,8 @@ const (
 	testClassNameType ecsp.ComponentHash     = 0x0a0b0c0d
 	testRocketData    ecsp.DataComponentHash = 0xfe2545cd
 	testRocketType    ecsp.ComponentHash     = 0x2c8f7a75
+	testBombData      ecsp.DataComponentHash = 0xcd1063e9
+	testBombType      ecsp.ComponentHash     = 0x3178acb1
 	testVelocityData  ecsp.DataComponentHash = 0x33333333
 	testVelocityType  ecsp.ComponentHash     = 0x44444444
 	testUnknownData   ecsp.DataComponentHash = 0x11111111
@@ -76,6 +78,9 @@ func TestMetadataParserProjectileOwnerAndExactDestruction(t *testing.T) {
 	if projectile.Name != "Missile" {
 		t.Fatalf("name=%q, want Missile", projectile.Name)
 	}
+	if projectile.Kind != "" {
+		t.Fatalf("rocket kind=%q, want empty", projectile.Kind)
+	}
 	if projectile.Template != "rocket" || projectile.WeaponRef != weaponRef || projectile.LeadingULEB != 0x2a {
 		t.Fatalf("template=%q leading=%#x weaponRef=%#x", projectile.Template, projectile.LeadingULEB, projectile.WeaponRef)
 	}
@@ -97,6 +102,76 @@ func TestMetadataParserProjectileOwnerAndExactDestruction(t *testing.T) {
 	}
 	if !projectile.HasEnd || projectile.EndTime != 1500 {
 		t.Fatalf("end=%v time=%d, want true/1500", projectile.HasEnd, projectile.EndTime)
+	}
+}
+
+func TestMetadataParserTracksBombWithSharedRocketLayout(t *testing.T) {
+	p := NewMetadataParser(spawnTestMaps(), false)
+	ownerEID := encodeSpawnEID(0x421, 2)
+	bombEID := encodeSpawnEID(0x522, 3)
+
+	owner := spawnTemplateBlock(40, "aircraft", []spawnWireComponent{
+		{id: 600, dataHash: testUIDData, typeHash: testUIDType},
+	}, false, []spawnWireValue{{local: 0, data: spawnU32(777)}})
+	bomb := spawnTemplateBlock(41, "bomb", []spawnWireComponent{
+		{id: 601, dataHash: testBombData, typeHash: testBombType},
+	}, false, []spawnWireValue{{local: 0, data: spawnRocketValue(ownerEID, 0, 0x00080021, 101.5, -202.25, 303.125)}})
+
+	data := spawnConstructionPacket(
+		spawnFrame(ownerEID, owner),
+		spawnFrame(bombEID, bomb),
+	)
+	if _, err := p.Parse(&packet.Packet{CurrentTime: 6000, PacketPayload: data}); err != nil {
+		t.Fatalf("Parse bomb construction: %v", err)
+	}
+	projectile := p.Tracks[bombEID]
+	if projectile == nil {
+		t.Fatalf("bomb %#x was not tracked", bombEID)
+	}
+	if projectile.Kind != "bomb" || projectile.Name != "Bomb" {
+		t.Fatalf("kind=%q name=%q, want bomb/Bomb", projectile.Kind, projectile.Name)
+	}
+	if projectile.Template != "bomb" || projectile.OwnerEID != ownerEID || projectile.WeaponRef != 0x00080021 {
+		t.Fatalf("template=%q owner=%#x weaponRef=%#x", projectile.Template, projectile.OwnerEID, projectile.WeaponRef)
+	}
+	if !projectile.HasParent || projectile.ParentUID != 777 {
+		t.Fatalf("parent uid=%d present=%v", projectile.ParentUID, projectile.HasParent)
+	}
+	if projectile.SpawnSample != (Sample{Time: 6000, X: 101.5, Y: -202.25, Z: 303.125}) {
+		t.Fatalf("bomb spawn sample=%+v", projectile.SpawnSample)
+	}
+	if !projectile.HasTemplateComponent("bomb_component") || projectile.HasTemplateComponent("rocket_component") {
+		t.Fatalf("bomb template components=%#v", projectile.TemplateComponents)
+	}
+
+	if _, err := p.Parse(&packet.Packet{CurrentTime: 6500, PacketPayload: spawnDestructionPacket(bombEID)}); err != nil {
+		t.Fatalf("Parse bomb destruction: %v", err)
+	}
+	if !projectile.HasEnd || projectile.EndTime != 6500 {
+		t.Fatalf("bomb end=%v time=%d", projectile.HasEnd, projectile.EndTime)
+	}
+}
+
+func TestMetadataParserFindsBombAfterParsedPrefixComponent(t *testing.T) {
+	p := NewMetadataParser(spawnTestMaps(), false)
+	eid := encodeSpawnEID(0x523, 1)
+	bomb := spawnTemplateBlock(42, "bomb", []spawnWireComponent{
+		{id: 602, dataHash: testUIDData, typeHash: testUIDType},
+		{id: 603, dataHash: testBombData, typeHash: testBombType},
+	}, false, []spawnWireValue{
+		{local: 0, data: spawnU32(1234)},
+		{local: 1, data: spawnRocketValue(1, 2, 3, 7, 8, 9)},
+	})
+
+	if _, err := p.Parse(&packet.Packet{CurrentTime: 6600, PacketPayload: spawnConstructionPacket(spawnFrame(eid, bomb))}); err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	projectile := p.Tracks[eid]
+	if projectile == nil || projectile.Kind != "bomb" || projectile.Name != "Bomb" {
+		t.Fatalf("bomb after uid prefix was not decoded: %+v", projectile)
+	}
+	if projectile.SpawnSample.X != 7 || projectile.SpawnSample.Y != 8 || projectile.SpawnSample.Z != 9 {
+		t.Fatalf("bomb position=%+v", projectile.SpawnSample)
 	}
 }
 
@@ -226,7 +301,9 @@ func TestMetadataParserRetainsReconstructedSameEID(t *testing.T) {
 func TestMetadataParserCandidatesAndFiniteCoordinates(t *testing.T) {
 	p := NewMetadataParser(spawnTestMaps(), false)
 	valid := spawnRocketValue(1, 2, 3, 4, 5, 6)
-	bomb := spawnTemplateBlock(20, "bomb", []spawnWireComponent{
+	// A template named "bomb" does not prove that its Rocket body is a Bomb
+	// component; only the component definition does.
+	nameOnlyBomb := spawnTemplateBlock(20, "bomb", []spawnWireComponent{
 		{id: 300, dataHash: testRocketData, typeHash: testRocketType},
 	}, false, []spawnWireValue{{local: 0, data: valid}})
 	invalid := append([]byte(nil), valid...)
@@ -234,16 +311,36 @@ func TestMetadataParserCandidatesAndFiniteCoordinates(t *testing.T) {
 	nanRocket := spawnTemplateBlock(21, "rocket", []spawnWireComponent{
 		{id: 301, dataHash: testRocketData, typeHash: testRocketType},
 	}, false, []spawnWireValue{{local: 0, data: invalid}})
+	nanBomb := spawnTemplateBlock(22, "bomb", []spawnWireComponent{
+		{id: 302, dataHash: testBombData, typeHash: testBombType},
+	}, false, []spawnWireValue{{local: 0, data: invalid}})
 
 	data := spawnConstructionPacket(
-		spawnFrame(encodeSpawnEID(0x901, 1), bomb),
+		spawnFrame(encodeSpawnEID(0x901, 1), nameOnlyBomb),
 		spawnFrame(encodeSpawnEID(0x902, 1), nanRocket),
+		spawnFrame(encodeSpawnEID(0x903, 1), nanBomb),
 	)
 	if _, err := p.Parse(&packet.Packet{CurrentTime: 3000, PacketPayload: data}); err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
 	if len(p.Tracks) != 0 {
-		t.Fatalf("tracks=%d, want no bomb or non-finite rocket", len(p.Tracks))
+		t.Fatalf("tracks=%d, want no guessed or non-finite construction", len(p.Tracks))
+	}
+}
+
+func TestMetadataParserRejectsTruncatedBombConstruction(t *testing.T) {
+	p := NewMetadataParser(spawnTestMaps(), false)
+	eid := encodeSpawnEID(0x904, 1)
+	value := spawnRocketValue(1, 2, 3, 4, 5, 6)
+	bomb := spawnTemplateBlock(23, "bomb", []spawnWireComponent{
+		{id: 303, dataHash: testBombData, typeHash: testBombType},
+	}, false, []spawnWireValue{{local: 0, data: value[:5]}})
+
+	if _, err := p.Parse(&packet.Packet{CurrentTime: 3100, PacketPayload: spawnConstructionPacket(spawnFrame(eid, bomb))}); err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(p.Tracks) != 0 || len(p.History) != 0 {
+		t.Fatalf("truncated bomb was retained: tracks=%+v history=%+v", p.Tracks, p.History)
 	}
 }
 
@@ -285,6 +382,7 @@ func spawnTestMaps() ecsp.ComponentHashMaps {
 			uint32(testUIDType):       "Int32",
 			uint32(testClassNameType): "String",
 			uint32(testRocketType):    "Rocket",
+			uint32(testBombType):      "Bomb",
 			uint32(testVelocityType):  "Point3",
 			uint32(testUnknownType):   "Unsupported",
 		},
@@ -292,6 +390,7 @@ func spawnTestMaps() ecsp.ComponentHashMaps {
 			uint32(testUIDData):       {Name: "uid", ComponentHash: uint32(testUIDType)},
 			uint32(testClassNameData): {Name: "unit__className", ComponentHash: uint32(testClassNameType)},
 			uint32(testRocketData):    {Name: "rocket_component", ComponentHash: uint32(testRocketType)},
+			uint32(testBombData):      {Name: "bomb_component", ComponentHash: uint32(testBombType)},
 			uint32(testVelocityData):  {Name: "proj__velocity", ComponentHash: uint32(testVelocityType)},
 			uint32(testUnknownData):   {Name: "unsupported_value", ComponentHash: uint32(testUnknownType)},
 		},

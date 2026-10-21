@@ -1,0 +1,1199 @@
+{
+  "schema": 1,
+  "source_repository": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE",
+  "source_commit": "c26c0069558079df6597a7bc147cb91391509f89",
+  "checked_at_utc": "2026-10-21T04:47:05.229Z",
+  "supported_map_count": 69,
+  "enabled_count": 14,
+  "disabled_count": 55,
+  "installation": {
+    "layout": "geographic",
+    "output_directory": "WarThunderMaps",
+    "one_xml_per_map": true,
+    "enabled_map_format": "Geo1",
+    "disabled_map_format": "Atlas1",
+    "legacy_acmi_layout": false
+  },
+  "transform": {
+    "orientation": "north-up, axis-aligned; upstream provides no rotated corners and both bbox and local grid use +X east / +Z north",
+    "authoritative": "equivalent_box_mapping",
+    "equivalent_box_mapping": "linearly map local [minX,minZ,maxX,maxZ] onto geo [minLon,minLat,maxLon,maxLat]; do not rotate",
+    "source_model": "WT-MAP-ANALYZE fitted a north-up DEM affine with a scalar world-unit scale; the shared configuration freezes its resulting local and geographic boxes. Per-map method text retains the upstream match method and computed k as provenance only.",
+    "constants": {
+      "meters_per_degree_lat": 110540,
+      "meters_per_degree_lon_equator": 111320
+    }
+  },
+  "eligibility": {
+    "enabled_requires": [
+      "confidence high or medium",
+      "no upstream advisory",
+      "no rejected/crosscheck contradiction",
+      "world bounds cover metadata.sample_bounds_m and catalog extent within 1 pixel",
+      "local-to-geo k agrees with upstream k within 10%"
+    ],
+    "overlap_policy": "Final installation only. Accepted Geo footprints are pairwise disjoint and disjoint from every final Atlas1 fallback footprint. Priority is high, then medium, then AtlasReferences order.",
+    "all_source_atlas_boxes_used": false,
+    "excess_candidate_removals_from_all_atlas_conservatism": 0
+  },
+  "checks": {
+    "accepted_geo_pair_checks": 91,
+    "accepted_geo_overlaps": 0,
+    "enabled_geo_vs_disabled_atlas_checks": 770,
+    "enabled_geo_vs_disabled_atlas_overlaps": 0,
+    "disabled_atlas_pair_checks": 1485,
+    "disabled_atlas_overlaps": 0,
+    "disabled_atlas_overlap_pairs": [],
+    "world_bound_pixel_tolerance": 1,
+    "sample_edge_exceeded_enabled_count": 0,
+    "rotation_support": "none; all accepted bounds require north-up axis-aligned placement"
+  },
+  "counts_by_reason": {
+    "enabled": 14,
+    "disabled-rejected": 17,
+    "disabled-low": 20,
+    "disabled-advisory": 12,
+    "disabled-candidate-check": 3,
+    "disabled-unresolved": 3
+  },
+  "enabled": [
+    {
+      "id": "air_afghan",
+      "confidence": "high",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 1.0758,
+      "calculated_k_m": 1.0758489238407634,
+      "k_mismatch_pct": 0.0045497596521704535,
+      "square_km": [
+        141.01367309131294,
+        141.01366720000013
+      ],
+      "uncertainty_km": 1,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        -141.20744744332075,
+        -60.59287135878415,
+        -138.7931421306262,
+        -59.40741812918401
+      ],
+      "local_bounds": [
+        -65536,
+        -65536,
+        65536,
+        65536
+      ],
+      "geo_bounds": [
+        68.545161,
+        34.208128,
+        70.088667,
+        35.483808
+      ]
+    },
+    {
+      "id": "air_africa_desert",
+      "confidence": "high",
+      "method": "dem-only",
+      "upstream_world_unit_m": 1.0066,
+      "calculated_k_m": 1.0065626869534232,
+      "k_mismatch_pct": 0.0037383275268883524,
+      "square_km": [
+        65.96611302435926,
+        65.96607147999981
+      ],
+      "uncertainty_km": 2,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        -100.59824032124469,
+        -60.296435679392076,
+        -99.40234389781902,
+        -59.70385380857608
+      ],
+      "local_bounds": [
+        -32768,
+        -32768,
+        32768,
+        32768
+      ],
+      "geo_bounds": [
+        28.129811,
+        30.090599,
+        28.816773,
+        30.687361
+      ]
+    },
+    {
+      "id": "air_denmark",
+      "confidence": "high",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 1.0042,
+      "calculated_k_m": 1.0042462932411507,
+      "k_mismatch_pct": 0.0046352934553597555,
+      "square_km": [
+        131.72503480804323,
+        131.72510154000003
+      ],
+      "uncertainty_km": 1,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        -21.207147245816206,
+        -60.59272661480007,
+        -18.792852754183794,
+        -59.40727338519993
+      ],
+      "local_bounds": [
+        -65536,
+        -65536,
+        65632.09,
+        65632.09
+      ],
+      "geo_bounds": [
+        10.022551,
+        55.166732,
+        12.125734,
+        56.358383
+      ]
+    },
+    {
+      "id": "air_pyrenees",
+      "confidence": "high",
+      "method": "dem-only",
+      "upstream_world_unit_m": 0.961,
+      "calculated_k_m": 0.960977441637209,
+      "k_mismatch_pct": 0.002347662347354336,
+      "square_km": [
+        125.95723558054475,
+        125.95723487999976
+      ],
+      "uncertainty_km": 1,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        19.15274102089488,
+        -45.59287135878415,
+        20.84684527843173,
+        -44.40741812918401
+      ],
+      "local_bounds": [
+        -65536,
+        -65536,
+        65536,
+        65536
+      ],
+      "geo_bounds": [
+        0.795437,
+        41.943979,
+        2.330458,
+        43.083451
+      ]
+    },
+    {
+      "id": "dover_strait",
+      "confidence": "high",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 0.973,
+      "calculated_k_m": 0.9730055639178841,
+      "k_mismatch_pct": 0.000578239367065531,
+      "square_km": [
+        127.627289556964,
+        127.62727319999954
+      ],
+      "uncertainty_km": 1,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        139.40724166708333,
+        -0.5927266148000724,
+        140.59275833291667,
+        0.5927266148000724
+      ],
+      "local_bounds": [
+        -65536,
+        -65536,
+        65632.09,
+        65632.09
+      ],
+      "geo_bounds": [
+        0.703367,
+        50.522286,
+        2.529079,
+        51.676866
+      ]
+    },
+    {
+      "id": "air_smolensk",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 1.0162,
+      "calculated_k_m": 1.0161526757204624,
+      "k_mismatch_pct": 0.004660763960978721,
+      "square_km": [
+        133.28680058528488,
+        133.28681065999996
+      ],
+      "uncertainty_km": 1,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        139.15295005584593,
+        -45.59272661480007,
+        140.84704994415407,
+        -44.40727338519993
+      ],
+      "local_bounds": [
+        -65536,
+        -65536,
+        65632.09,
+        65632.09
+      ],
+      "geo_bounds": [
+        31.031968,
+        54.19257,
+        33.108874,
+        55.398349
+      ]
+    },
+    {
+      "id": "berlin",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 1.0122,
+      "calculated_k_m": 1.0121569155564347,
+      "k_mismatch_pct": 0.004277796095333055,
+      "square_km": [
+        66.36514912782351,
+        66.36512088000002
+      ],
+      "uncertainty_km": 0.5,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        -20.296367272032015,
+        -0.2963633074000362,
+        -19.703632727967985,
+        0.2963633074000362
+      ],
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        12.908273,
+        52.096063,
+        13.885278,
+        52.696435
+      ]
+    },
+    {
+      "id": "bulge",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 0.9933,
+      "calculated_k_m": 0.9932695219984062,
+      "k_mismatch_pct": 0.0030920704654610184,
+      "square_km": [
+        65.1267103729545,
+        65.1267412599998
+      ],
+      "uncertainty_km": 0.5,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        59.703632727967985,
+        -0.2963633074000362,
+        60.296367272032015,
+        0.2963633074000362
+      ],
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        5.254094,
+        49.612551,
+        6.162502,
+        50.20172
+      ]
+    },
+    {
+      "id": "guam",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+lsq",
+      "upstream_world_unit_m": null,
+      "calculated_k_m": 0.9474175845445594,
+      "k_mismatch_pct": null,
+      "square_km": [
+        60.372476391890395,
+        63.86813282000002
+      ],
+      "uncertainty_km": null,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        -100.30724781785855,
+        14.703636692599964,
+        -99.69275218214145,
+        15.296363307400036
+      ],
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        144.536987,
+        13.147535,
+        145.094582,
+        13.725318
+      ]
+    },
+    {
+      "id": "korsun",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 1.0036,
+      "calculated_k_m": 1.0036400859694665,
+      "k_mismatch_pct": 0.004040515881001333,
+      "square_km": [
+        65.80673373209702,
+        65.8066728000001
+      ],
+      "uncertainty_km": 0.5,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        139.69275218214145,
+        14.703636692599964,
+        140.30724781785855,
+        15.296363307400036
+      ],
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        31.107132,
+        49.114316,
+        32.015732,
+        49.709636
+      ]
+    },
+    {
+      "id": "kursk",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+lsq",
+      "upstream_world_unit_m": null,
+      "calculated_k_m": 0.9522734532656182,
+      "k_mismatch_pct": null,
+      "square_km": [
+        59.41129144528929,
+        65.49660810000066
+      ],
+      "uncertainty_km": null,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        -100.34324049507073,
+        29.703636692599964,
+        -99.65675950492927,
+        30.296363307400036
+      ],
+      "local_bounds": [
+        -32768,
+        -32768,
+        32816.05,
+        32816.05
+      ],
+      "geo_bounds": [
+        35.94354,
+        50.639672,
+        36.790426,
+        51.232187
+      ]
+    },
+    {
+      "id": "sicily",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 0.9673,
+      "calculated_k_m": 0.9672542273520608,
+      "k_mismatch_pct": 0.004801885480430639,
+      "square_km": [
+        63.420909873293624,
+        63.42099851999986
+      ],
+      "uncertainty_km": 1.5,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        59.57869415399663,
+        44.703636692599964,
+        60.42130584600337,
+        45.296363307400036
+      ],
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        14.583399,
+        37.04862,
+        15.299936,
+        37.622358
+      ]
+    },
+    {
+      "id": "spain",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 1.0727,
+      "calculated_k_m": 1.0726634756774813,
+      "k_mismatch_pct": 0.003432199974277404,
+      "square_km": [
+        140.69925773475327,
+        140.69918090000007
+      ],
+      "uncertainty_km": 1.5,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        99.15295005584595,
+        44.40727338519993,
+        100.84704994415405,
+        45.59272661480007
+      ],
+      "local_bounds": [
+        -65536,
+        -65536,
+        65632.09,
+        65632.09
+      ],
+      "geo_bounds": [
+        -0.283831,
+        40.470124,
+        1.39359,
+        41.742959
+      ]
+    },
+    {
+      "id": "stalingrad",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "upstream_world_unit_m": 0.9081,
+      "calculated_k_m": 0.9081376866027083,
+      "k_mismatch_pct": 0.004156433048442863,
+      "square_km": [
+        59.54479527859336,
+        59.544802880000596
+      ],
+      "uncertainty_km": 1.5,
+      "sample_overflow_px": 0,
+      "catalog_overflow_px": 0,
+      "atlas_footprint": [
+        139.57869415399662,
+        44.703636692599964,
+        140.42130584600338,
+        45.296363307400036
+      ],
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        44.150279,
+        48.479305,
+        44.961512,
+        49.017977
+      ]
+    }
+  ],
+  "disabled": [
+    {
+      "id": "air_archipelago",
+      "confidence": "unresolved",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.76 vs dem 0.17, ratio 4.4x)",
+      "atlas_footprint": [
+        -62.46019149566673,
+        -61.1857427175683,
+        -57.54100976971202,
+        -58.81483625836801
+      ]
+    },
+    {
+      "id": "air_equatorial_island",
+      "confidence": "unresolved",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream rejected: texture water mask IoU 0.25 < 0.35",
+      "atlas_footprint": [
+        18.792852754183794,
+        -60.59272661480007,
+        21.207147245816206,
+        -59.40727338519993
+      ]
+    },
+    {
+      "id": "air_falklands",
+      "confidence": "low",
+      "method": "ocr+gazetteer+lsq",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        58.79255255667926,
+        -60.59287135878415,
+        61.206857869373806,
+        -59.40741812918401
+      ]
+    },
+    {
+      "id": "air_grand_canyon",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: the level's terrain is not a faithful copy of the real Grand Canyon (local NCC 0.55 vs 0.69 for a false global peak); bbox points at east Greenland and is wrong",
+      "atlas_footprint": [
+        98.79255255667925,
+        -60.59287135878415,
+        101.2068578693738,
+        -59.40741812918401
+      ]
+    },
+    {
+      "id": "air_israel",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: crosscheck contradiction: 23 place labels are 3953.2 km from the upstream bbox centre",
+      "atlas_footprint": [
+        138.7928527541838,
+        -60.59272661480007,
+        141.2071472458162,
+        -59.40727338519993
+      ]
+    },
+    {
+      "id": "air_kamchatka",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        -140.84704994415407,
+        -45.59272661480007,
+        -139.15295005584593,
+        -44.40727338519993
+      ]
+    },
+    {
+      "id": "air_ladoga",
+      "confidence": "unresolved",
+      "method": "unknown",
+      "reason": "Atlas fallback: upstream confidence unresolved; no coordinate suitable for geographic terrain",
+      "atlas_footprint": [
+        -100.42130584600338,
+        -45.296363307400036,
+        -99.57869415399662,
+        -44.703636692599964
+      ]
+    },
+    {
+      "id": "air_mysterious_valley",
+      "confidence": "low",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -60.84704994415405,
+        -45.59272661480007,
+        -59.15295005584595,
+        -44.40727338519993
+      ]
+    },
+    {
+      "id": "air_normandy",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream rejected: land/water swapped (map 0.57 vs dem 0.00)",
+      "atlas_footprint": [
+        -20.421305846003374,
+        -45.296363307400036,
+        -19.578694153996626,
+        -44.703636692599964
+      ]
+    },
+    {
+      "id": "air_race_phiphi_islands",
+      "confidence": "unresolved",
+      "method": "unknown",
+      "reason": "Atlas fallback: upstream confidence unresolved; no coordinate suitable for geographic terrain",
+      "atlas_footprint": [
+        59.93010328440891,
+        -45.049381825512825,
+        60.06989671559109,
+        -44.950618174487175
+      ]
+    },
+    {
+      "id": "air_skyscraper_city",
+      "confidence": "unresolved",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream rejected: texture shows water (22%) but the DEM window is dry land",
+      "atlas_footprint": [
+        99.57869415399662,
+        -45.296363307400036,
+        100.42130584600338,
+        -44.703636692599964
+      ]
+    },
+    {
+      "id": "air_south_eastern_city",
+      "confidence": "low",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -140.68874032411765,
+        -30.59287135878415,
+        -139.31159597486874,
+        -29.407418129184006
+      ]
+    },
+    {
+      "id": "air_southeastern_cliffs",
+      "confidence": "low",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -100.68857114617592,
+        -30.59272661480007,
+        -99.31142885382408,
+        -29.40727338519993
+      ]
+    },
+    {
+      "id": "air_vietnam",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        -60.68857114617592,
+        -30.59272661480007,
+        -59.31142885382408,
+        -29.40727338519993
+      ]
+    },
+    {
+      "id": "arcade_africa_canyon",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        -20.171361881669434,
+        -30.148181653700018,
+        -19.828638118330566,
+        -29.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_africa_seashore",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream rejected: texture shows water (44%) but the DEM window is dry land",
+      "atlas_footprint": [
+        19.871545654623073,
+        -30.09261353356251,
+        20.08562751711077,
+        -29.90738646643749
+      ]
+    },
+    {
+      "id": "arcade_alps",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        59.828638118330566,
+        -30.148181653700018,
+        60.171361881669434,
+        -29.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_asia_4roads",
+      "confidence": "low",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        99.82863811833057,
+        -30.148181653700018,
+        100.17136188166943,
+        -29.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_canyon_snow",
+      "confidence": "low",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        139.82863811833056,
+        -30.148181653700018,
+        140.17136188166944,
+        -29.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_ireland",
+      "confidence": "low",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -140.1535158340173,
+        -15.148181653700018,
+        -139.8464841659827,
+        -14.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_mediterranean",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        -100.1535158340173,
+        -15.148181653700018,
+        -99.8464841659827,
+        -14.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_norway_fjords",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream rejected: texture shows water (30%) but the DEM window is dry land",
+      "atlas_footprint": [
+        -60.153515834017306,
+        -15.148181653700018,
+        -59.846484165982694,
+        -14.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_norway_green",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        -20.153515834017302,
+        -15.148181653700018,
+        -19.846484165982698,
+        -14.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_norway_plain",
+      "confidence": "low",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        19.846484165982698,
+        -15.148181653700018,
+        20.153515834017302,
+        -14.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_phiphi_crater",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.24 vs dem 1.00, ratio 4.2x)",
+      "atlas_footprint": [
+        59.846484165982694,
+        -15.148181653700018,
+        60.153515834017306,
+        -14.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_phiphi_crater_rocks",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        99.8464841659827,
+        -15.148181653700018,
+        100.1535158340173,
+        -14.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_rice_terraces",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        139.8464841659827,
+        -15.148181653700018,
+        140.1535158340173,
+        -14.851818346299982
+      ]
+    },
+    {
+      "id": "arcade_snow_rocks",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        -140.14818214927487,
+        -0.1481816537000181,
+        -139.85181785072513,
+        0.1481816537000181
+      ]
+    },
+    {
+      "id": "arcade_tabletop_mountain",
+      "confidence": "unresolved",
+      "method": "dem-only",
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.08 vs dem 1.00, ratio 12.7x)",
+      "atlas_footprint": [
+        -100.14818214927487,
+        -0.1481816537000181,
+        -99.85181785072513,
+        0.1481816537000181
+      ]
+    },
+    {
+      "id": "arcade_zhang_park",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream rejected: land/water swapped (map 0.99 vs dem 0.00)",
+      "atlas_footprint": [
+        -60.148182149274874,
+        -0.1481816537000181,
+        -59.851817850725126,
+        0.1481816537000181
+      ]
+    },
+    {
+      "id": "britain",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: terrain sample exceeds contour world bounds by 219.767 px; catalog terrain extent exceeds contour world bounds by 219.892 px",
+      "atlas_footprint": [
+        19.831298513678774,
+        -0.3038899945721006,
+        20.424033465618212,
+        0.2888366202279718
+      ]
+    },
+    {
+      "id": "caribbean_islands",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.01 vs dem 0.05, ratio 4.6x)",
+      "atlas_footprint": [
+        99.70363272796799,
+        -0.2963633074000362,
+        100.29636727203201,
+        0.2963633074000362
+      ]
+    },
+    {
+      "id": "guadalcanal",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream rejected: texture shows water (56%) but the DEM window is dry land",
+      "atlas_footprint": [
+        -140.30724781785855,
+        14.703636692599964,
+        -139.69275218214145,
+        15.296363307400036
+      ]
+    },
+    {
+      "id": "honolulu",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.33 vs dem 0.08, ratio 4.4x)",
+      "atlas_footprint": [
+        -60.61537442631043,
+        14.407273385199927,
+        -59.38462557368957,
+        15.592726614800073
+      ]
+    },
+    {
+      "id": "hurtgen",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -20.30724781785856,
+        14.703636692599964,
+        -19.69275218214144,
+        15.296363307400036
+      ]
+    },
+    {
+      "id": "iwo_jima",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.10 vs dem 0.32, ratio 3.2x)",
+      "atlas_footprint": [
+        19.38462557368957,
+        14.407273385199927,
+        20.61537442631043,
+        15.592726614800073
+      ]
+    },
+    {
+      "id": "khalkhin_gol",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        59.69275218214144,
+        14.703636692599964,
+        60.30724781785856,
+        15.296363307400036
+      ]
+    },
+    {
+      "id": "korea",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        99.69275218214145,
+        14.703636692599964,
+        100.30724781785855,
+        15.296363307400036
+      ]
+    },
+    {
+      "id": "krymsk",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -140.34324049507072,
+        29.703636692599964,
+        -139.65675950492928,
+        30.296363307400036
+      ]
+    },
+    {
+      "id": "malta",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.19 vs dem 1.00, ratio 5.3x); texture shows water (91%) but the DEM window is dry land",
+      "atlas_footprint": [
+        -60.343240495070724,
+        29.703636692599964,
+        -59.656759504929276,
+        30.296363307400036
+      ]
+    },
+    {
+      "id": "midway",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -20.68857114617592,
+        29.40727338519993,
+        -19.31142885382408,
+        30.59272661480007
+      ]
+    },
+    {
+      "id": "moscow",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        19.31142885382408,
+        29.40727338519993,
+        20.68857114617592,
+        30.59272661480007
+      ]
+    },
+    {
+      "id": "mozdok",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        59.656759504929276,
+        29.703636692599964,
+        60.343240495070724,
+        30.296363307400036
+      ]
+    },
+    {
+      "id": "mozdok_winter",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        99.65675950492927,
+        29.703636692599964,
+        100.34324049507073,
+        30.296363307400036
+      ]
+    },
+    {
+      "id": "norway",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        138.96710124342562,
+        29.40727338519993,
+        140.6885291088654,
+        30.59272661480007
+      ]
+    },
+    {
+      "id": "peleliu",
+      "confidence": "low",
+      "method": "ocr+gazetteer+lsq",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -140.84704994415407,
+        44.40727338519993,
+        -139.15295005584593,
+        45.59272661480007
+      ]
+    },
+    {
+      "id": "port_moresby",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream rejected: texture shows water (30%) but the DEM window is dry land",
+      "atlas_footprint": [
+        -100.42130584600338,
+        44.703636692599964,
+        -99.57869415399662,
+        45.296363307400036
+      ]
+    },
+    {
+      "id": "ruhr",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -60.42130584600337,
+        44.703636692599964,
+        -59.57869415399663,
+        45.296363307400036
+      ]
+    },
+    {
+      "id": "saipan",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence unresolved; no coordinate suitable for geographic terrain",
+      "atlas_footprint": [
+        -20.84704994415405,
+        44.40727338519993,
+        -19.15295005584595,
+        45.59272661480007
+      ]
+    },
+    {
+      "id": "sector_montmedy",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        19.578694153996626,
+        44.703636692599964,
+        20.421305846003374,
+        45.296363307400036
+      ]
+    },
+    {
+      "id": "stalingrad_w",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: Geo footprint overlaps higher-priority accepted stalingrad",
+      "atlas_footprint": [
+        -140.59809294219275,
+        59.703636692599964,
+        -139.40190705780725,
+        60.296363307400036
+      ]
+    },
+    {
+      "id": "tunisia",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "atlas_footprint": [
+        -100.59809294219275,
+        59.703636692599964,
+        -99.40190705780725,
+        60.296363307400036
+      ]
+    },
+    {
+      "id": "wake_island",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.11 vs dem 1.00, ratio 8.8x); texture shows water (99%) but the DEM window is dry land",
+      "atlas_footprint": [
+        -60.59809294219275,
+        59.703636692599964,
+        -59.40190705780725,
+        60.296363307400036
+      ]
+    },
+    {
+      "id": "zhengzhou",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "atlas_footprint": [
+        -20.598092942192753,
+        59.703636692599964,
+        -19.401907057807247,
+        60.296363307400036
+      ]
+    },
+    {
+      "id": "avg_egypt_sinai",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "reason": "Atlas fallback: upstream rejected: land/water swapped (map 1.00 vs dem 0.00)",
+      "atlas_footprint": [
+        18.792852754183794,
+        59.40727338519993,
+        21.207147245816206,
+        60.59272661480007
+      ]
+    }
+  ],
+  "special_checks": {
+    "air_grand_canyon": {
+      "accepted": false,
+      "result": "disabled; upstream Advisory identifies a false Greenland match"
+    },
+    "air_israel": {
+      "accepted": false,
+      "result": "disabled; place labels in Lebanon contradict a Portugal bbox"
+    },
+    "avg_egypt_sinai": {
+      "accepted": false,
+      "result": "disabled; upstream terrain solve rejected for land/water swap"
+    }
+  }
+}

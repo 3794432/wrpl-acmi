@@ -77,13 +77,18 @@ type PacketECSParser struct {
 	// definition/reference and construction component count. Opt in explicitly
 	// so older replays keep their original wire layout.
 	ConstructionReservedByte bool
-	TemplateDefs             map[TemplateIdx]*Template
-	ComponentDefs            map[ComponentIdx]*HashedComponent
-	Messages                 []ParsedPacketECS
-	InternedStrings          map[uint16]string
-	Mgr                      EntityManager
-	Maps                     ComponentHashMaps
-	componentParseDepth      int
+	// AllowMissingPODDataComponents lets a caller tolerate server data
+	// components that are absent from ecshashes when their component type is a
+	// fixed-width POD. The bytes are retained as OpaqueDataComponent. This is
+	// opt-in because the default model should keep rejecting unknown layouts.
+	AllowMissingPODDataComponents bool
+	TemplateDefs                  map[TemplateIdx]*Template
+	ComponentDefs                 map[ComponentIdx]*HashedComponent
+	Messages                      []ParsedPacketECS
+	InternedStrings               map[uint16]string
+	Mgr                           EntityManager
+	Maps                          ComponentHashMaps
+	componentParseDepth           int
 }
 
 func NewPacketECSParser(m ComponentHashMaps) *PacketECSParser { // I removed parsers because that data will not change across iterations, so no need to reload it
@@ -252,7 +257,10 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 		}
 		name, good := p.Maps.GetDataCompName(c.Name)
 		if !good {
-			return nil, fmt.Errorf("unkown Datatype of name %d", c.Name)
+			if !p.AllowMissingPODDataComponents {
+				return nil, fmt.Errorf("unkown Datatype of name %d", c.Name)
+			}
+			name = fmt.Sprintf("missing_data_0x%08x", uint32(c.Name))
 		}
 		Payload.Data.AddComponent(component, name)
 	}
@@ -372,6 +380,21 @@ func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParse
 		serializer, _ = mgr.Maps.ComponentParsers[comp_type]
 	}
 	if serializer == nil {
+		if mgr.AllowMissingPODDataComponents && datacomp_type != 0 {
+			_, knownDataComponent := mgr.Maps.DataComponents[uint32(datacomp_type)]
+			if !knownDataComponent {
+				if size, ok := fixedPODComponentBits(mgr.Maps, comp_type); ok {
+					raw, readErr := r.ReadBits(size)
+					if readErr != nil {
+						return nil, readErr
+					}
+					return &Component{
+						Value: OpaqueDataComponent{Type: comp_type, Raw: append([]byte(nil), raw...)},
+						Type:  comp_type,
+					}, nil
+				}
+			}
+		}
 		return nil, fmt.Errorf("serializer not found for datacomponent %s<%d>", mgr.Maps.DataComponents[uint32(datacomp_type)].Name, comp_type)
 	}
 	raw, err := serializer.Parse(r, mgr)

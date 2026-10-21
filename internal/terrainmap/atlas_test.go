@@ -40,8 +40,8 @@ func TestAtlasReferencesAreFrozenInCatalogOrder(t *testing.T) {
 		}
 		index++
 	}
-	if index != 68 {
-		t.Fatalf("atlas contains %d entries, want 68", index)
+	if index != 69 {
+		t.Fatalf("atlas contains %d entries, want 69", index)
 	}
 }
 
@@ -52,6 +52,9 @@ func TestAtlasReferenceAndMapIDFormats(t *testing.T) {
 	}
 	if lat, lon, ok := AtlasReference(FormatAtlasMapID("zhengzhou")); !ok || lat != 60 || lon != -20 {
 		t.Fatalf("prefixed AtlasReference = (%v,%v,%v)", lat, lon, ok)
+	}
+	if lat, lon, ok := AtlasReference("avg_egypt_sinai"); !ok || lat != 60 || lon != 20 {
+		t.Fatalf("avg_egypt_sinai AtlasReference = (%v,%v,%v), want (60,20,true)", lat, lon, ok)
 	}
 	if _, _, ok := AtlasReference("not_a_map"); ok {
 		t.Fatal("unknown atlas reference was accepted")

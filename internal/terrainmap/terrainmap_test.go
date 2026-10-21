@@ -2,10 +2,10 @@ package terrainmap
 
 import "testing"
 
-func TestCatalogHas68ActualMaps(t *testing.T) {
+func TestCatalogHas69ActualMaps(t *testing.T) {
 	ids := KnownIDs()
-	if len(ids) != 68 {
-		t.Fatalf("catalog size = %d, want 68", len(ids))
+	if len(ids) != 69 {
+		t.Fatalf("catalog size = %d, want 69", len(ids))
 	}
 	if !IsKnown("air_grand_canyon") || IsKnown("air_race_africa_canyon") {
 		t.Fatal("catalog must include air_grand_canyon and exclude the missing race map")
@@ -22,6 +22,13 @@ func TestResolveRealReplayFields(t *testing.T) {
 	}
 	if _, err := ResolveReplay("levels/not_a_map.bin", "missions/x;location/also_not_a_map"); err == nil {
 		t.Fatal("unknown header fields must not be guessed")
+	}
+}
+
+func TestResolveAvgEgyptSinaiHeaderWithoutMap(t *testing.T) {
+	id, err := ResolveReplay("levels/avg_egypt_sinai.bin", "")
+	if err != nil || id != "avg_egypt_sinai" {
+		t.Fatalf("resolved header level %q as %q, %v", "levels/avg_egypt_sinai.bin", id, err)
 	}
 }
 

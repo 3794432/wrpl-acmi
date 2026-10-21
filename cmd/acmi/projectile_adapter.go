@@ -76,7 +76,7 @@ func decodedMissileTracks(metadata *projectiles.MetadataParser, positions *proje
 }
 
 func guidedProjectile(source *projectiles.Projectile) bool {
-	if source == nil {
+	if source == nil || isBombProjectile(source) {
 		return false
 	}
 	// Aircraft trigger IDs from the weapon reference: 8 = AAM, 7 = AGM.

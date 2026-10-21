@@ -277,7 +277,7 @@ func TestCompressedPositionUsesExtendedHeader(t *testing.T) {
 	}
 }
 
-func TestOnlyRocketClassIsRetained(t *testing.T) {
+func TestWeaponSyncSeparatesRocketsBombsAndTorpedoes(t *testing.T) {
 	const (
 		rocketEntity  = uint32(0x001f8c01)
 		bombEntity    = uint32(0x0024c401)
@@ -306,17 +306,114 @@ func TestOnlyRocketClassIsRetained(t *testing.T) {
 	body.writeTail(true)
 
 	p, added, err := parseOne(t, directPositionPacket(rocketPositions, body), 10)
-	if err != nil || added != 1 {
+	if err != nil {
 		t.Fatalf("Parse() added=%d err=%v", added, err)
+	}
+	if added != 2 {
+		t.Fatalf("retained samples=%d, want rocket+bomb", added)
 	}
 	if len(p.Samples) != 1 || len(p.Samples[uint64(rocketEntity)]) != 1 {
 		t.Fatalf("rocket samples=%+v", p.Samples)
 	}
+	if len(p.BombSamples) != 1 || len(p.BombSamples[uint64(bombEntity)]) != 1 {
+		t.Fatalf("bomb samples=%+v", p.BombSamples)
+	}
+	if got := p.BombSamples[uint64(bombEntity)][0]; got.Time != 10 || got.X != 4 || got.Y != 5 || got.Z != 6 || !got.FromSync {
+		t.Fatalf("bomb sample = %+v", got)
+	}
+	if motion := p.BombSamples[uint64(bombEntity)][0].RawMotion; motion == nil || !motion.Complete || motion.HasGuidance {
+		t.Fatalf("bomb tail evidence = %+v", motion)
+	}
 	if _, ok := p.Samples[uint64(bombEntity)]; ok {
-		t.Fatalf("bomb class was retained: %+v", p.Samples)
+		t.Fatalf("bomb class polluted rocket samples: %+v", p.Samples)
+	}
+	if _, ok := p.BombSamples[uint64(rocketEntity)]; ok {
+		t.Fatalf("rocket class polluted bomb samples: %+v", p.BombSamples)
 	}
 	if _, ok := p.Samples[uint64(torpedoEntity)]; ok {
 		t.Fatalf("torpedo class was retained: %+v", p.Samples)
+	}
+	if _, ok := p.BombSamples[uint64(torpedoEntity)]; ok {
+		t.Fatalf("torpedo class was retained as a bomb: %+v", p.BombSamples)
+	}
+}
+
+func TestMalformedBombDoesNotRetainOrPolluteRocketSamples(t *testing.T) {
+	const (
+		rocketEntity = uint32(0x001f8c01)
+		bombEntity   = uint32(0x0024c401)
+	)
+	body := &testBitWriter{}
+	body.writeByte(1)
+	body.writeRawRecord(rocketEntity, true, 1, 2, 3)
+	body.writeByte(1)
+	body.writeBit(false)
+	body.writeBit(false) // tail promised but the record ends after position
+	body.writeRawEntity(bombEntity)
+	body.writeBit(true)
+	body.writeFloat32(4)
+	body.writeFloat32(5)
+	body.writeFloat32(6)
+
+	p, added, err := parseOne(t, directPositionPacket(rocketPositions, body), 10)
+	if err == nil || added != 1 {
+		t.Fatalf("malformed bomb added=%d err=%v", added, err)
+	}
+	if len(p.Samples) != 1 || len(p.Samples[uint64(rocketEntity)]) != 1 {
+		t.Fatalf("rocket retained before bomb error = %+v", p.Samples)
+	}
+	if len(p.BombSamples) != 0 {
+		t.Fatalf("malformed bomb was retained: %+v", p.BombSamples)
+	}
+}
+
+func TestInvalidBombPositionIsSkippedWithoutPollutingRockets(t *testing.T) {
+	const (
+		rocketEntity = uint32(0x001f8c01)
+		bombEntity   = uint32(0x0024c401)
+	)
+	body := &testBitWriter{}
+	body.writeByte(1)
+	body.writeRawRecord(rocketEntity, true, 1, 2, 3)
+	body.writeByte(1)
+	body.writeRawRecord(bombEntity, true, float32(math.Inf(1)), 5, 6)
+	body.writeByte(0)
+
+	p, added, err := parseOne(t, directPositionPacket(rocketPositions, body), 10)
+	if err != nil || added != 1 {
+		t.Fatalf("invalid bomb added=%d err=%v", added, err)
+	}
+	if len(p.Samples) != 1 || len(p.Samples[uint64(rocketEntity)]) != 1 {
+		t.Fatalf("rocket samples = %+v", p.Samples)
+	}
+	if len(p.BombSamples) != 0 {
+		t.Fatalf("non-finite bomb position was retained: %+v", p.BombSamples)
+	}
+}
+
+func TestZeroValuePositionParserInitializesBothSampleMaps(t *testing.T) {
+	const (
+		rocketEntity = uint32(0x001f8c01)
+		bombEntity   = uint32(0x0024c401)
+	)
+	body := &testBitWriter{}
+	body.writeByte(1)
+	body.writeRawRecord(rocketEntity, true, 1, 2, 3)
+	body.writeByte(1)
+	body.writeRawRecord(bombEntity, true, 4, 5, 6)
+	body.writeByte(0)
+	payload := directPositionPacket(rocketPositions, body)
+
+	p := &PositionParser{}
+	result, err := p.Parse(&packet.Packet{CurrentTime: 1, PacketPayload: payload})
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if result != 2 {
+		t.Fatalf("added=%v, want 2", result)
+	}
+	if len(p.Samples[uint64(rocketEntity)]) != 1 || len(p.BombSamples[uint64(bombEntity)]) != 1 {
+		t.Fatalf("zero-value parser samples=%+v bombs=%+v", p.Samples, p.BombSamples)
 	}
 }
 

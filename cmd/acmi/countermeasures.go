@@ -224,7 +224,7 @@ func decodedCountermeasures(metadata *projectiles.MetadataParser, positions *pro
 }
 
 func isCountermeasureProjectile(source *projectiles.Projectile) bool {
-	return source != nil && source.WeaponRef>>16 == countermeasureWeaponTrigger
+	return source != nil && !isBombProjectile(source) && source.WeaponRef>>16 == countermeasureWeaponTrigger
 }
 
 // nextConstructionSpawnTime returns the spawn tick immediately following one

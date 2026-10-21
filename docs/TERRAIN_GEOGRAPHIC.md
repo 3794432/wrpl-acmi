@@ -9,8 +9,12 @@
     Copy-Item tools/terrain/GeoReferences.json D:/converted-war-thunder-terrain/GeoReferences.json
     tools/terrain/Install-All-Terrains.cmd -SourceRoot "D:\converted-war-thunder-terrain" -AtlasReferences tools/terrain/AtlasReferences.json
 
-**SourceRoot** 必须已经包含 **69maps/*.data**、对应 metadata 与零点 XML。这些本地地形输入不在
-Git 中，不能写成仓库内相对链接。安装后完全退出并重启 Tacview，再用新版 **wrpl-acmi.exe** 或
+**SourceRoot** 必须已经包含全部 69 张地图的 `maps/<id>/<id>.data`、对应 metadata 与零点 XML。
+高程原始数据来自本机游戏 `levels/*.bin`；[War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine)
+只在此流程中提供地图边界、水位等配置，不能单独生成高程。当前 Git 仓库包含安装器，尚未发布完整的高程提取/
+转换工具链；上述命令只安装已有产物。SourceRoot 不能指向 Datamine 克隆目录或原始 `.bin` 目录。
+输入来源和完整目录要求见[地形工具说明](../tools/terrain/README.md#input-sources--输入来源)。
+这些本地地形输入不在 Git 中。安装后完全退出并重启 Tacview，再用新版 **wrpl-acmi.exe** 或
 **run.bat** 导出 WRPL。没有旧 ACMI 兼容保证；已有文件应重新导出。
 
 ## 同步规则

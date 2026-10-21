@@ -60,6 +60,11 @@ Install terrain with (the converted output must contain GeoReferences.json):
 
 Use `-AtlasOnly` with the same installer for the matching Atlas layout. Map `.data` files are not tracked in Git and terrain assets are not bundled; see the [terrain tool guide](tools/terrain/README.md) for installation and directory requirements.
 
+Terrain heights come from an installed War Thunder client's `levels/*.bin`, not from
+[War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine). That repository supplies level configuration such as map bounds and water level; it does not supply the compiled level geometry needed by this conversion. Geographic placement metadata is a separate input from WT-MAP-ANALYZE.
+
+**This repository currently includes the terrain installers, not the full terrain extraction/conversion toolchain.** Cloning Datamine or building `cmd/acmi` does not create a terrain package. `-SourceRoot` must point to an already converted package, not the Datamine checkout or the game's `levels` directory. The installer validates and installs `.data`, metadata and XML; it does not decode `.bin` files. See [input sources and the required package layout](tools/terrain/README.md#input-sources--输入来源).
+
 ## Documentation
 
 - [Current export guide](docs/acmi-export.md)

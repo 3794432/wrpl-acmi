@@ -60,6 +60,11 @@ POSIX shell 中等价于 `CGO_ENABLED=0 go build -o wrpl-acmi ./cmd/acmi`。历�
 
 Atlas 配套安装使用同一工具的 `-AtlasOnly`。地图 `.data` 不纳入 Git，仓库不附带地形资产；安装和目录要求见 [地形工具说明](tools/terrain/README.md)。
 
+高程来自本机已安装游戏的 `levels/*.bin`，并非来自
+[War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine)。该仓库提供地图边界、水位等关卡配置，不提供此转换所需的编译后关卡地形；经纬度定位元数据则另行参考 WT-MAP-ANALYZE。
+
+**当前仓库包含地形安装器，尚未包含完整的高程提取/转换工具链。** 克隆 Datamine 或构建 `cmd/acmi` 都不会生成地形包。`-SourceRoot` 必须指向已转换的产物，不能指向 Datamine 克隆目录或游戏 `levels` 目录。安装器只校验和安装 `.data`、metadata 与 XML，不负责解码 `.bin`。详见[输入来源与目录要求](tools/terrain/README.md#input-sources--输入来源)。
+
 ## 文档
 
 - [当前导出指南](docs/acmi-export.md)

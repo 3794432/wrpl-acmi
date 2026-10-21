@@ -2,6 +2,10 @@
 
 本页对应当前 `dev` 的 `cmd/acmi`。地形定位见 [地理地形](TERRAIN_GEOGRAPHIC.md)，Atlas 与 legacy 的对照见 [terrain-atlas.md](terrain-atlas.md)。
 
+`cmd/acmi` 只转换回放，不提取地形。地图高程须从本机游戏 `levels/*.bin` 经另行转换后安装；
+War-Thunder-Datamine 仅提供配置参数。当前 Git 仓库尚未包含完整高程转换工具，不能仅克隆 Datamine
+就执行地形安装。详见[输入来源与安装前提](../tools/terrain/README.md#input-sources--输入来源)。
+
 ## 输入
 
 - 客户端回放：单个 `.wrpl` 文件。

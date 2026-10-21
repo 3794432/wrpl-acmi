@@ -1,36 +1,45 @@
-# Atlas 地形与旧回放
+# Atlas 与 legacy 地形布局
 
-默认 Atlas V1 将 68 张已知地图放在固定、互不重叠的技术坐标。导出器的内嵌表 `internal/terrainmap/atlas_references.json` 与安装器的 `tools/terrain/AtlasReferences.json` 必须一致，不能单独改动。它们不表示真实地理位置。
+当前默认布局是 `-terrain-layout geographic`，不是 Atlas。地图目录共 69 张：14 张使用审核后的 WGS84 估算位置，55 张回退 Atlas 技术坐标。高程 XML 与飞机、导弹、炸弹、地面单位和干扰物共用同一份 GeoReferences。原理、筛选和回退原因见 [地理地形](TERRAIN_GEOGRAPHIC.md)。
 
-## 安装已有高程包
+## Atlas 技术布局
 
-本源码仓库不包含游戏地图资产或约 2.1 GiB 的 `.data` 文件。以下命令要求已经有完整的转换产物目录，其中 `maps/<id>/` 带高程 `.data`、metadata、result 和 XML 模板：
+Atlas 把地图放到固定、互不重叠的技术坐标，便于在没有可用地理定位时并排检查地图，不代表真实地球位置。它需要显式和当前默认模式配套：
 
-```powershell
-./tools/terrain/Install-All-Terrains.cmd -SourceRoot ./war-thunder-air-terrain -AtlasReferences ./tools/terrain/AtlasReferences.json
+```
+.\wrpl-acmi.exe -terrain-layout atlas -in "replay.wrpl" -out "replay-atlas.acmi"
+.\tools\terrain\Install-All-Terrains.cmd -SourceRoot "<地形转换产物目录>" -AtlasOnly
 ```
 
-安装器会先核对全部源文件、SHA256、尺寸和边界，更新 `%APPDATA%/Tacview/Data/Terrain/Custom/WarThunderMaps`，并复用相同数据。旧 XML 在更新前保存为 `.before-atlas.bak`，不会被作为额外 XML 加载。完成后完全退出并重启 Tacview 一次。安装后无需逐回放替换配置，也不依赖 Auto Terrain Switch 才能避免叠层。
+Atlas 的 `MapId` 使用 `WarThunder.Atlas1.<id>`。导出器与安装器都必须选择 Atlas；只改一侧会造成轨迹与地形不匹配。安装器的 `-AtlasOnly` 跳过地理覆盖层，保留 69 项固定技术摆放。
 
-默认安装 XML 使用 `WarThunder.Atlas1.<id>` 和 `Visible=true`。手动参考坐标只用于 `-LegacyCoordinates` 模式；导出器相应使用 `-terrain-layout legacy`，参数必须匹配。默认模式中传入人工参考参数会报错，避免静默配错。
+## 手工 legacy 布局
+
+`legacy` 是人工参考路径，仅用于已经自行配准地图的情况。以下数值只演示参数格式，坐标和中心点需要自行配准：
+
+```
+.\wrpl-acmi.exe -terrain-layout legacy -lat 30.0 -lon 31.0 -center-x 0 -center-z 0 -in "replay.wrpl"
+.\tools\terrain\Install-All-Terrains.cmd -SourceRoot "<地形转换产物目录>" -LegacyCoordinates -Latitude 30.0 -Longitude 31.0 -CenterX 0 -CenterZ 0
+```
+
+只有 `legacy` 接受 `-lat`、`-lon`、`-center-x`、`-center-z` 等人工参数；默认 `geographic` 和 `atlas` 下会自动拒绝这些覆盖参数。人工参考点、安装器参数和地形 XML 必须属于同一套配准，工具不会替用户证明这组坐标正确。
+
+## 安装地形
+
+默认地理布局使用：
+
+```
+.\tools\terrain\Install-All-Terrains.cmd -SourceRoot "<地形转换产物目录>"
+```
+
+转换产物根目录应带 `GeoReferences.json`、地图元数据和对应高程 `.data`。安装器核对配置、文件尺寸和哈希后更新 Tacview 的自定义地形目录；地图 `.data` 会复用，但不会从源码仓库自动下载。安装完成后完全退出并重启 Tacview。
+
+地图 `.data` 不纳入 Git，源码仓库不附带地形资产。安装器选项、目录结构和校验方法以 [tools/terrain/README.md](../tools/terrain/README.md) 为准。
 
 ## 旧 ACMI
 
-多数本导出器的旧文件使用 T6，未保存原始 U/V，建议用新版重新导出 WRPL。仅补 MapId 不会迁移轨迹位置。
+当前版本放弃旧 ACMI 的坐标兼容保证。旧的 Atlas 或人工参考文件不能假定能直接匹配新地形；应使用同一份 WRPL 和新版导出器重新生成 ACMI。旧 `acmi-mapid` / `acmi-atlas` 迁移工具属于历史路径，当前不作为兼容性承诺。
 
-```powershell
-go build -o ./acmi-mapid.exe ./cmd/acmi-mapid
-go build -o ./acmi-atlas.exe ./cmd/acmi-atlas
-./acmi-atlas.exe -in ./old-replays
-```
+## 来源与边界
 
-`acmi-mapid` 只补地图标识，适合旧布局；`acmi-atlas` 只转换本导出器且含原生 U/V 的文本 T5/T8 文件。迁移默认另存 `.atlas.acmi`，原文件不变，缺失 U/V 或压缩文件会报错。不要对 T6 文件猜测原始参考点。
-
-## 验证
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./tools/terrain/smalltests/test-install-all-terrains.ps1
-go test ./cmd/acmi ./cmd/acmi-mapid ./cmd/acmi-atlas ./internal/terrainmap
-```
-
-测试检查参考参数、68 个固定 ID、边界、安装备份和数据复用；它们不等同于在 Tacview 图形界面逐图加载验证。
+地理定位来自 [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE) 固定 commit `c26c0069558079df6597a7bc147cb91391509f89` 的估算结果，仍有不确定性；已知错误的 Sinai、Grand Canyon 和 Israel 定位不采用。地图与游戏资源归 Gaijin Entertainment 所有，本项目与其无隶属或背书关系。

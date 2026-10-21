@@ -16,6 +16,9 @@ const (
 	shellPositions          = 0xf0db
 	maxCoordinate           = 10_000_000.0
 	maxULEBBytes            = 10
+	// WeaponSync stores each class count in one byte. Keep the limit explicit
+	// so a future wider count cannot silently drive an unbounded allocation.
+	maxWeaponRecordsPerClass = 1<<8 - 1
 )
 
 // Sample is one projectile position emitted by a WeaponSync MPI message.
@@ -115,15 +118,21 @@ func (m RawMotion) MarshalJSON() ([]byte, error) {
 	return json.Marshal(out)
 }
 
-// PositionParser retains class-0 rocket samples by the exact 32-bit entity
-// value read from the WeaponSync record. Bomb and torpedo records are consumed
-// but not stored. Mapping the raw value to an ECS identity is separate.
+// PositionParser retains WeaponSync samples by the exact 32-bit entity value
+// read from each record. Samples contains class-0 rockets only; BombSamples
+// contains class-1 bombs only. Torpedo records are consumed but not stored.
+// Keeping bombs in a separate map prevents them from entering missile and
+// countermeasure joins. Mapping the raw value to an ECS identity is separate.
 type PositionParser struct {
-	Samples map[uint64][]Sample
+	Samples     map[uint64][]Sample
+	BombSamples map[uint64][]Sample
 }
 
 func NewPositionParser() *PositionParser {
-	return &PositionParser{Samples: make(map[uint64][]Sample)}
+	return &PositionParser{
+		Samples:     make(map[uint64][]Sample),
+		BombSamples: make(map[uint64][]Sample),
+	}
 }
 
 func (p *PositionParser) Name() string { return "projectile_positions" }
@@ -143,13 +152,18 @@ func (p *PositionParser) ParsesMatching() map[byte][][]packet.ParsingCondition {
 	}
 }
 
-// Parse consumes ShellsData/ShellsDataServerReplay (Rocket2/Rocket1). Only the
-// rocket class is retained. A point is stored only after its entire record,
-// including any optional tail, has decoded successfully. Earlier valid records
-// remain available on a later record error.
+// Parse consumes ShellsData/ShellsDataServerReplay (Rocket2/Rocket1). The
+// WeaponSync body has one byte-counted group for rockets (class 0) and one for
+// bombs (class 1), followed by torpedoes (class 2). A point is stored only
+// after its entire record, including any optional tail, has decoded
+// successfully. Earlier valid records remain available on a later record
+// error.
 func (p *PositionParser) Parse(pk *packet.Packet) (any, error) {
 	if p.Samples == nil {
 		p.Samples = make(map[uint64][]Sample)
+	}
+	if p.BombSamples == nil {
+		p.BombSamples = make(map[uint64][]Sample)
 	}
 	r := danet.NewBitReader(pk.PacketPayload)
 	recognized, err := consumeObjectHeader(r)
@@ -192,17 +206,28 @@ func (p *PositionParser) Parse(pk *packet.Packet) (any, error) {
 		if err != nil {
 			return added, fmt.Errorf("reading projectile class %d count: %w", class, err)
 		}
+		// The wire count is one byte, so each class contributes at most 255
+		// records per packet. No slice is sized from any larger untrusted value.
+		if int(count) > maxWeaponRecordsPerClass {
+			return added, fmt.Errorf("projectile class %d count %d exceeds limit %d", class, count, maxWeaponRecordsPerClass)
+		}
 		for i := 0; i < int(count); i++ {
 			sample, ok, err := parseWeapon(r, pk.CurrentTime)
 			if err != nil {
 				return added, fmt.Errorf("class %d record %d: %w", class, i, err)
 			}
-			if !ok || class != 0 {
+			if !ok {
 				continue
 			}
 			key := uint64(sample.entity)
-			p.Samples[key] = append(p.Samples[key], sample.Sample)
-			added++
+			switch class {
+			case 0:
+				p.Samples[key] = append(p.Samples[key], sample.Sample)
+				added++
+			case 1:
+				p.BombSamples[key] = append(p.BombSamples[key], sample.Sample)
+				added++
+			}
 		}
 	}
 	return added, nil

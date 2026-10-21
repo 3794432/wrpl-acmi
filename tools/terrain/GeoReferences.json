@@ -1,0 +1,672 @@
+{
+  "schema": 1,
+  "source": {
+    "repository": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE",
+    "commit": "c26c0069558079df6597a7bc147cb91391509f89"
+  },
+  "maps": {
+    "air_afghan": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "high",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=1.0758 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/air_afghan.json",
+      "local_bounds": [
+        -65536,
+        -65536,
+        65536,
+        65536
+      ],
+      "geo_bounds": [
+        68.545161,
+        34.208128,
+        70.088667,
+        35.483808
+      ],
+      "uncertainty_km": 1
+    },
+    "air_africa_desert": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "high",
+      "method": "dem-only; north-up axis-aligned equirectangular; k=1.0066 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/air_africa_desert.json",
+      "local_bounds": [
+        -32768,
+        -32768,
+        32768,
+        32768
+      ],
+      "geo_bounds": [
+        28.129811,
+        30.090599,
+        28.816773,
+        30.687361
+      ],
+      "uncertainty_km": 2
+    },
+    "air_archipelago": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.76 vs dem 0.17, ratio 4.4x)",
+      "confidence": "unresolved",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_denmark": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "high",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=1.0042 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/air_denmark.json",
+      "local_bounds": [
+        -65536,
+        -65536,
+        65632.09,
+        65632.09
+      ],
+      "geo_bounds": [
+        10.022551,
+        55.166732,
+        12.125734,
+        56.358383
+      ],
+      "uncertainty_km": 1
+    },
+    "air_equatorial_island": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: texture water mask IoU 0.25 < 0.35",
+      "confidence": "unresolved",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_falklands": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+lsq",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_grand_canyon": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: the level's terrain is not a faithful copy of the real Grand Canyon (local NCC 0.55 vs 0.69 for a false global peak); bbox points at east Greenland and is wrong",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_israel": {
+      "enabled": false,
+      "reason": "Atlas fallback: crosscheck contradiction: 23 place labels are 3953.2 km from the upstream bbox centre",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/air_israel.json"
+    },
+    "air_kamchatka": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_ladoga": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence unresolved; no coordinate suitable for geographic terrain",
+      "confidence": "unresolved",
+      "method": "unknown",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_mysterious_valley": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_normandy": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/water swapped (map 0.57 vs dem 0.00)",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_pyrenees": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "high",
+      "method": "dem-only; north-up axis-aligned equirectangular; k=0.9610 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/air_pyrenees.json",
+      "local_bounds": [
+        -65536,
+        -65536,
+        65536,
+        65536
+      ],
+      "geo_bounds": [
+        0.795437,
+        41.943979,
+        2.330458,
+        43.083451
+      ],
+      "uncertainty_km": 1
+    },
+    "air_race_phiphi_islands": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence unresolved; no coordinate suitable for geographic terrain",
+      "confidence": "unresolved",
+      "method": "unknown",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_skyscraper_city": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: texture shows water (22%) but the DEM window is dry land",
+      "confidence": "unresolved",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_smolensk": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=1.0162 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/air_smolensk.json",
+      "local_bounds": [
+        -65536,
+        -65536,
+        65632.09,
+        65632.09
+      ],
+      "geo_bounds": [
+        31.031968,
+        54.19257,
+        33.108874,
+        55.398349
+      ],
+      "uncertainty_km": 1
+    },
+    "air_south_eastern_city": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_southeastern_cliffs": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "air_vietnam": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_africa_canyon": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_africa_seashore": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: texture shows water (44%) but the DEM window is dry land",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_alps": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_asia_4roads": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_canyon_snow": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_ireland": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_mediterranean": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_norway_fjords": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: texture shows water (30%) but the DEM window is dry land",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_norway_green": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_norway_plain": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_phiphi_crater": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.24 vs dem 1.00, ratio 4.2x)",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_phiphi_crater_rocks": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_rice_terraces": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_snow_rocks": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_tabletop_mountain": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.08 vs dem 1.00, ratio 12.7x)",
+      "confidence": "unresolved",
+      "method": "dem-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "arcade_zhang_park": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/water swapped (map 0.99 vs dem 0.00)",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "berlin": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=1.0122 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/berlin.json",
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        12.908273,
+        52.096063,
+        13.885278,
+        52.696435
+      ],
+      "uncertainty_km": 0.5
+    },
+    "britain": {
+      "enabled": false,
+      "reason": "Atlas fallback: terrain sample exceeds contour world bounds by 219.767 px; catalog terrain extent exceeds contour world bounds by 219.892 px",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/britain.json"
+    },
+    "bulge": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=0.9933 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/bulge.json",
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        5.254094,
+        49.612551,
+        6.162502,
+        50.20172
+      ],
+      "uncertainty_km": 0.5
+    },
+    "caribbean_islands": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.01 vs dem 0.05, ratio 4.6x)",
+      "confidence": "unresolved",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "dover_strait": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "high",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=0.9730 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/dover_strait.json",
+      "local_bounds": [
+        -65536,
+        -65536,
+        65632.09,
+        65632.09
+      ],
+      "geo_bounds": [
+        0.703367,
+        50.522286,
+        2.529079,
+        51.676866
+      ],
+      "uncertainty_km": 1
+    },
+    "guadalcanal": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: texture shows water (56%) but the DEM window is dry land",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "guam": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+lsq; north-up axis-aligned equirectangular; k=0.9474 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/guam.json",
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        144.536987,
+        13.147535,
+        145.094582,
+        13.725318
+      ]
+    },
+    "honolulu": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.33 vs dem 0.08, ratio 4.4x)",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "hurtgen": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "iwo_jima": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.10 vs dem 0.32, ratio 3.2x)",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "khalkhin_gol": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "korea": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "korsun": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=1.0036 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/korsun.json",
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        31.107132,
+        49.114316,
+        32.015732,
+        49.709636
+      ],
+      "uncertainty_km": 0.5
+    },
+    "krymsk": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "kursk": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+lsq; north-up axis-aligned equirectangular; k=0.9523 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/kursk.json",
+      "local_bounds": [
+        -32768,
+        -32768,
+        32816.05,
+        32816.05
+      ],
+      "geo_bounds": [
+        35.94354,
+        50.639672,
+        36.790426,
+        51.232187
+      ]
+    },
+    "malta": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.19 vs dem 1.00, ratio 5.3x); texture shows water (91%) but the DEM window is dry land",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "midway": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "moscow": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "mozdok": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "mozdok_winter": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "norway": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "peleliu": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+lsq",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "port_moresby": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: texture shows water (30%) but the DEM window is dry land",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "ruhr": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "saipan": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence unresolved; no coordinate suitable for geographic terrain",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "sector_montmedy": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "sicily": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=0.9673 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/sicily.json",
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        14.583399,
+        37.04862,
+        15.299936,
+        37.622358
+      ],
+      "uncertainty_km": 1.5
+    },
+    "spain": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=1.0727 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/spain.json",
+      "local_bounds": [
+        -65536,
+        -65536,
+        65632.09,
+        65632.09
+      ],
+      "geo_bounds": [
+        -0.283831,
+        40.470124,
+        1.39359,
+        41.742959
+      ],
+      "uncertainty_km": 1.5
+    },
+    "stalingrad": {
+      "enabled": true,
+      "reason": "enabled: high/medium georeference passes advisory, cross-check, world-bound coverage, scale, and final-footprint overlap checks",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match; north-up axis-aligned equirectangular; k=0.9081 m per world unit",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/stalingrad.json",
+      "local_bounds": [
+        -32768,
+        -32768,
+        32800.03,
+        32800.03
+      ],
+      "geo_bounds": [
+        44.150279,
+        48.479305,
+        44.961512,
+        49.017977
+      ],
+      "uncertainty_km": 1.5
+    },
+    "stalingrad_w": {
+      "enabled": false,
+      "reason": "Atlas fallback: Geo footprint overlaps higher-priority accepted stalingrad",
+      "confidence": "medium",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/stalingrad_w.json"
+    },
+    "tunisia": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream advisory: matched only at global z5 DEM (~4.9 km/px), no independent label evidence",
+      "confidence": "low",
+      "method": "dem-coarse-only",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "wake_island": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/sea mismatch (map 0.11 vs dem 1.00, ratio 8.8x); texture shows water (99%) but the DEM window is dry land",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "zhengzhou": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream confidence low; coordinate is hint-only for the terrain transport",
+      "confidence": "low",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "avg_egypt_sinai": {
+      "enabled": false,
+      "reason": "Atlas fallback: upstream rejected: land/water swapped (map 1.00 vs dem 0.00)",
+      "confidence": "unresolved",
+      "method": "ocr+gazetteer+dem-match",
+      "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    }
+  }
+}

@@ -1,0 +1,393 @@
+{
+  "germ_20mm_flak38_airfield": {
+    "name": "2 cm FlaK 38",
+    "kind": "anti_aircraft",
+    "kind_source": "mission units category air_defence"
+  },
+  "germ_37mm_flak43_airfield": {
+    "name": "3.7 cm FlaK 43",
+    "kind": "anti_aircraft",
+    "kind_source": "mission units category air_defence"
+  },
+  "germ_88mm_flak36": {
+    "name": "8.8 cm FlaK 36",
+    "kind": "anti_aircraft",
+    "kind_source": "mission units category air_defence"
+  },
+  "uk_40mm_bofors_airfield": {
+    "name": "Bofors 40 mm",
+    "kind": "anti_aircraft",
+    "kind_source": "mission units category air_defence"
+  },
+  "us_90mm_m1": {
+    "name": "90 mm Gun M1",
+    "kind": "anti_aircraft",
+    "kind_source": "mission units category air_defence"
+  },
+  "ussr_25mm_72k_airfield": {
+    "name": "25 mm 72-K",
+    "kind": "anti_aircraft",
+    "kind_source": "mission units category air_defence"
+  },
+  "dummy": {
+    "name": null,
+    "kind": "building",
+    "kind_source": "mission units category structures"
+  },
+  "dummy_immortal": {
+    "name": null,
+    "kind": "building",
+    "kind_source": "mission units category structures"
+  },
+  "unit_airfield_flight_radar_char": {
+    "name": null,
+    "kind": "building",
+    "kind_source": "mission units category structures"
+  },
+  "unit_airfield_main_radar_char": {
+    "name": null,
+    "kind": "building",
+    "kind_source": "mission units category structures"
+  },
+  "cn_m42_duster": {
+    "name": "M42",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "fr_amx_30_roland": {
+    "name": "Roland 1",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "fr_crotale_ng": {
+    "name": "ItO 90M",
+    "acmi_name": "Crotale NG",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "sw_crotale_ng": {
+    "name": "ItO 90M",
+    "acmi_name": "Crotale NG",
+    "kind": "anti_aircraft",
+    "kind_source": "same Crotale NG system: tankModels/sw_crotale_ng"
+  },
+  "it_otobreda_sidam_25": {
+    "name": "SIDAM 25",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "jp_m19": {
+    "name": "M19A1",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "jp_m42_duster": {
+    "name": "M42",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "jp_type_87": {
+    "name": "Type 87",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "uk_falcon": {
+    "name": "Falcon",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "uk_rooikat_za_35": {
+    "name": "ZA-35",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name",
+    "engagement_range_m": 3000,
+    "engagement_range_source": "wtdatamine:35mm_ga_35_user_cannon.attackMaxDist@2.59.0.74"
+  },
+  "uk_skink_aa": {
+    "name": "Skink",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "uk_vickers_mk_6_aa_mk_1": {
+    "name": "Light AA Mk I",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "us_apc_m113": {
+    "name": "M113",
+    "kind": "vehicle",
+    "kind_source": "all mission instances for this model use a truck/APC role name"
+  },
+  "us_at_gun_m1": {
+    "name": "57 mm anti-tank gun M1",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_at_m40": {
+    "name": "106 mm anti-tank gun М40",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_halftrack_m13": {
+    "name": "M13 MGMC",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "us_m1128_mgs": {
+    "name": "M1128",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m163_vulcan": {
+    "name": "M163",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "us_m19": {
+    "name": "M19A1",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "us_m1a1_abrams": {
+    "name": "M1A1",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m1a2_abrams": {
+    "name": "M1A2 Abrams",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m22_locust": {
+    "name": "M22",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m26_pershing": {
+    "name": "M26",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m2a4": {
+    "name": "M2A4",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m3a3_bradley": {
+    "name": "M3A3 Bradley",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m42_duster": {
+    "name": "M42",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "us_m4a1_1942_sherman": {
+    "name": "M4A1",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m4a2_76w_sherman": {
+    "name": "M4A2 (76) W",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m4a2_sherman": {
+    "name": "M4A2",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m4a3e8_76w_sherman": {
+    "name": "M4A3 (76) W",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m551": {
+    "name": "M551",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m5a1_stuart": {
+    "name": "M5A1",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m60": {
+    "name": "M60",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m60a1": {
+    "name": "M60A1 (AOS)",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_m8_greyhound": {
+    "name": "M8 LAC",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_mbt_70": {
+    "name": "MBT-70",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_t114": {
+    "name": "T114",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_t18_e2": {
+    "name": "T18E2",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_t92": {
+    "name": "T92",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "us_truck_us6_studebaker_tent": {
+    "name": "Studebaker US6",
+    "kind": "vehicle",
+    "kind_source": "all mission instances for this model use a truck/APC role name"
+  },
+  "ussr_2s25": {
+    "name": "2S25",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_apc_btr_152": {
+    "name": "BTR-152",
+    "kind": "vehicle",
+    "kind_source": "all mission instances for this model use a truck/APC role name"
+  },
+  "ussr_at_gun_53k": {
+    "name": "45 mm anti-tank gun mod. 1937 (53-K)",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_at_spg_9": {
+    "name": "73 mm anti-tank gun SPG-9",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_ba_11": {
+    "name": "BA-11",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_bmp_1": {
+    "name": "BMP-1",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_bmp_3": {
+    "name": "BMP-3",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_btr_152a": {
+    "name": "BTR-152A",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "ussr_btr_zd": {
+    "name": "BTR-ZD",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "ussr_gaz_4m": {
+    "name": "GAZ-AAA (4M)",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "ussr_object_906": {
+    "name": "Object 906",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_26_1940": {
+    "name": "T-26",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_34_1940_l_11": {
+    "name": "T-34 (Prototype)",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_34_1942": {
+    "name": "T-34 (1942)",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_34_85_d_5t": {
+    "name": "T-34-85 (D-5T)",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_44": {
+    "name": "T-44",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_50": {
+    "name": "T-50",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_54_1947": {
+    "name": "T-54 (1947)",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_54_1951": {
+    "name": "T-54 (1951)",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_62": {
+    "name": "T-62",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_64_b_1984": {
+    "name": "T-64B",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_80bvm": {
+    "name": "T-80BVM",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_t_90a": {
+    "name": "T-90A",
+    "kind": "armor",
+    "kind_source": "mission instances use tank/artillery/bunker/armored-car role names"
+  },
+  "ussr_zis_43": {
+    "name": "ZiS-43",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "ussr_zsu_23_4": {
+    "name": "ZSU-23-4V",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name",
+    "engagement_range_m": 2500,
+    "engagement_range_source": "wtdatamine:23mm_2a7_user_cannon.attackMaxDist@2.59.0.74"
+  },
+  "ussr_zsu_37": {
+    "name": "ZSU-37",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  },
+  "ussr_zsu_37_2": {
+    "name": "ZSU-37-2",
+    "kind": "anti_aircraft",
+    "kind_source": "all mission instances for this model use an *_aaa_* role name"
+  }
+}

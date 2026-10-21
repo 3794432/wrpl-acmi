@@ -10,7 +10,8 @@ param(
     [switch]$LegacyCoordinates,
     [switch]$LegacyDoubleReference,
     [switch]$ValidateOnly,
-    [switch]$AllowPartial
+    [switch]$AllowPartial,
+    [switch]$AtlasOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -19,7 +20,7 @@ foreach ($parameterName in $PSBoundParameters.Keys) {
     $script:InvocationParameters[$parameterName] = $PSBoundParameters[$parameterName]
 }
 $script:InstallerName = 'war-thunder-air-terrain'
-$script:ExpectedMapCount = 68
+$script:ExpectedMapCount = 69
 $script:MapIdPrefix = 'WarThunder.'
 $script:AtlasMapIdPrefix = 'WarThunder.Atlas1.'
 $script:AtlasLayout = 'AtlasV1'
@@ -602,6 +603,38 @@ function Assert-NoExplicitLegacyCoordinates {
     }
 }
 
+function Invoke-GeographicInstaller {
+    param(
+        [string]$SourceRootPath,
+        [string]$DestinationPath,
+        [string]$AtlasPath,
+        [bool]$ValidationOnly
+    )
+
+    $geoPath = Join-Path $SourceRootPath 'GeoReferences.json'
+    if (-not (Test-Path -LiteralPath $geoPath -PathType Leaf)) {
+        if ([bool]$AllowPartial) {
+            Write-Host 'Geographic references are absent; skipped for the partial Atlas fixture.'
+            return
+        }
+        throw "Geographic terrain configuration is required for a full install: $geoPath"
+    }
+    $geoScript = Join-Path $PSScriptRoot 'Install-Geographic-Terrains.ps1'
+    if (-not (Test-Path -LiteralPath $geoScript -PathType Leaf)) {
+        throw "Geographic installer is missing: $geoScript"
+    }
+    $geoArguments = @{
+        SourceRoot = $SourceRootPath
+        Destination = $DestinationPath
+        GeoReferences = $geoPath
+        AtlasReferences = $AtlasPath
+        FromInstaller = $true
+    }
+    if ($ValidationOnly) { $geoArguments.ValidateOnly = $true }
+    if ([bool]$AllowPartial) { $geoArguments.AllowPartial = $true }
+    & $geoScript @geoArguments
+}
+
 function Invoke-Installer {
     $legacyMode = [bool]$LegacyCoordinates
     if (-not $legacyMode) { Assert-NoExplicitLegacyCoordinates }
@@ -780,12 +813,20 @@ function Invoke-Installer {
         }
     }
 
+    $destinationFull = Resolve-FullPath $Destination
+
     if ($ValidateOnly) {
+        if (-not $legacyMode -and -not $AtlasOnly) {
+            Invoke-GeographicInstaller -SourceRootPath $sourceRootFull -DestinationPath $destinationFull -AtlasPath $atlas.Path -ValidationOnly $true
+        }
         Write-Host 'Validation-only run complete; no files were written.'
         return
     }
 
-    $destinationFull = Resolve-FullPath $Destination
+    if (-not $legacyMode -and -not $AtlasOnly) {
+        Invoke-GeographicInstaller -SourceRootPath $sourceRootFull -DestinationPath $destinationFull -AtlasPath $atlas.Path -ValidationOnly $true
+    }
+
     if (Test-Path -LiteralPath $destinationFull) {
         if (-not (Get-Item -LiteralPath $destinationFull).PSIsContainer) { throw "Destination is not a directory: $destinationFull" }
         $manifestPath = Join-Path $destinationFull 'WarThunderMaps.install.json'
@@ -896,8 +937,15 @@ function Invoke-Installer {
     Write-Host ("Installed {0} maps to {1}" -f $records.Count, $destinationFull)
     Write-Host ("Data files copied: {0}; reused by matching size/SHA256: {1}; new bytes: {2:N2} GiB" -f $copied, $reused, ($installedBytes / 1GB))
     if (-not $legacyMode) {
-        Write-Host ("Layout: AtlasV1; anchors from {0}" -f $atlas.Path)
-        Write-Host 'Every XML declares Visible=true with a unique WarThunder.Atlas1 ID. No add-on or MapId switch is required.'
+        if ($AtlasOnly) {
+            Write-Host ("Layout: AtlasV1; anchors from {0}" -f $atlas.Path)
+            Write-Host 'AtlasOnly: geographic overlay skipped.'
+        }
+        else {
+            Write-Host ("Layout: AtlasV1; anchors from {0}" -f $atlas.Path)
+            Write-Host 'The 69-map Atlas baseline is installed before the geographic overlay.'
+            Invoke-GeographicInstaller -SourceRootPath $sourceRootFull -DestinationPath $destinationFull -AtlasPath $atlas.Path -ValidationOnly $false
+        }
     }
     else {
         Write-Host ("Layout: LegacyCoordinates; latitude={0} longitude={1} center=({2},{3}) legacy_double_reference={4}" -f $Latitude, $Longitude, $CenterX, $CenterZ, [bool]$LegacyDoubleReference)
@@ -915,6 +963,6 @@ try {
     exit 0
 }
 catch {
-    Write-Error ($_.Exception.Message + "`n" + $_.ScriptStackTrace)
+    [Console]::Error.WriteLine($_.Exception.Message + [string][char]10 + $_.ScriptStackTrace)
     exit 1
 }

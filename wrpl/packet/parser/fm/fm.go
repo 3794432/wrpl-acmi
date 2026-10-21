@@ -369,7 +369,9 @@ func readTargets(r *danet.BitReader) ([]FMTargetData, error) {
 	for i := range targetsCount[0] {
 		ret[i], err = readTarget(r)
 		if err != nil {
-			return ret, fmt.Errorf("reading target %d: %w", i, err)
+			// A partial list must not be mistaken for a complete designation
+			// update. nil means unavailable; a successful empty list means clear.
+			return nil, fmt.Errorf("reading target %d: %w", i, err)
 		}
 	}
 	return ret, nil

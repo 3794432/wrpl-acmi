@@ -66,5 +66,6 @@
   "stalingrad_w": {"latitude": 60, "longitude": -140},
   "tunisia": {"latitude": 60, "longitude": -100},
   "wake_island": {"latitude": 60, "longitude": -60},
-  "zhengzhou": {"latitude": 60, "longitude": -20}
+  "zhengzhou": {"latitude": 60, "longitude": -20},
+  "avg_egypt_sinai": {"latitude": 60, "longitude": 20}
 }

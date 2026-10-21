@@ -12,15 +12,19 @@ import (
 
 const maxDecompressedECS = 256 << 20
 
-// Projectile combines the creation metadata published in a Rocket component
-// with the lifetime boundary carried by an ECS destruction packet.
+// Projectile combines creation metadata published in a Rocket or Bomb
+// component with the lifetime boundary carried by an ECS destruction packet.
 type Projectile struct {
 	ID        uint64
 	OwnerEID  uint64
 	ParentUID uint64
 	HasParent bool
-	Name      string
-	Template  string
+	// Kind is "bomb" only for a construction carrying a proven Bomb component.
+	// Rocket constructions keep the empty value so existing missile consumers
+	// continue to see their established behavior.
+	Kind     string
+	Name     string
+	Template string
 	// TemplateComponents is construction schema only: component names declared
 	// by the template, in template order. It does not imply that a value was
 	// present or decoded in this construction instance.
@@ -133,6 +137,12 @@ func (p *MetadataParser) parseConstructions(blob []byte, time uint32, created *[
 		return fmt.Errorf("missing ECS construction count")
 	}
 	count := int(blob[0]) + 1
+	// The count byte can request at most 256 frames, but every frame also
+	// needs an EID and a size prefix. Rejecting a count larger than the whole
+	// remainder keeps the loop bounded by bytes that actually arrived.
+	if count > len(blob) {
+		return fmt.Errorf("ECS construction count %d exceeds %d remaining bytes", count, len(blob))
+	}
 	r := danet.NewBitReader(blob[1:])
 	for i := 0; i < count; i++ {
 		eid, err := packet.ReadEID(r)
@@ -218,7 +228,7 @@ func (p *MetadataParser) parseConstruction(eid uint64, block []byte, time uint32
 		return nil
 	}
 
-	candidate := isCandidateTemplate(template.Name)
+	rocketTemplate := isCandidateTemplate(template.Name)
 	componentNames := p.templateComponentNames(template)
 	previous := -1
 	for i := 0; i < componentCount; i++ {
@@ -234,11 +244,22 @@ func (p *MetadataParser) parseConstruction(eid uint64, block []byte, time uint32
 			return nil
 		}
 
-		if candidate {
-			if local != 0 || !p.isRocketComponent(component) {
-				return nil
+		if kind, ok := p.projectileComponentKind(component); ok {
+			if kind == projectileKindBomb {
+				return p.readProjectileConstruction(eid, r, time, template.Name, componentNames, kind)
 			}
-			return p.readRocket(eid, r, time, template.Name, componentNames)
+			if rocketTemplate {
+				if local != 0 {
+					return nil
+				}
+				return p.readProjectileConstruction(eid, r, time, template.Name, componentNames, kind)
+			}
+		}
+		if rocketTemplate {
+			// The established rocket templates place their Rocket component
+			// first. Reaching any other component means this construction does
+			// not have the layout this parser knows how to decode.
+			return nil
 		}
 
 		parser := p.maps.DataComponentParsers[component.Name]
@@ -324,15 +345,45 @@ func readComponentOffset(r *danet.BitReader, templateComponents, previous int, f
 	return previous + int(offset) + 1, nil
 }
 
-func (p *MetadataParser) isRocketComponent(component *ecsp.HashedComponent) bool {
-	return p.maps.ComponentNames[uint32(component.Type)] == "Rocket"
+const (
+	projectileKindRocket = "rocket"
+	projectileKindBomb   = "bomb"
+)
+
+// projectileComponentKind identifies only components whose construction body
+// is the shared RocketSerializer layout. Bomb is a Rocket subclass registered
+// with that same serializer, so its body can be decoded with the same reader.
+// Unknown components are rejected rather than guessed by template name.
+func (p *MetadataParser) projectileComponentKind(component *ecsp.HashedComponent) (string, bool) {
+	if component == nil {
+		return "", false
+	}
+	switch p.maps.ComponentNames[uint32(component.Type)] {
+	case "Rocket":
+		return projectileKindRocket, true
+	case "Bomb":
+		return projectileKindBomb, true
+	}
+	if name, ok := p.maps.GetDataCompName(component.Name); ok {
+		switch name {
+		case "rocket_component":
+			return projectileKindRocket, true
+		case "bomb_component":
+			return projectileKindBomb, true
+		}
+	}
+	return "", false
 }
 
 func isCandidateTemplate(name string) bool {
 	return name == "rocket" || name == "rocket+arh_shell"
 }
 
-func (p *MetadataParser) readRocket(eid uint64, r *danet.BitReader, time uint32, template string, templateComponents []string) *Projectile {
+// readProjectileConstruction decodes the fixed prefix shared by the
+// RocketSerializer layout. ComponentTypesDefs declares `struct Bomb : Rocket`
+// and registers Bomb with the same rocket_serializer, so a Bomb construction
+// uses this layout rather than a guessed one. The kind selects only identity.
+func (p *MetadataParser) readProjectileConstruction(eid uint64, r *danet.BitReader, time uint32, template string, templateComponents []string, kind string) *Projectile {
 	leading, err := r.ReadCompressed()
 	if err != nil { // leading serialized ULEB value
 		return nil
@@ -367,10 +418,17 @@ func (p *MetadataParser) readRocket(eid uint64, r *danet.BitReader, time uint32,
 		return nil
 	}
 
+	name := "Missile"
+	projectileKind := ""
+	if kind == projectileKindBomb {
+		name = "Bomb"
+		projectileKind = projectileKindBomb
+	}
 	projectile := &Projectile{
 		ID:                 eid,
 		OwnerEID:           ownerEID,
-		Name:               "Missile",
+		Kind:               projectileKind,
+		Name:               name,
 		Template:           template,
 		TemplateComponents: append([]string(nil), templateComponents...),
 		LeadingULEB:        leading,

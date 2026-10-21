@@ -25,6 +25,11 @@ import (
 	"io"
 )
 
+// MaxPacketPayloadSize bounds allocations driven by an untrusted packet size
+// prefix. Replay parsers are expected to handle individual packets well below
+// this limit; streams above it are corrupt or malicious.
+const MaxPacketPayloadSize = 16 << 20
+
 type PacketReader interface {
 	ReadPacket(pk *Packet) (isEOF bool, err error)
 }
@@ -57,6 +62,9 @@ again:
 	if packetSize == 0 {
 		goto again
 	}
+	if packetSize < 2 {
+		return false, fmt.Errorf("packet size %d is smaller than the packet header", packetSize)
+	}
 
 	psr.Header[0] = 0
 	psr.Header[1] = 0
@@ -71,6 +79,9 @@ again:
 		payloadSize = int(packetSize) - 2
 	} else {
 		pk.PacketType = psr.Header[0]
+		if packetSize < 6 {
+			return false, fmt.Errorf("packet size %d is smaller than a timestamped packet header", packetSize)
+		}
 		err = binary.Read(psr.R, binary.LittleEndian, &psr.T)
 		if err != nil {
 			return false, fmt.Errorf("reading packet timestamp: %w", err)
@@ -78,6 +89,12 @@ again:
 		payloadSize = int(packetSize) - 6
 	}
 	pk.CurrentTime = psr.T
+	if payloadSize < 0 {
+		return false, fmt.Errorf("invalid negative packet payload size %d (packet size was %d)", payloadSize, packetSize)
+	}
+	if payloadSize > MaxPacketPayloadSize {
+		return false, fmt.Errorf("packet payload size %d exceeds limit %d", payloadSize, MaxPacketPayloadSize)
+	}
 	if payloadSize == 0 {
 		return false, nil
 	}

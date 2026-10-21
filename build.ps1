@@ -48,14 +48,14 @@ $oldCGO = $env:CGO_ENABLED
 Push-Location $repoRoot
 try {
     $env:CGO_ENABLED = '0'
-    foreach ($target in @(
-        @{ Name = 'wrpl-acmi'; Package = './cmd/acmi' },
-        @{ Name = 'acmi-mapid'; Package = './cmd/acmi-mapid' },
-        @{ Name = 'acmi-atlas'; Package = './cmd/acmi-atlas' }
-    )) {
-        $binary = Join-Path $output ($target.Name + '.exe')
-        & $go build -trimpath -o $binary $target.Package
-        if ($LASTEXITCODE -ne 0) { throw "Go build failed for $($target.Name) (exit $LASTEXITCODE)." }
+    $binary = Join-Path $output 'wrpl-acmi.exe'
+    & $go build -trimpath -o $binary ./cmd/acmi
+    if ($LASTEXITCODE -ne 0) { throw "Go build failed for wrpl-acmi (exit $LASTEXITCODE)." }
+    foreach ($name in @('acmi-mapid.exe', 'acmi-atlas.exe')) {
+        $obsolete = Join-Path $output $name
+        if (Test-Path -LiteralPath $obsolete -PathType Leaf) {
+            Remove-Item -LiteralPath $obsolete -Force
+        }
     }
     foreach ($folder in @('data', 'docs')) {
         Copy-PackageTree (Join-Path $repoRoot $folder) (Join-Path $output $folder)
@@ -71,9 +71,8 @@ try {
         & (Join-Path $repoRoot 'tools/terrain/build-terrain.ps1') -GameRoot $GameRoot -DatamineRoot $DatamineRoot -OutputRoot (Join-Path $output 'terrain') -Python $Python -Resume:$ResumeTerrain
         if (-not $?) { throw 'Terrain build failed.' }
     }
-    $binaries = @{}
-    foreach ($name in @('wrpl-acmi.exe', 'acmi-mapid.exe', 'acmi-atlas.exe')) {
-        $binaries[$name] = (Get-FileHash -LiteralPath (Join-Path $output $name) -Algorithm SHA256).Hash.ToLowerInvariant()
+    $binaries = @{
+        'wrpl-acmi.exe' = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant()
     }
     $manifest = [ordered]@{
         schema_version = 1

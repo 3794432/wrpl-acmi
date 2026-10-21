@@ -18,7 +18,7 @@
 把转换结果放入 `dist/wrpl-acmi/terrain`。SourceRoot 应指向该转换产物，不能指向 Datamine 克隆目录或原始 `.bin` 目录。
 完整从零命令见[项目说明](../README.zh-CN.md)，输入来源与目录要求见[地形工具说明](../tools/terrain/README.zh-CN.md#输入来源与许可)。
 这些本地地形输入不在 Git 中。安装后完全退出并重启 Tacview，再用新版 **wrpl-acmi.exe** 或
-**run.bat** 导出 WRPL。没有旧 ACMI 兼容保证；已有文件应重新导出。
+**run.bat** 导出 WRPL。已有 ACMI 若要与当前地形匹配，应从对应的原始 WRPL 直接重新导出。
 
 ## 同步规则
 
@@ -51,6 +51,8 @@ ACMI 记录 `WT_GeoreferenceConfigSHA256` 和上游 commit；安装清单记录�
 仅采用通过审核的 high/medium 定位；已知错误、低置信、未解算、范围不匹配或与最终地形重叠的地图
 自动使用 Atlas 技术坐标，并写入 `WT_GeoreferenceStatus=AtlasFallback` 和具体原因。
 Atlas 经纬度不是该地图的现实地理位置。这是定位质量回退，不是旧回放兼容模式。
+权威地图参考集恰好包含 69 张地图，其中 14 张采用地理估算，55 张使用 Atlas 回退。
+正常的 geographic 导出与地形安装都依赖这整套参考集；转换地形、导出器配置和安装器元数据必须保持同步。
 
 上游估计仍有不确定性，启用地图会标记 `WT_GeoreferenceStatus=Estimated`。
 已知错误的 Grand Canyon → Greenland 结果不会被采用。
@@ -59,4 +61,4 @@ Atlas 经纬度不是该地图的现实地理位置。这是定位质量回退�
 安装器直接更新每张地图的 XML，不同时保留该地图的旧 Atlas 地形。
 地图数据 `.data` 复用原高程；这里不需要重新提取全部高度，也不包含地表纹理。
 `-terrain-layout atlas` 可显式使用纯技术坐标，配套安装器的 `-AtlasOnly` 用于同一摆放方式。
-`-terrain-layout legacy` 才允许手动 `-lat/-lon/-center-x/-center-z`，手动位置需另行配准高程。
+`-terrain-layout` 只接受 `geographic`（默认）或 `atlas`；`-alt` 仍是以米为单位的垂直高度偏移。

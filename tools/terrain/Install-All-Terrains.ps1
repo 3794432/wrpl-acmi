@@ -3,28 +3,17 @@ param(
     [string]$SourceRoot = '',
     [string]$Destination = (Join-Path $env:APPDATA 'Tacview\Data\Terrain\Custom\WarThunderMaps'),
     [string]$AtlasReferences = '',
-    [double]$Latitude = 0,
-    [double]$Longitude = 0,
-    [double]$CenterX = 0,
-    [double]$CenterZ = 0,
-    [switch]$LegacyCoordinates,
-    [switch]$LegacyDoubleReference,
     [switch]$ValidateOnly,
     [switch]$AllowPartial,
     [switch]$AtlasOnly
 )
 
 $ErrorActionPreference = 'Stop'
-$script:InvocationParameters = @{}
-foreach ($parameterName in $PSBoundParameters.Keys) {
-    $script:InvocationParameters[$parameterName] = $PSBoundParameters[$parameterName]
-}
 $script:InstallerName = 'war-thunder-air-terrain'
 $script:ExpectedMapCount = 69
 $script:MapIdPrefix = 'WarThunder.'
 $script:AtlasMapIdPrefix = 'WarThunder.Atlas1.'
 $script:AtlasLayout = 'AtlasV1'
-$script:LegacyLayout = 'LegacyCoordinates'
 $script:AtlasLongitudeSlot = 40.0
 $script:AtlasLatitudeSlot = 15.0
 $script:LegacyActiveUnresolved = $false
@@ -123,10 +112,7 @@ function Get-CornerCoordinates {
     param(
         [double[]]$Bounds,
         [double]$AnchorLatitude,
-        [double]$AnchorLongitude,
-        [double]$CenterXValue,
-        [double]$CenterZValue,
-        [bool]$Legacy
+        [double]$AnchorLongitude
     )
 
     if ($Bounds.Count -ne 4) { throw 'sample_bounds_m must contain four values.' }
@@ -140,13 +126,9 @@ function Get-CornerCoordinates {
     foreach ($corner in $definitions) {
         $x = [double]$corner[1]
         $z = [double]$corner[2]
-        $mapLatitude = $AnchorLatitude + ($z - $CenterZValue) / 111320.0
+        $mapLatitude = $AnchorLatitude + $z / 111320.0
         if ([Math]::Abs($mapLatitude) -ge 85.0) { throw 'Choose a reference away from the poles.' }
-        $mapLongitude = $AnchorLongitude + ($x - $CenterXValue) / (111320.0 * [Math]::Cos($mapLatitude * [Math]::PI / 180.0))
-        if ($Legacy) {
-            $mapLatitude += $AnchorLatitude
-            $mapLongitude += $AnchorLongitude
-        }
+        $mapLongitude = $AnchorLongitude + $x / (111320.0 * [Math]::Cos($mapLatitude * [Math]::PI / 180.0))
         if ([Math]::Abs($mapLongitude) -ge 180.0 -or [Math]::Abs($mapLatitude) -ge 90.0) {
             throw 'Reference crosses supported longitude/latitude bounds.'
         }
@@ -160,14 +142,9 @@ function Get-CornerCoordinates {
 }
 
 function Get-MapCorners {
-    param(
-        [object]$Record,
-        [double]$CenterXValue = 0,
-        [double]$CenterZValue = 0,
-        [bool]$Legacy = $false
-    )
+    param([object]$Record)
 
-    return @(Get-CornerCoordinates -Bounds $Record.Bounds -AnchorLatitude ([double]$Record.AnchorLatitude) -AnchorLongitude ([double]$Record.AnchorLongitude) -CenterXValue $CenterXValue -CenterZValue $CenterZValue -Legacy $Legacy)
+    return @(Get-CornerCoordinates -Bounds $Record.Bounds -AnchorLatitude ([double]$Record.AnchorLatitude) -AnchorLongitude ([double]$Record.AnchorLongitude))
 }
 
 function Add-TextElement {
@@ -304,7 +281,7 @@ function Read-AtlasReferences {
     param([string]$Path)
 
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
-        throw "Atlas references file is missing: $Path. Pass -AtlasReferences or use -LegacyCoordinates."
+        throw "Atlas references file is missing: $Path. Pass -AtlasReferences."
     }
     try {
         $rawText = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
@@ -393,7 +370,7 @@ function Assert-SourceXml {
     if ([string]$Node.AltitudeFactor -ne '1' -or [string]$Node.AltitudeOffset -ne '0') { throw "XML altitude conversion mismatch for $($Record.Id)" }
     if ([string]$Node.Projection -ne 'Quad') { throw "XML projection mismatch for $($Record.Id)" }
 
-    $expected = Get-CornerCoordinates -Bounds $Record.Bounds -AnchorLatitude 0 -AnchorLongitude 0 -CenterXValue 0 -CenterZValue 0 -Legacy $false
+    $expected = Get-CornerCoordinates -Bounds $Record.Bounds -AnchorLatitude 0 -AnchorLongitude 0
     foreach ($corner in $expected) {
         $element = $Node.SelectSingleNode($corner.Name)
         if ($null -eq $element) { throw "XML is missing $($corner.Name) for $($Record.Id)" }
@@ -591,18 +568,6 @@ function Disable-OwnedLegacyActive {
     Write-Host "Disabled legacy WarThunderActive XML for $legacyId (backups and active.data preserved)."
 }
 
-function Assert-NoExplicitLegacyCoordinates {
-    $coordinateNames = @('Latitude', 'Longitude', 'CenterX', 'CenterZ')
-    foreach ($name in $coordinateNames) {
-        if ($script:InvocationParameters.ContainsKey($name)) {
-            throw "-$name requires -LegacyCoordinates. The default Atlas layout takes each anchor from -AtlasReferences."
-        }
-    }
-    if ([bool]$LegacyDoubleReference) {
-        throw '-LegacyDoubleReference requires -LegacyCoordinates.'
-    }
-}
-
 function Invoke-GeographicInstaller {
     param(
         [string]$SourceRootPath,
@@ -636,9 +601,6 @@ function Invoke-GeographicInstaller {
 }
 
 function Invoke-Installer {
-    $legacyMode = [bool]$LegacyCoordinates
-    if (-not $legacyMode) { Assert-NoExplicitLegacyCoordinates }
-
     if ([string]::IsNullOrWhiteSpace($SourceRoot)) { $script:SourceRoot = $PSScriptRoot }
     $sourceRootFull = Resolve-FullPath $script:SourceRoot
     $mapsRoot = Join-Path $sourceRootFull 'maps'
@@ -647,16 +609,9 @@ function Invoke-Installer {
     }
     if (-not (Test-Path -LiteralPath $mapsRoot -PathType Container)) { throw "maps is not a directory: $mapsRoot" }
 
-    if ([double]::IsNaN($Latitude) -or [double]::IsInfinity($Latitude) -or [math]::Abs($Latitude) -ge 85.0) { throw 'Latitude must be finite and within (-85, 85).' }
-    if ([double]::IsNaN($Longitude) -or [double]::IsInfinity($Longitude) -or [math]::Abs($Longitude) -gt 180.0) { throw 'Longitude must be finite and within [-180, 180].' }
-    if ([double]::IsNaN($CenterX) -or [double]::IsInfinity($CenterX) -or [double]::IsNaN($CenterZ) -or [double]::IsInfinity($CenterZ)) { throw 'CenterX and CenterZ must be finite.' }
-
-    $atlas = $null
-    if (-not $legacyMode) {
-        $atlasPathValue = $AtlasReferences
-        if ([string]::IsNullOrWhiteSpace($atlasPathValue)) { $atlasPathValue = Join-Path $sourceRootFull 'AtlasReferences.json' }
-        $atlas = Read-AtlasReferences $atlasPathValue
-    }
+    $atlasPathValue = $AtlasReferences
+    if ([string]::IsNullOrWhiteSpace($atlasPathValue)) { $atlasPathValue = Join-Path $sourceRootFull 'AtlasReferences.json' }
+    $atlas = Read-AtlasReferences $atlasPathValue
 
     $allDirs = @(Get-ChildItem -LiteralPath $mapsRoot -Directory -Force | Sort-Object Name)
     $mapDirs = New-Object System.Collections.ArrayList
@@ -685,7 +640,7 @@ function Invoke-Installer {
     if ($mapDirs.Count -ne $script:ExpectedMapCount -and -not $AllowPartial) {
         throw "Expected $($script:ExpectedMapCount) map directories, found $($mapDirs.Count). Use -AllowPartial only for a test fixture."
     }
-    if ($null -ne $atlas -and -not $AllowPartial) {
+    if (-not $AllowPartial) {
         if ($atlas.Entries.Count -ne $script:ExpectedMapCount) {
             throw "Atlas references has $($atlas.Entries.Count) map IDs; expected $($script:ExpectedMapCount): $($atlas.Path)"
         }
@@ -781,49 +736,39 @@ function Invoke-Installer {
     }
     Write-Host ("Verified {0} maps, {1:N2} GiB of elevation data." -f $records.Count, ($totalBytes / 1GB))
 
-    if ($null -ne $atlas) {
-        foreach ($record in $records) {
-            if (-not $atlas.Entries.ContainsKey($record.Id)) {
-                throw "Atlas references has no anchor for map $($record.Id): $($atlas.Path)"
-            }
-            $anchor = $atlas.Entries[$record.Id]
-            $record | Add-Member -NotePropertyName AnchorLatitude -NotePropertyValue ([double]$anchor.Latitude)
-            $record | Add-Member -NotePropertyName AnchorLongitude -NotePropertyValue ([double]$anchor.Longitude)
-            $record | Add-Member -NotePropertyName InstalledMapId -NotePropertyValue ($script:AtlasMapIdPrefix + $record.Id)
-            $record | Add-Member -NotePropertyName InstalledVisible -NotePropertyValue $true
+    foreach ($record in $records) {
+        if (-not $atlas.Entries.ContainsKey($record.Id)) {
+            throw "Atlas references has no anchor for map $($record.Id): $($atlas.Path)"
         }
-        if (-not $AllowPartial) {
-            foreach ($atlasId in $atlas.Entries.Keys) {
-                if (-not $seenIds.ContainsKey($atlasId)) {
-                    throw "Atlas references contains unknown map ID ${atlasId}: $($atlas.Path)"
-                }
-            }
-            if ($atlas.Entries.Count -ne $records.Count) {
-                throw "Atlas references has $($atlas.Entries.Count) map IDs; verified $($records.Count)."
-            }
-        }
-        Assert-AtlasGeometry $records
+        $anchor = $atlas.Entries[$record.Id]
+        $record | Add-Member -NotePropertyName AnchorLatitude -NotePropertyValue ([double]$anchor.Latitude)
+        $record | Add-Member -NotePropertyName AnchorLongitude -NotePropertyValue ([double]$anchor.Longitude)
+        $record | Add-Member -NotePropertyName InstalledMapId -NotePropertyValue ($script:AtlasMapIdPrefix + $record.Id)
+        $record | Add-Member -NotePropertyName InstalledVisible -NotePropertyValue $true
     }
-    else {
-        foreach ($record in $records) {
-            $record | Add-Member -NotePropertyName AnchorLatitude -NotePropertyValue $Latitude
-            $record | Add-Member -NotePropertyName AnchorLongitude -NotePropertyValue $Longitude
-            $record | Add-Member -NotePropertyName InstalledMapId -NotePropertyValue ($script:MapIdPrefix + $record.Id)
-            $record | Add-Member -NotePropertyName InstalledVisible -NotePropertyValue $false
+    if (-not $AllowPartial) {
+        foreach ($atlasId in $atlas.Entries.Keys) {
+            if (-not $seenIds.ContainsKey($atlasId)) {
+                throw "Atlas references contains unknown map ID ${atlasId}: $($atlas.Path)"
+            }
+        }
+        if ($atlas.Entries.Count -ne $records.Count) {
+            throw "Atlas references has $($atlas.Entries.Count) map IDs; verified $($records.Count)."
         }
     }
+    Assert-AtlasGeometry $records
 
     $destinationFull = Resolve-FullPath $Destination
 
     if ($ValidateOnly) {
-        if (-not $legacyMode -and -not $AtlasOnly) {
+        if (-not $AtlasOnly) {
             Invoke-GeographicInstaller -SourceRootPath $sourceRootFull -DestinationPath $destinationFull -AtlasPath $atlas.Path -ValidationOnly $true
         }
         Write-Host 'Validation-only run complete; no files were written.'
         return
     }
 
-    if (-not $legacyMode -and -not $AtlasOnly) {
+    if (-not $AtlasOnly) {
         Invoke-GeographicInstaller -SourceRootPath $sourceRootFull -DestinationPath $destinationFull -AtlasPath $atlas.Path -ValidationOnly $true
     }
 
@@ -867,7 +812,7 @@ function Invoke-Installer {
         $targetMetadata = Join-Path $targetDir 'metadata.json'
         [void](Copy-FileAtomic $record.MetadataPath $targetMetadata $record.MetadataHash $record.MetadataBytes)
 
-        $corners = Get-MapCorners -Record $record -CenterXValue $CenterX -CenterZValue $CenterZ -Legacy $legacyMode
+        $corners = Get-MapCorners -Record $record
         $targetXml = Join-Path $targetDir 'CustomHeightmapList.xml'
         if (Test-Path -LiteralPath $targetXml -PathType Container) { throw "Map target XML is a directory: $targetXml" }
         if (-not (Test-Path -LiteralPath $targetXml) -or -not (Test-InstalledXmlMatches $targetXml $record $corners)) {
@@ -898,19 +843,12 @@ function Invoke-Installer {
         Write-Host ("[{0}/{1}] installed {2} as {3} (data {4})" -f $position, $records.Count, $record.Id, $record.InstalledMapId, $state)
     }
 
-    $layout = if ($legacyMode) { $script:LegacyLayout } else { $script:AtlasLayout }
+    $layout = $script:AtlasLayout
     $reference = [ordered]@{
         layout = $layout
-        latitude = $Latitude
-        longitude = $Longitude
-        center_x = $CenterX
-        center_z = $CenterZ
-        legacy_double_reference = [bool]$LegacyDoubleReference
-    }
-    if ($null -ne $atlas) {
-        $reference.atlas_references = $atlas.Path
-        $reference.atlas_references_sha256 = $atlas.Sha256
-        $reference.atlas_references_bytes = $atlas.Bytes
+        atlas_references = $atlas.Path
+        atlas_references_sha256 = $atlas.Sha256
+        atlas_references_bytes = $atlas.Bytes
     }
     $manifest = [ordered]@{
         schema_version = 2
@@ -936,21 +874,14 @@ function Invoke-Installer {
 
     Write-Host ("Installed {0} maps to {1}" -f $records.Count, $destinationFull)
     Write-Host ("Data files copied: {0}; reused by matching size/SHA256: {1}; new bytes: {2:N2} GiB" -f $copied, $reused, ($installedBytes / 1GB))
-    if (-not $legacyMode) {
-        if ($AtlasOnly) {
-            Write-Host ("Layout: AtlasV1; anchors from {0}" -f $atlas.Path)
-            Write-Host 'AtlasOnly: geographic overlay skipped.'
-        }
-        else {
-            Write-Host ("Layout: AtlasV1; anchors from {0}" -f $atlas.Path)
-            Write-Host 'The 69-map Atlas baseline is installed before the geographic overlay.'
-            Invoke-GeographicInstaller -SourceRootPath $sourceRootFull -DestinationPath $destinationFull -AtlasPath $atlas.Path -ValidationOnly $false
-        }
+    if ($AtlasOnly) {
+        Write-Host ("Layout: AtlasV1; anchors from {0}" -f $atlas.Path)
+        Write-Host 'AtlasOnly: geographic overlay skipped.'
     }
     else {
-        Write-Host ("Layout: LegacyCoordinates; latitude={0} longitude={1} center=({2},{3}) legacy_double_reference={4}" -f $Latitude, $Longitude, $CenterX, $CenterZ, [bool]$LegacyDoubleReference)
-        Write-Host 'Every XML declares Visible=false with the old WarThunder ID.'
-        Write-Host 'Restart Tacview, then enable Advanced Options > Auto Terrain Switch once.'
+        Write-Host ("Layout: AtlasV1; anchors from {0}" -f $atlas.Path)
+        Write-Host 'The 69-map Atlas baseline is installed before the geographic overlay.'
+        Invoke-GeographicInstaller -SourceRootPath $sourceRootFull -DestinationPath $destinationFull -AtlasPath $atlas.Path -ValidationOnly $false
     }
     Write-Host 'Restart Tacview after changing the installed terrain set.'
     if ($script:LegacyActiveUnresolved) {

@@ -28,59 +28,26 @@ func TestACMIWritesGlobalAtlasMapID(t *testing.T) {
 	}
 }
 
-func TestACMILegacyWritesOriginalMapID(t *testing.T) {
-	setTestTerrainLayout(t, terrainLayoutLegacy)
-	path := filepath.Join(t.TempDir(), "legacy.acmi")
-	if err := writeACMIWithEventsMapID(path, wrpl.WRPLHeader{}, nil, nil, nil, nil, "air_grand_canyon"); err != nil {
-		t.Fatal(err)
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(b), "\n0,MapId=WarThunder.air_grand_canyon\n") {
-		t.Fatalf("legacy MapId missing:\n%s", b)
-	}
-	if strings.Contains(string(b), "Atlas1") || strings.Contains(string(b), "WT_TerrainLayout") {
-		t.Fatalf("legacy output contains Atlas metadata:\n%s", b)
-	}
-}
-
-func TestAtlasRejectsExplicitPlacementFlags(t *testing.T) {
-	err := validateAtlasOverrideFlags(terrainLayoutAtlas, []string{"in", "lon", "center-x", "center-z"})
-	if err == nil {
-		t.Fatal("Atlas layout accepted manual placement flags")
-	}
-	for _, want := range []string{"-lon", "-center-x", "-center-z", "-terrain-layout legacy"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Fatalf("conflict error %q does not mention %q", err, want)
-		}
-	}
-	if err := validateAtlasOverrideFlags(terrainLayoutLegacy, []string{"lat", "lon", "center-x", "center-z"}); err != nil {
-		t.Fatalf("legacy layout rejected manual placement: %v", err)
-	}
-}
-
 func TestAtlasLayoutAppliesCatalogAnchor(t *testing.T) {
-	oldLat, oldLon := *lat0, *lon0
-	oldCenterX, oldCenterZ := *centerX, *centerZ
-	t.Cleanup(func() {
-		*lat0, *lon0 = oldLat, oldLon
-		*centerX, *centerZ = oldCenterX, oldCenterZ
-	})
-	*lat0, *lon0, *centerX, *centerZ = 0, 0, 9, 9
-	if err := applyAtlasReference(terrainLayoutAtlas, "air_grand_canyon"); err != nil {
+	oldLat, oldLon := atlasLatitude, atlasLongitude
+	t.Cleanup(func() { atlasLatitude, atlasLongitude = oldLat, oldLon })
+	if err := applyAtlasReference("air_grand_canyon"); err != nil {
 		t.Fatal(err)
 	}
-	if *lat0 != -60 || *lon0 != 100 || *centerX != 0 || *centerZ != 0 {
-		t.Fatalf("atlas anchor = lat %v lon %v center (%v,%v)", *lat0, *lon0, *centerX, *centerZ)
+	if atlasLatitude != -60 || atlasLongitude != 100 {
+		t.Fatalf("atlas anchor = (%v,%v)", atlasLatitude, atlasLongitude)
 	}
-	*lat0, *lon0, *centerX, *centerZ = 1, 2, 3, 4
-	if err := applyAtlasReference(terrainLayoutLegacy, "air_grand_canyon"); err != nil {
+	if err := applyAtlasReference(""); err != nil {
 		t.Fatal(err)
 	}
-	if *lat0 != 1 || *lon0 != 2 || *centerX != 3 || *centerZ != 4 {
-		t.Fatal("legacy layout was overwritten by an atlas anchor")
+	if atlasLatitude != 0 || atlasLongitude != 0 {
+		t.Fatal("unknown map retained a previous replay anchor")
+	}
+}
+
+func TestTerrainLayoutRejectsRemovedLegacyMode(t *testing.T) {
+	if _, err := parseTerrainLayout("legacy"); err == nil {
+		t.Fatal("removed terrain layout was accepted")
 	}
 }
 
@@ -91,7 +58,7 @@ func TestReplayMapIDFromRealHeaderFieldsAndOverride(t *testing.T) {
 	if got, err := resolveReplayMapID(header, ""); err != nil || got != "air_grand_canyon" {
 		t.Fatalf("real fields resolved %q, %v", got, err)
 	}
-	if got, err := resolveReplayMapID(header, "WarThunder.spain"); err != nil || got != "spain" {
+	if got, err := resolveReplayMapID(header, "WarThunder.Geo1.spain"); err != nil || got != "spain" {
 		t.Fatalf("explicit override resolved %q, %v", got, err)
 	}
 	if _, err := resolveReplayMapID(header, "WarThunder.not_a_map"); err == nil {

@@ -31,9 +31,7 @@ avg_egypt_sinai`)
 
 var (
 	known            = make(map[string]struct{}, len(knownIDs))
-	mapIDPrefix      = "WarThunder."
 	atlasMapIDPrefix = "WarThunder.Atlas1."
-	filenameBreaks   = "_-./ ()+[]"
 )
 
 func init() {
@@ -49,9 +47,9 @@ func IsKnown(id string) bool {
 	return ok
 }
 
-// NormalizeMapID accepts a canonical id with no prefix, the legacy
-// WarThunder. prefix, the Geographic V1 WarThunder.Geo1. prefix, or the Atlas
-// V1 WarThunder.Atlas1. prefix. It normalizes case, but rejects paths,
+// NormalizeMapID accepts a canonical id with no prefix, the current Geographic
+// V1 WarThunder.Geo1. prefix, or the current Atlas V1 WarThunder.Atlas1.
+// prefix. It normalizes case, but rejects the legacy WarThunder. prefix, paths,
 // whitespace, and other forms that could silently select the wrong map.
 func NormalizeMapID(s string) (string, error) {
 	s = strings.TrimSpace(s)
@@ -60,8 +58,6 @@ func NormalizeMapID(s string) (string, error) {
 		s = s[len(atlasMapIDPrefix):]
 	case strings.HasPrefix(lower, strings.ToLower(geographicMapIDPrefix)):
 		s = s[len(geographicMapIDPrefix):]
-	case strings.HasPrefix(lower, strings.ToLower(mapIDPrefix)):
-		s = s[len(mapIDPrefix):]
 	}
 	s = strings.ToLower(s)
 	if s == "" || !IsKnown(s) {
@@ -74,8 +70,6 @@ func NormalizeMapID(s string) (string, error) {
 	}
 	return s, nil
 }
-
-func FormatMapID(id string) string { return mapIDPrefix + id }
 
 func FormatAtlasMapID(id string) string { return atlasMapIDPrefix + id }
 
@@ -120,54 +114,4 @@ func ResolveReplay(level, locName string) (string, error) {
 		return locID, nil
 	}
 	return "", fmt.Errorf("%w: level=%q locName=%q", ErrUnknown, level, locName)
-}
-
-// FromFilename finds one exact catalog id as a filename token. It never uses
-// coordinates, weather words, or fuzzy names. A shorter id is ignored only
-// when its whole match is another id's prefix, so mozdok does not make
-// mozdok_winter ambiguous. Separate map tokens always make the name ambiguous.
-func FromFilename(filename string) (string, bool) {
-	base := strings.ToLower(path.Base(strings.ReplaceAll(filename, `\`, "/")))
-	if strings.HasSuffix(base, ".acmi") {
-		base = strings.TrimSuffix(base, ".acmi")
-	}
-	type match struct {
-		id         string
-		start, end int
-	}
-	var matches []match
-	for _, id := range knownIDs {
-		for from := 0; from <= len(base)-len(id); from++ {
-			if !strings.HasPrefix(base[from:], id) {
-				continue
-			}
-			end := from + len(id)
-			if (from > 0 && !strings.ContainsRune(filenameBreaks, rune(base[from-1]))) ||
-				(end < len(base) && !strings.ContainsRune(filenameBreaks, rune(base[end]))) {
-				continue
-			}
-			matches = append(matches, match{id: id, start: from, end: end})
-		}
-	}
-	ids := map[string]struct{}{}
-	for i, short := range matches {
-		contained := false
-		for j, long := range matches {
-			if i != j && short.id != long.id &&
-				long.start <= short.start && long.end >= short.end {
-				contained = true
-				break
-			}
-		}
-		if !contained {
-			ids[short.id] = struct{}{}
-		}
-	}
-	if len(ids) != 1 {
-		return "", false
-	}
-	for id := range ids {
-		return id, true
-	}
-	return "", false
 }

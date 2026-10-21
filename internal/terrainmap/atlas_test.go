@@ -45,7 +45,7 @@ func TestAtlasReferencesAreFrozenInCatalogOrder(t *testing.T) {
 	}
 }
 
-func TestAtlasReferenceAndMapIDFormats(t *testing.T) {
+func TestAtlasReferenceAndCurrentMapIDFormats(t *testing.T) {
 	lat, lon, ok := AtlasReference("air_grand_canyon")
 	if !ok || lat != -60 || lon != 100 {
 		t.Fatalf("AtlasReference = (%v,%v,%v), want (-60,100,true)", lat, lon, ok)
@@ -53,8 +53,14 @@ func TestAtlasReferenceAndMapIDFormats(t *testing.T) {
 	if lat, lon, ok := AtlasReference(FormatAtlasMapID("zhengzhou")); !ok || lat != 60 || lon != -20 {
 		t.Fatalf("prefixed AtlasReference = (%v,%v,%v)", lat, lon, ok)
 	}
+	if lat, lon, ok := AtlasReference(FormatGeographicMapID("zhengzhou")); !ok || lat != 60 || lon != -20 {
+		t.Fatalf("Geographic prefixed AtlasReference = (%v,%v,%v)", lat, lon, ok)
+	}
 	if lat, lon, ok := AtlasReference("avg_egypt_sinai"); !ok || lat != 60 || lon != 20 {
 		t.Fatalf("avg_egypt_sinai AtlasReference = (%v,%v,%v), want (60,20,true)", lat, lon, ok)
+	}
+	if _, _, ok := AtlasReference("WarThunder.air_grand_canyon"); ok {
+		t.Fatal("legacy WarThunder prefix was accepted")
 	}
 	if _, _, ok := AtlasReference("not_a_map"); ok {
 		t.Fatal("unknown atlas reference was accepted")

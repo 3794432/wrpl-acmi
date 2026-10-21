@@ -1,6 +1,6 @@
 # wrpl-acmi ACMI 导出指南
 
-本页对应当前 `dev` 的 `cmd/acmi`。地形定位见 [地理地形](TERRAIN_GEOGRAPHIC.md)，Atlas 与 legacy 的对照见 [terrain-atlas.md](terrain-atlas.md)。
+本页对应当前 `dev` 的 `cmd/acmi`。地形定位见 [地理地形](TERRAIN_GEOGRAPHIC.md)，技术布局见 [Atlas 布局](terrain-atlas.md)。
 
 `cmd/acmi` 只转换回放，不提取或安装地形。仓库中的地形转换器读取本机游戏 `levels/*.bin` 的实际高度与几何，
 再从固定提交 `f7952e4291e9fd7b6fe38e84020dddef925c3457` 的 War-Thunder-Datamine 取得地图边界、水位等配置；
@@ -37,10 +37,9 @@
 | `-in` | 输入 `.wrpl` 或服务器分片目录 |
 | `-out` | 输出 `.acmi` 路径 |
 | `-allow-incomplete` | 是否允许尾片缺失；默认 `true` |
-| `-terrain-layout` | `geographic`（默认）、`atlas` 或 `legacy` |
+| `-terrain-layout` | `geographic`（默认）或 `atlas`（当前技术布局） |
 | `-map-id` | 无法自动识别地图时显式指定地图 ID |
-| `-lat` / `-lon` / `-center-x` / `-center-z` | 仅 `legacy` 布局可用的人工参考参数 |
-| `-alt` | 高度偏移，单位米 |
+| `-alt` | 垂直高度偏移，单位米 |
 | `-missile-models` | `embedded`、`off` 或型号表 JSON 路径 |
 | `-missile-guidance` | `embedded`、`off` 或制导表 JSON 路径 |
 | `-countermeasures` | 是否导出干扰物；默认 `true` |
@@ -50,7 +49,7 @@
 | `-list` | 可选，写出轨迹与当前名称的 CSV 清单 |
 | `-names` | 可选，用 JSON 覆盖 `air:`、`ground:`、`missile:` 等显示名 |
 
-默认布局下传入 `-lat`、`-lon`、`-center-x` 或 `-center-z` 会报错，避免把手动参考点悄悄叠加到地理布局。需要人工参考时显式使用 `-terrain-layout legacy`。
+水平定位由 `-terrain-layout` 选择；`-alt` 只调整垂直高度，不会改变地图的水平摆放。
 
 ## 导出内容
 
@@ -71,9 +70,9 @@
 
 ## 地图与地形
 
-默认 `-terrain-layout geographic`。地图目录共 69 张：14 张使用审核后的 WGS84 估算位置，55 张回退 Atlas 技术坐标；高程 XML 与所有轨迹共用同一份 GeoReferences 变换。已知定位错误的 Sinai、Grand Canyon、Israel 不采用上游坐标。
+默认 `-terrain-layout geographic`。权威地图目录恰好包含 69 张地图：14 张使用审核后的 WGS84 估算位置，55 张使用 Atlas 回退；高程 XML 与所有轨迹共用同一份 GeoReferences 变换。正常 geographic 导出依赖这整套 69 张地图的参考数据，必须与已安装地形和转换元数据使用同一版本。已知定位错误的 Sinai、Grand Canyon、Israel 不采用上游坐标。
 
-当前版本不保证旧 ACMI 的绝对坐标兼容；旧文件应从 WRPL 重新导出。`-terrain-layout atlas` 与安装器的 `-AtlasOnly` 配对，属于显式技术摆放；`-terrain-layout legacy` 才允许人工经纬度和中心点。详见 [地理地形](TERRAIN_GEOGRAPHIC.md) 与 [Atlas / legacy](terrain-atlas.md)。
+若已有 ACMI 要与当前地形匹配，应从对应的原始 WRPL 直接重新导出。`-terrain-layout atlas` 与安装器的 `-AtlasOnly` 配对，属于当前的技术布局；`-alt` 可用于增加垂直高度偏移。详见 [地理地形](TERRAIN_GEOGRAPHIC.md) 与 [Atlas 布局](terrain-atlas.md)。
 
 地图 `.data` 不纳入 Git，软件仓库不附带地形资产。`-WithTerrain` 构建会把 69 张地图放进 `dist/wrpl-acmi/terrain`；安装工具入口为 `dist/wrpl-acmi/tools/terrain/Install-All-Terrains.cmd`，目录与选项见 [地形工具说明](../tools/terrain/README.zh-CN.md)。
 

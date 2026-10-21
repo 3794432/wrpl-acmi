@@ -14,7 +14,7 @@ func terrainPosition(x, z float64) (latitude, longitude float64) {
 	if activeGeographicProfile != nil {
 		return activeGeographicProfile.Location(x, z)
 	}
-	return localToLatLon(x, z, *centerX, *centerZ, *lat0, *lon0)
+	return localToLatLon(x, z, atlasLatitude, atlasLongitude)
 }
 
 func geographicFallbackReason(profile terrainmap.GeographicProfile, found bool) string {
@@ -51,11 +51,7 @@ func terrainGlobalProperties(layout terrainLayout, mapID string) []string {
 		layout = terrainLayoutAtlas
 	}
 	if mapID != "" {
-		if layout == terrainLayoutAtlas {
-			properties = append(properties, "MapId="+terrainmap.FormatAtlasMapID(mapID))
-		} else {
-			properties = append(properties, "MapId="+terrainmap.FormatMapID(mapID))
-		}
+		properties = append(properties, "MapId="+terrainmap.FormatAtlasMapID(mapID))
 	}
 	if layout == terrainLayoutAtlas {
 		properties = append(properties, "WT_TerrainLayout=AtlasV1")

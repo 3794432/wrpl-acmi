@@ -2,8 +2,6 @@
 /dist/
 /wrpl-acmi.exe
 
-/acmi-atlas.exe
-/acmi-mapid.exe
 /tools/terrain/smalltests/runtime/
 /tools/terrain/smalltests/geographic/runtime/
 /tools/terrain/smalltests/geographic/fixture/

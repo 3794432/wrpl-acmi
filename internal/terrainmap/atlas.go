@@ -4,7 +4,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 // atlasReferencesJSON is the frozen War Thunder Atlas V1 placement table. The
@@ -38,17 +37,14 @@ func loadAtlasReferences(data []byte) map[string]atlasCoordinates {
 	return refs
 }
 
-// AtlasReference returns the technical Atlas V1 anchor for id.
+// AtlasReference returns the technical Atlas V1 anchor for a canonical,
+// Geographic V1, or Atlas V1 map id.
 func AtlasReference(id string) (latitude, longitude float64, ok bool) {
-	id = strings.TrimSpace(id)
-	lower := strings.ToLower(id)
-	switch {
-	case strings.HasPrefix(lower, strings.ToLower(atlasMapIDPrefix)):
-		id = id[len(atlasMapIDPrefix):]
-	case strings.HasPrefix(lower, strings.ToLower(mapIDPrefix)):
-		id = id[len(mapIDPrefix):]
+	canonical, err := NormalizeMapID(id)
+	if err != nil {
+		return 0, 0, false
 	}
-	ref, ok := atlasReferences[strings.ToLower(id)]
+	ref, ok := atlasReferences[canonical]
 	if !ok {
 		return 0, 0, false
 	}

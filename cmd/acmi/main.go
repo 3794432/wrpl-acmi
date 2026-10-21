@@ -31,13 +31,9 @@ var (
 	inPath               = flag.String("in", "", "input .wrpl replay or server replay shard directory")
 	outPath              = flag.String("out", "", "output .acmi (default: input name with .acmi or .partial.acmi)")
 	allowIncomplete      = flag.Bool("allow-incomplete", true, "export available server replay parts when the tail is missing; set false to require a complete replay")
-	mapIDOverride        = flag.String("map-id", "", "explicit Tacview map id: canonical name or WarThunder.<name>")
-	terrainLayoutName    = flag.String("terrain-layout", "geographic", "terrain placement: geographic (default, reviewed georeferences with atlas fallback), atlas, or legacy")
-	lat0                 = flag.Float64("lat", 0, "legacy reference latitude in degrees")
-	lon0                 = flag.Float64("lon", 0, "legacy reference longitude in degrees")
+	mapIDOverride        = flag.String("map-id", "", "explicit map id: canonical name, WarThunder.Geo1.<name>, or WarThunder.Atlas1.<name>")
+	terrainLayoutName    = flag.String("terrain-layout", "geographic", "terrain placement: geographic (default, reviewed georeferences with atlas fallback) or atlas")
 	alt0                 = flag.Float64("alt", 0, "altitude offset in meters")
-	centerX              = flag.Float64("center-x", 0, "legacy local X coordinate of the map origin")
-	centerZ              = flag.Float64("center-z", 0, "legacy local Z coordinate of the map origin")
 	hashPath             = flag.String("ecshashes", "data/ecshashes.json", "ECS component hash map (empty to disable)")
 	namesPath            = flag.String("names", "", "optional JSON map: air:<uid> / ground:<eid> / missile:<eid> -> display name")
 	listPath             = flag.String("list", "", "optional CSV listing of tracks and current names")
@@ -52,20 +48,22 @@ var (
 	groundModels         = flag.Bool("ground-models", true, "identify surface-unit models from explicit replay metadata")
 )
 
+// Atlas anchors are selected from the shared catalog, never from manual flags.
+var atlasLatitude, atlasLongitude float64
+
 type terrainLayout string
 
 const (
 	terrainLayoutAtlas      terrainLayout = "atlas"
-	terrainLayoutLegacy     terrainLayout = "legacy"
 	terrainLayoutGeographic terrainLayout = "geographic"
 )
 
 func parseTerrainLayout(value string) (terrainLayout, error) {
 	switch layout := terrainLayout(strings.ToLower(strings.TrimSpace(value))); layout {
-	case terrainLayoutAtlas, terrainLayoutLegacy, terrainLayoutGeographic:
+	case terrainLayoutAtlas, terrainLayoutGeographic:
 		return layout, nil
 	default:
-		return "", fmt.Errorf("invalid -terrain-layout %q: use geographic, atlas, or legacy", value)
+		return "", fmt.Errorf("invalid -terrain-layout %q: use geographic or atlas", value)
 	}
 }
 
@@ -73,42 +71,16 @@ func currentTerrainLayout() (terrainLayout, error) {
 	return parseTerrainLayout(*terrainLayoutName)
 }
 
-func validateAtlasOverrideFlags(layout terrainLayout, visited []string) error {
-	if layout == terrainLayoutLegacy {
-		return nil
-	}
-	var conflicts []string
-	for _, name := range visited {
-		switch name {
-		case "lat", "lon", "center-x", "center-z":
-			conflicts = append(conflicts, "-"+name)
-		}
-	}
-	if len(conflicts) == 0 {
-		return nil
-	}
-	return fmt.Errorf("%s cannot override map placement with -terrain-layout %s; use -terrain-layout legacy",
-		strings.Join(conflicts, ", "), layout)
-}
-
-func visitedFlagNames() []string {
-	var names []string
-	flag.Visit(func(f *flag.Flag) {
-		names = append(names, f.Name)
-	})
-	return names
-}
-
-func applyAtlasReference(layout terrainLayout, mapID string) error {
-	if layout == terrainLayoutLegacy || mapID == "" {
+func applyAtlasReference(mapID string) error {
+	atlasLatitude, atlasLongitude = 0, 0
+	if mapID == "" {
 		return nil
 	}
 	latitude, longitude, ok := terrainmap.AtlasReference(mapID)
 	if !ok {
 		return fmt.Errorf("atlas reference missing for map %q", mapID)
 	}
-	*lat0, *lon0 = latitude, longitude
-	*centerX, *centerZ = 0, 0
+	atlasLatitude, atlasLongitude = latitude, longitude
 	return nil
 }
 
@@ -203,9 +175,6 @@ func runACMIMain() (retErr error) {
 		return err
 	}
 	*terrainLayoutName = string(layout)
-	if err := validateAtlasOverrideFlags(layout, visitedFlagNames()); err != nil {
-		return err
-	}
 	if *mapIDOverride != "" {
 		normalized, err := terrainmap.NormalizeMapID(*mapIDOverride)
 		if err != nil {
@@ -266,13 +235,11 @@ func runACMIMain() (retErr error) {
 	if err != nil {
 		return err
 	}
-	if err := applyAtlasReference(layout, resolvedMapID); err != nil {
+	if err := applyAtlasReference(resolvedMapID); err != nil {
 		return err
 	}
-	if resolvedMapID == "" && layout != terrainLayoutLegacy {
-		fmt.Fprintln(os.Stderr, "warning: replay map id is unknown; no terrain reference, T uses local coordinates (use -map-id or -terrain-layout legacy)")
-	} else if resolvedMapID == "" {
-		fmt.Fprintln(os.Stderr, "warning: replay map id is unknown; output has no MapId (use -map-id to override)")
+	if resolvedMapID == "" {
+		fmt.Fprintln(os.Stderr, "warning: replay map id is unknown; no terrain reference, T uses local coordinates (use -map-id to override)")
 	}
 	if layout == terrainLayoutGeographic && resolvedMapID != "" {
 		profile, ok := terrainmap.GeographicReference(resolvedMapID)
@@ -675,7 +642,7 @@ func writeACMIWithEventsMapIDAndSource(path string, header wrpl.WRPLHeader, trac
 }
 
 // acmiWriterContext carries optional exporters without mutating package globals.
-// A zero context reproduces the legacy output byte for byte.
+// A zero context writes the object stream without optional radar state.
 type acmiWriterContext struct {
 	radarLocks *radarLockExport
 }
@@ -1133,16 +1100,14 @@ func bombTrackEnd(tr *track) (uint32, bool) {
 	return tr.samples[len(tr.samples)-1].t, true
 }
 
-func localToLatLon(x, z, cx, cz, lat, lon float64) (float64, float64) {
+func localToLatLon(x, z, lat, lon float64) (float64, float64) {
 	const metersPerDegree = 111320.0
-	dx := x - cx
-	dz := z - cz
-	lat += dz / metersPerDegree
+	lat += z / metersPerDegree
 	cosLat := math.Cos(lat * math.Pi / 180)
 	if math.Abs(cosLat) < 1e-6 {
 		cosLat = 1
 	}
-	lon += dx / (metersPerDegree * cosLat)
+	lon += x / (metersPerDegree * cosLat)
 	return lat, lon
 }
 

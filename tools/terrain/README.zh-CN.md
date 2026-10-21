@@ -50,15 +50,8 @@ git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
 ```text
 dist/wrpl-acmi/
   wrpl-acmi.exe
-  acmi-mapid.exe
-  acmi-atlas.exe
   run.bat
-  README.md
-  README.zh-CN.md
-  LICENSE
-  build-manifest.json
-  data/ecshashes.json
-  docs/
+  data/
   tools/terrain/                 # 转换器、安装器、元数据与许可声明
   terrain/                       # -WithTerrain 成功转换后存在
     GeoReferences.json
@@ -90,11 +83,11 @@ pyooz 附带的 GPL-3.0-or-later `ooz` 解码器负责处理 Oodle 压缩的地�
 .\dist\wrpl-acmi\tools\terrain\Install-All-Terrains.cmd -SourceRoot .\dist\wrpl-acmi\terrain -AtlasReferences .\dist\wrpl-acmi\tools\terrain\AtlasReferences.json
 ```
 
-安装器校验所有地图的元数据与哈希，重写 XML 摆放并复用栅格数据。默认目标为 Tacview 的 `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`；可用 `-Destination` 指定其他位置。默认地理布局使用 14 张审核后的估算位置和 55 张 Atlas 回退；不保证旧 ACMI 的坐标兼容。
+安装器校验所有地图的元数据与哈希，重写 XML 摆放并复用栅格数据。默认目标为 Tacview 的 `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`；可用 `-Destination` 指定其他位置。权威目录恰好包含 69 张地图，其中 14 张使用审核后的地理估算位置，55 张使用 Atlas 回退。正常的 geographic 导出与安装需要这整套参考数据，转换地形、导出器配置和安装器元数据必须保持同步。
 
-需要显式技术坐标时，将安装器的 `-AtlasOnly` 与导出器的 `-terrain-layout atlas` 配对使用。人工摆放时，安装器使用 `-LegacyCoordinates -Latitude ... -Longitude ... -CenterX ... -CenterZ ...`，导出器使用 `-terrain-layout legacy -lat ... -lon ... -center-x ... -center-z ...`，并自行确认整套配准。完整说明见 [地理地形](../../docs/TERRAIN_GEOGRAPHIC.md)、[Atlas 与 legacy](../../docs/terrain-atlas.md) 和 [覆盖清单](georeference/coverage.json)。
+需要显式技术坐标时，将安装器的 `-AtlasOnly` 与导出器的 `-terrain-layout atlas` 配对使用。导出器的 `-alt` 仍是以米为单位的垂直偏移。完整说明见 [地理地形](../../docs/TERRAIN_GEOGRAPHIC.md)、[Atlas 布局](../../docs/terrain-atlas.md) 和 [覆盖清单](georeference/coverage.json)。
 
-安装完成后完全退出并重启 Tacview，再用当前导出器重新导出旧 WRPL。
+安装完成后完全退出并重启 Tacview，再用当前导出器重新导出 WRPL。若已有 ACMI 要与当前地形匹配，请以对应的原始 WRPL 直接重新导出。
 
 ## 导出
 
@@ -105,7 +98,7 @@ pyooz 附带的 GPL-3.0-or-later `ooz` 解码器负责处理 Oodle 压缩的地�
 .\dist\wrpl-acmi\run.bat -in "C:\Replays\server-session" -out "C:\Replays\server-session.acmi"
 ```
 
-`run.bat` 会把工作目录保留在包内，从而找到 `data/ecshashes.json` 和随包默认文件。导出器读取客户端 `.wrpl` 或同一场服务器回放的分片目录，写出 Tacview ACMI 2.1；它本身不提取或安装地形。
+`run.bat` 会把工作目录保留在包内，从而找到 `data/ecshashes.json` 和随包默认文件。导出器读取客户端 `.wrpl` 或同一场服务器回放的分片目录，写出 Tacview ACMI 2.1；它本身不提取或安装地形。默认使用 `-terrain-layout geographic`（14 张地理估算、55 张 Atlas 回退）；与安装器 `-AtlasOnly` 配套时可显式使用 `-terrain-layout atlas`。需要垂直高度偏移时仍可使用 `-alt`。
 
 ## 安装器检查
 

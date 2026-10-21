@@ -358,42 +358,51 @@ try {
     Assert-Condition ($result.FlatOutput -match 'Validated 2 geographic maps') 'main ValidateOnly did not run the geographic check'
     Assert-Condition (-not (Test-Path -LiteralPath $goodValidateDestination)) 'main ValidateOnly created a destination'
 
-    $oldFixture = New-FixtureCopy 'fixture-old'
-    Remove-Item -LiteralPath (Join-Path $oldFixture 'GeoReferences.json') -Force
-    $oldDestination = Join-Path $testRootFull 'J\WarThunderMaps'
-    $result = Run-Tool $mainScript @('-SourceRoot', $oldFixture, '-Destination', $oldDestination, '-AllowPartial')
-    Assert-Condition ($result.ExitCode -eq 0) "old partial fixture without Geo failed: $($result.Output)"
-    Assert-Condition ([string](Read-Manifest $oldDestination).layout -eq 'AtlasV1') 'old partial fixture did not stay AtlasV1'
+    $partialNoGeoFixture = New-FixtureCopy 'fixture-partial-nogeo'
+    Remove-Item -LiteralPath (Join-Path $partialNoGeoFixture 'GeoReferences.json') -Force
+    $partialNoGeoDestination = Join-Path $testRootFull 'J\WarThunderMaps'
+    $result = Run-Tool $mainScript @('-SourceRoot', $partialNoGeoFixture, '-Destination', $partialNoGeoDestination, '-AllowPartial')
+    Assert-Condition ($result.ExitCode -eq 0) "partial synthetic fixture without Geo failed: $($result.Output)"
+    Assert-Condition ([string](Read-Manifest $partialNoGeoDestination).layout -eq 'AtlasV1') 'partial synthetic fixture without Geo did not stay AtlasV1'
 
     $fixture69 = Join-Path $testRootFull 'fixture69'
     New-Item -ItemType Directory -Path $fixture69 | Out-Null
-    $positions69 = [ordered]@{}
-    for ($row = 0; $row -lt 9; $row++) {
-        $columnCount = if ($row -lt 8) { 8 } else { 5 }
-        for ($column = 0; $column -lt $columnCount; $column++) {
-            $mapId = 'g' + ($row * 8 + $column).ToString('00')
-            Write-FixtureMap $fixture69 $mapId @(-65536.0, -65536.0, 65536.0, 65536.0) @(-65536.0, -65536.0, 65504.0, 65504.0) 2 2 | Out-Null
-            $positions69[$mapId] = [ordered]@{ latitude = (-60.0 + 15.0 * $row); longitude = (-140.0 + 40.0 * $column) }
+    $terrainRoot = Split-Path -Path $mainScript -Parent
+    Copy-Item -LiteralPath (Join-Path $terrainRoot 'AtlasReferences.json') -Destination (Join-Path $fixture69 'AtlasReferences.json')
+    Copy-Item -LiteralPath (Join-Path $terrainRoot 'GeoReferences.json') -Destination (Join-Path $fixture69 'GeoReferences.json')
+    $defaultAtlas = Get-Content -LiteralPath (Join-Path $fixture69 'AtlasReferences.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $defaultGeo = Get-Content -LiteralPath (Join-Path $fixture69 'GeoReferences.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $samples69 = @{}
+    foreach ($property in @($defaultAtlas.PSObject.Properties | Sort-Object Name)) {
+        $mapId = [string]$property.Name
+        $geoEntry = $defaultGeo.maps.PSObject.Properties[$mapId].Value
+        if ($null -ne $geoEntry -and [bool]$geoEntry.enabled) {
+            $bounds = @([double]$geoEntry.local_bounds[0], [double]$geoEntry.local_bounds[1], [double]$geoEntry.local_bounds[2], [double]$geoEntry.local_bounds[3])
         }
+        else {
+            $bounds = @(-32768.0, -32768.0, 32768.0, 32768.0)
+        }
+        $samples69[$mapId] = $bounds
+        Write-FixtureMap $fixture69 $mapId $bounds $bounds 2 2 | Out-Null
     }
-    Write-AtlasFile (Join-Path $fixture69 'AtlasReferences.json') $positions69
-    $maps69 = [ordered]@{}
-    $maps69['g00'] = New-GeoEntry $true @(-65536.0, -65536.0, 65536.0, 65536.0) @(68.5, 34.2, 70.1, 35.5) 1.0
-    $maps69['g01'] = New-GeoEntry $true @(-65536.0, -65536.0, 65536.0, 65536.0) @(74.0, 36.0, 75.5, 37.2) 2.0
-    Write-GeoFile (Join-Path $fixture69 'GeoReferences.json') $maps69
+    Assert-Condition ($samples69.Count -eq 69) "default-reference fixture map count is $($samples69.Count)"
 
     $destination69 = Join-Path $testRootFull 'K\WarThunderMaps'
     $result = Run-Tool $mainScript @('-SourceRoot', $fixture69, '-Destination', $destination69)
-    Assert-Condition ($result.ExitCode -eq 0) "69-map geographic install failed: $($result.Output)"
+    Assert-Condition ($result.ExitCode -eq 0) "default 69-map geographic install failed: $($result.Output)"
+    Assert-Condition ($result.FlatOutput -match 'Applied 14 geographic maps') 'default 69-map install did not apply 14 geographic maps'
     $manifest69 = Read-Manifest $destination69
     Assert-Condition ([int]$manifest69.map_count -eq 69) '69-map manifest map_count'
     Assert-Condition ([string]$manifest69.layout -eq 'GeographicV1') '69-map manifest layout'
+    Assert-Condition ([int]$manifest69.reference.geo_enabled_map_count -eq 14) '69-map manifest geo_enabled_map_count is not 14'
+    Assert-Condition ([int]$manifest69.reference.geo_disabled_map_count -eq 55) '69-map manifest geo_disabled_map_count is not 55'
     $geoCount = @($manifest69.maps | Where-Object { $_.installed_map_id -like 'WarThunder.Geo1.*' }).Count
     $atlasCount = @($manifest69.maps | Where-Object { $_.installed_map_id -like 'WarThunder.Atlas1.*' }).Count
-    Assert-Condition ($geoCount -eq 2) "69-map geo count is $geoCount"
-    Assert-Condition ($atlasCount -eq 67) "69-map Atlas fallback count is $atlasCount"
-    Assert-GeoXml (Join-Path $destination69 'g00\CustomHeightmapList.xml') 'g00' @(-65536.0, -65536.0, 65536.0, 65536.0) @(68.5, 34.2, 70.1, 35.5) @(-65536.0, -65536.0, 65504.0, 65504.0)
-    Assert-AtlasXml (Join-Path $destination69 'g02\CustomHeightmapList.xml') 'g02' @(-65536.0, -65536.0, 65504.0, 65504.0) -60.0 -60.0
+    Assert-Condition ($geoCount -eq 14) "69-map geo count is $geoCount"
+    Assert-Condition ($atlasCount -eq 55) "69-map Atlas fallback count is $atlasCount"
+    $afghanEntry = $defaultGeo.maps.air_afghan
+    Assert-GeoXml (Join-Path $destination69 'air_afghan\CustomHeightmapList.xml') 'air_afghan' $afghanEntry.local_bounds $afghanEntry.geo_bounds $samples69['air_afghan']
+    Assert-AtlasXml (Join-Path $destination69 'air_grand_canyon\CustomHeightmapList.xml') 'air_grand_canyon' $samples69['air_grand_canyon'] ([double]$defaultAtlas.air_grand_canyon.latitude) ([double]$defaultAtlas.air_grand_canyon.longitude)
     foreach ($mapDirectory in @(Get-ChildItem -LiteralPath $destination69 -Directory -Force)) {
         $sourceMetadata = Get-Content -LiteralPath (Join-Path (Join-Path $fixture69 'maps') (Join-Path $mapDirectory.Name 'metadata.json')) -Raw -Encoding UTF8 | ConvertFrom-Json
         $installedData = Join-Path $mapDirectory.FullName ($mapDirectory.Name + '.data')
@@ -425,7 +434,7 @@ exit 0
     $result = Run-Tool $wrapper @()
     Assert-Condition ($result.ExitCode -eq 42) "FromInstaller failure changed the caller exit code to $($result.ExitCode)"
 
-    Write-Host 'PASS: geographic corners, ID/Visible/Quad, Atlas fallback, manifest layout/geo hash/commit/per-map IDs and anchors/XML hashes, data reuse, stale fallback restore, source and installed hash rejection, overlap rejection (geo and Atlas), world-bound coverage rejection, invalid latitude/bounds/uncertainty rejection, missing main manifest, ValidateOnly no-write, AtlasOnly bypass, old partial fixture compatibility, 69-map non-partial install, missing GeoReferences rejection before writes, and FromInstaller exit-code propagation.'
+    Write-Host 'PASS: geographic corners, ID/Visible/Quad, Atlas fallback, manifest layout/geo hash/commit/per-map IDs and anchors/XML hashes, data reuse, stale fallback restore, source and installed hash rejection, overlap rejection (geo and Atlas), world-bound coverage rejection, invalid latitude/bounds/uncertainty rejection, missing main manifest, ValidateOnly no-write, AtlasOnly bypass, partial synthetic fixture without Geo, default 69-map 14-geo/55-Atlas geometry, missing GeoReferences rejection before writes, and FromInstaller exit-code propagation.'
 }
 finally {
     if (Test-Path -LiteralPath $testRootFull) {

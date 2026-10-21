@@ -32,44 +32,28 @@ func TestResolveAvgEgyptSinaiHeaderWithoutMap(t *testing.T) {
 	}
 }
 
-func TestMapIDNormalizationAndFilenameTokens(t *testing.T) {
+func TestNormalizeMapIDAcceptsCurrentFormats(t *testing.T) {
 	for input, want := range map[string]string{
-		"air_grand_canyon":            "air_grand_canyon",
-		"WarThunder.air_grand_canyon": "air_grand_canyon",
-		"warthunder.AIR_GRAND_CANYON": "air_grand_canyon",
+		"air_grand_canyon":                   "air_grand_canyon",
+		"WarThunder.Geo1.air_grand_canyon":   "air_grand_canyon",
+		"warthunder.GEO1.AIR_GRAND_CANYON":   "air_grand_canyon",
+		"WarThunder.Atlas1.air_grand_canyon": "air_grand_canyon",
+		"warthunder.atlas1.AIR_GRAND_CANYON": "air_grand_canyon",
 	} {
 		if got, err := NormalizeMapID(input); err != nil || got != want {
 			t.Errorf("NormalizeMapID(%q) = %q, %v", input, got, err)
 		}
 	}
-	for _, bad := range []string{"", "grand canyon", "../air_grand_canyon", "WarThunder.unknown"} {
-		if _, err := NormalizeMapID(bad); err == nil {
-			t.Errorf("unsafe map id %q accepted", bad)
-		}
-	}
-	if id, ok := FromFilename("2026_09_17_air_grand_canyon_named.acmi"); !ok || id != "air_grand_canyon" {
-		t.Fatalf("filename token = %q, %v", id, ok)
-	}
-	if id, ok := FromFilename("arcade_phiphi_crater_rocks.acmi"); !ok || id != "arcade_phiphi_crater_rocks" {
-		t.Fatalf("longest filename token = %q, %v", id, ok)
-	}
-	if id, ok := FromFilename("mozdok_winter.acmi"); !ok || id != "mozdok_winter" {
-		t.Fatalf("contained prefix resolved as %q, %v", id, ok)
-	}
-	if _, ok := FromFilename("coordinate69_34_unknown.acmi"); ok {
-		t.Fatal("unknown filename guessed")
-	}
-}
-
-func TestFromFilenameRejectsSeparateTokensRegardlessOfLength(t *testing.T) {
-	for _, name := range []string{
-		"berlin_vs_air_grand_canyon.acmi",
-		"spain_berlin.acmi",
-		"air_afghan_vs_berlin.acmi",
-		"mozdok_vs_air_grand_canyon.acmi",
+	for _, bad := range []string{
+		"",
+		"grand canyon",
+		"../air_grand_canyon",
+		"WarThunder.air_grand_canyon",
+		"warthunder.AIR_GRAND_CANYON",
+		"WarThunder.unknown",
 	} {
-		if id, ok := FromFilename(name); ok {
-			t.Errorf("ambiguous filename %q resolved as %q", name, id)
+		if _, err := NormalizeMapID(bad); err == nil {
+			t.Errorf("unsupported map id %q accepted", bad)
 		}
 	}
 }

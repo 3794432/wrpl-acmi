@@ -61,15 +61,15 @@ git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
 
 `-Python` 请使用实际的 64 位 Python 3.12 解释器；默认值为 `python`。`-OutputRoot` 默认为 `dist\wrpl-acmi`。只构建导出器时省略 `-WithTerrain`、`-GameRoot` 和 `-DatamineRoot`。构建过程不会自动向 Tacview 安装地形。地形转换中断后，可用同样参数加上 `-ResumeTerrain` 继续；再次使用 `-WithTerrain` 时，若已有非空 `terrain` 目录且没有该开关，构建会拒绝覆盖。
 
-默认产物包含 `wrpl-acmi.exe`、`acmi-mapid.exe`、`acmi-atlas.exe`、`run.bat`、`data/ecshashes.json`、`tools/terrain` 下的地形源码与安装器；`-WithTerrain` 成功后还会包含带全部 69 张地图的转换目录 `terrain/`。这些程序均以关闭 CGO 的方式构建。历史 release 可能落后于当前 `dev`；需要最新行为时请从当前分支构建。
+运行包仅包含 `wrpl-acmi.exe`、`run.bat`、`data/` 和 `tools/terrain/`；`-WithTerrain` 成功后还会包含带全部 69 张地图的转换目录 `terrain/`。可执行文件以关闭 CGO 的方式构建。历史 release 可能落后于当前 `dev`；需要最新行为时请从当前分支构建。
 
 [源码构建工作流](https://github.com/3794432/wrpl-acmi/blob/dev/.github/workflows/source-build.yml)会运行 Go 测试、Python 解码器的合成输入测试、PowerShell 安装器测试，并构建不含地形的导出器包。真实地形转换依赖本机安装的游戏文件，因此不在 CI 中执行。
 
 ## 地图与地形
 
-默认 `-terrain-layout geographic`。地图目录共 69 张，其中 14 张使用审核过的 WGS84 估算位置（5 张高置信、9 张中置信），55 张自动回退 Atlas 技术坐标。Sinai、Grand Canyon、Israel 的已知错误定位不会被采用。
+默认 `-terrain-layout geographic`。权威地图目录恰好包含 69 张地图：14 张使用审核过的 WGS84 估算位置（5 张高置信、9 张中置信），55 张使用 Atlas 回退。转换地形、导出器配置与安装器元数据必须共用这整套 69 张地图的参考集。Sinai、Grand Canyon、Israel 的已知错误定位不会被采用。
 
-地形高程 XML 与飞机、导弹、炸弹、地面单位和干扰物共用同一份 GeoReferences 变换。当前版本不保证旧 ACMI 的坐标兼容；已有 ACMI 应从 WRPL 重新导出。`-terrain-layout atlas` 是显式技术摆放模式，`-terrain-layout legacy` 才允许手工 `-lat`/`-lon`/`-center-x`/`-center-z`。
+地形高程 XML 与飞机、导弹、炸弹、地面单位和干扰物共用同一份 GeoReferences 变换。若已有 ACMI 要与当前地形匹配，应从原始 WRPL 直接重新导出。`-terrain-layout atlas` 是当前的技术布局选项；`-alt` 仍可作为以米为单位的垂直偏移。
 
 地形安装命令（转换产物需带 GeoReferences.json，可从 tools/terrain 复制）：
 
@@ -86,7 +86,7 @@ Atlas 配套安装使用同一工具的 `-AtlasOnly`。地图 `.data` 不纳入 
 - [当前导出指南](docs/acmi-export.md)
 - [服务器分片](docs/ACMI_SERVER_REPLAYS.md) · [地面单位](docs/ACMI_GROUND_UNITS.md) · [炸弹](docs/ACMI_BOMBS.md) · [雷达锁定](docs/ACMI_RADAR_LOCKS.md)
 - [防空静态范围](docs/ACMI_AIR_DEFENCE_RANGES.md) · [导弹型号](docs/ACMI_MODELS.md) · [制导证据](docs/ACMI_GUIDANCE.md)
-- [地理地形](docs/TERRAIN_GEOGRAPHIC.md) · [Atlas 与 legacy](docs/terrain-atlas.md) · [上游检查器说明](docs/README.md)
+- [地理地形](docs/TERRAIN_GEOGRAPHIC.md) · [Atlas 布局](docs/terrain-atlas.md) · [上游检查器说明](docs/README.md)
 
 ## 解释边界
 

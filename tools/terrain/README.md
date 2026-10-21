@@ -50,15 +50,8 @@ The artifact contains:
 ```text
 dist/wrpl-acmi/
   wrpl-acmi.exe
-  acmi-mapid.exe
-  acmi-atlas.exe
   run.bat
-  README.md
-  README.zh-CN.md
-  LICENSE
-  build-manifest.json
-  data/ecshashes.json
-  docs/
+  data/
   tools/terrain/                 # converter, installer, metadata and license notices
   terrain/                       # present after a successful -WithTerrain build
     GeoReferences.json
@@ -90,11 +83,11 @@ Run from the repository root after a successful `-WithTerrain` build:
 .\dist\wrpl-acmi\tools\terrain\Install-All-Terrains.cmd -SourceRoot .\dist\wrpl-acmi\terrain -AtlasReferences .\dist\wrpl-acmi\tools\terrain\AtlasReferences.json
 ```
 
-The installer validates all map metadata and hashes, rewrites the XML placement, and reuses the raster bytes. Its default destination is Tacview's `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`. `-Destination` can select another install location. The default geographic layout uses 14 reviewed estimates and 55 Atlas fallbacks; old ACMI coordinate compatibility is not guaranteed.
+The installer validates all map metadata and hashes, rewrites the XML placement, and reuses the raster bytes. Its default destination is Tacview's `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`. `-Destination` can select another install location. The authoritative catalog contains exactly 69 maps: 14 use reviewed geographic estimates and 55 use the Atlas fallback. The complete reference set is required for normal geographic export and installation, so keep it synchronized between the converted terrain, exporter configuration, and installer metadata.
 
-Use `-AtlasOnly` with exporter `-terrain-layout atlas` only when deliberately choosing technical coordinates. For hand placement, use installer `-LegacyCoordinates -Latitude ... -Longitude ... -CenterX ... -CenterZ ...` with exporter `-terrain-layout legacy -lat ... -lon ... -center-x ... -center-z ...` and a registration you have checked. Full details are in [TERRAIN_GEOGRAPHIC.md](../../docs/TERRAIN_GEOGRAPHIC.md), [terrain-atlas.md](../../docs/terrain-atlas.md), and [coverage](georeference/coverage.json).
+Use `-AtlasOnly` with exporter `-terrain-layout atlas` when deliberately choosing technical coordinates. The exporter's `-alt` option remains a vertical offset in metres. Full details are in [TERRAIN_GEOGRAPHIC.md](../../docs/TERRAIN_GEOGRAPHIC.md), [terrain-atlas.md](../../docs/terrain-atlas.md), and [coverage](georeference/coverage.json).
 
-Restart Tacview after installation and re-export old WRPL files with the current exporter.
+Restart Tacview after installation and re-export WRPL files with the current exporter. To place an existing ACMI with the current terrain, use its original WRPL as the input.
 
 ## Export
 
@@ -105,7 +98,7 @@ From the repository root:
 .\dist\wrpl-acmi\run.bat -in "C:\Replays\server-session" -out "C:\Replays\server-session.acmi"
 ```
 
-`run.bat` keeps its working directory inside the package so `data/ecshashes.json` and packaged defaults are found. The exporter reads a client `.wrpl` or one match's server shard directory. It writes Tacview ACMI 2.1; it does not extract or install terrain by itself.
+`run.bat` keeps its working directory inside the package so `data/ecshashes.json` and packaged defaults are found. The exporter reads a client `.wrpl` or one match's server shard directory. It writes Tacview ACMI 2.1; it does not extract or install terrain by itself. Use `-terrain-layout geographic` (the default) for the 14-estimate and 55-Atlas-fallback catalog, or `-terrain-layout atlas` with the installer's `-AtlasOnly` for the technical layout. A vertical altitude offset can be applied with `-alt`.
 
 ## Installer checks
 

@@ -31,10 +31,10 @@ func TestGeographicAllPositionFormatsUseSameTransform(t *testing.T) {
 
 func TestGeographicWriterAndAtlasFallback(t *testing.T) {
 	setTestTerrainLayout(t, terrainLayoutGeographic)
-	oldLat, oldLon, oldX, oldZ := *lat0, *lon0, *centerX, *centerZ
-	t.Cleanup(func() { *lat0, *lon0, *centerX, *centerZ = oldLat, oldLon, oldX, oldZ })
+	oldLat, oldLon := atlasLatitude, atlasLongitude
+	t.Cleanup(func() { atlasLatitude, atlasLongitude = oldLat, oldLon })
 	for _, mapID := range []string{"air_afghan", "air_grand_canyon"} {
-		if err := applyAtlasReference(terrainLayoutGeographic, mapID); err != nil {
+		if err := applyAtlasReference(mapID); err != nil {
 			t.Fatal(err)
 		}
 		tr := &track{key: trackKey{air: true, id: 1}, samples: []acmiSample{{t: 1000, x: 1000, y: 123, z: 2000, roll: 1, pitch: 2, yaw: 3}}}
@@ -61,7 +61,7 @@ func TestGeographicWriterAndAtlasFallback(t *testing.T) {
 			if found && profile.Enabled {
 				t.Fatal("known incorrect Grand Canyon georeference was enabled")
 			}
-			wantLat, wantLon = localToLatLon(1000, 2000, 0, 0, -60, 100)
+			wantLat, wantLon = localToLatLon(1000, 2000, -60, 100)
 			if !strings.Contains(text, "MapId=WarThunder.Atlas1.air_grand_canyon\n") || !strings.Contains(text, "WT_GeoreferenceStatus=AtlasFallback\n") {
 				t.Fatal("fallback metadata missing")
 			}
@@ -76,14 +76,5 @@ func TestGeographicWriterAndAtlasFallback(t *testing.T) {
 		if activeGeographicProfile != nil {
 			t.Fatal("writer leaked its map transform into the next replay")
 		}
-	}
-}
-
-func TestGeographicRejectsManualPlacement(t *testing.T) {
-	if _, err := parseTerrainLayout("geographic"); err != nil {
-		t.Fatal(err)
-	}
-	if err := validateAtlasOverrideFlags(terrainLayoutGeographic, []string{"lat"}); err == nil {
-		t.Fatal("geographic mode accepted an unrelated manual origin")
 	}
 }

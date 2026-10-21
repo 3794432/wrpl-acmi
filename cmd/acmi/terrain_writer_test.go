@@ -20,13 +20,10 @@ func setTestTerrainLayout(t *testing.T, layout terrainLayout) {
 
 func TestAtlasWriterKeepsAbsoluteTWithoutDoubleReferencing(t *testing.T) {
 	setTestTerrainLayout(t, terrainLayoutAtlas)
-	oldLat, oldLon, oldAlt := *lat0, *lon0, *alt0
-	oldCenterX, oldCenterZ := *centerX, *centerZ
-	*lat0, *lon0, *alt0 = -60, 100, 1000
-	*centerX, *centerZ = 0, 0
+	oldLat, oldLon, oldAlt := atlasLatitude, atlasLongitude, *alt0
+	atlasLatitude, atlasLongitude, *alt0 = -60, 100, 1000
 	t.Cleanup(func() {
-		*lat0, *lon0, *alt0 = oldLat, oldLon, oldAlt
-		*centerX, *centerZ = oldCenterX, oldCenterZ
+		atlasLatitude, atlasLongitude, *alt0 = oldLat, oldLon, oldAlt
 	})
 
 	air := &track{
@@ -87,49 +84,6 @@ func TestAtlasWriterKeepsAbsoluteTWithoutDoubleReferencing(t *testing.T) {
 		!strings.Contains(text, "WT_GroundSpeed=100.000000") ||
 		!strings.Contains(text, "WT_ClimbRate=10.000000") {
 		t.Fatalf("missile speed was not preserved:\n%s", text)
-	}
-}
-
-func TestLegacyWriterKeepsManualAbsoluteTWithZeroReferences(t *testing.T) {
-	setTestTerrainLayout(t, terrainLayoutLegacy)
-	oldLat, oldLon, oldAlt := *lat0, *lon0, *alt0
-	oldCenterX, oldCenterZ := *centerX, *centerZ
-	*lat0, *lon0, *alt0 = 10, 20, 30
-	*centerX, *centerZ = 5, 6
-	t.Cleanup(func() {
-		*lat0, *lon0, *alt0 = oldLat, oldLon, oldAlt
-		*centerX, *centerZ = oldCenterX, oldCenterZ
-	})
-
-	air := &track{
-		key:     trackKey{air: true, id: 1},
-		samples: []acmiSample{{t: 1000, x: 5, y: 7, z: 6, roll: 1, pitch: 2, yaw: 3}},
-	}
-	path := filepath.Join(t.TempDir(), "legacy.acmi")
-	if err := writeACMIWithEventsMapID(path, wrpl.WRPLHeader{}, []*track{air}, nil, nil, nil, "spain"); err != nil {
-		t.Fatal(err)
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(data)
-	fields := acmiFields(t, text, "1")
-	want := []float64{20, 10, 37, 1, 2, 3}
-	for i := range want {
-		if math.Abs(fields[i]-want[i]) > 1e-6 {
-			t.Fatalf("legacy T field %d = %v, want %v", i, fields[i], want[i])
-		}
-	}
-	for _, line := range []string{
-		"0,ReferenceLongitude=0.0000000",
-		"0,ReferenceLatitude=0.0000000",
-		"0,ReferenceAltitude=0.0",
-		"0,MapId=WarThunder.spain",
-	} {
-		if !strings.Contains(text, line+"\n") {
-			t.Fatalf("missing %q in:\n%s", line, text)
-		}
 	}
 }
 

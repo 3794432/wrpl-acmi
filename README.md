@@ -61,15 +61,15 @@ The sparse checkout selects only `aces.vromfs.bin_u/levels`; a full Datamine clo
 
 Use an actual 64-bit Python 3.12 interpreter for `-Python`; `python` is the default. `-OutputRoot` defaults to `dist\wrpl-acmi`. Omit `-WithTerrain`, `-GameRoot`, and `-DatamineRoot` for an exporter-only build. The build does not install terrain into Tacview. If terrain conversion is interrupted, rerun with the same parameters plus `-ResumeTerrain`; a repeated `-WithTerrain` build rejects the existing nonempty terrain directory unless that switch is present.
 
-The default result contains `wrpl-acmi.exe`, `acmi-mapid.exe`, `acmi-atlas.exe`, `run.bat`, `data/ecshashes.json`, terrain sources and installers under `tools/terrain`, and, when `-WithTerrain` succeeds, the converted `terrain/` directory with all 69 maps. The binaries are built with CGO disabled. An older release may lag behind `dev`; build from the current branch when you need its behavior.
+The runtime package contains `wrpl-acmi.exe`, `run.bat`, `data/`, and `tools/terrain/`. When `-WithTerrain` succeeds, it also contains `terrain/` with all 69 converted maps. The executable is built with CGO disabled. An older release may lag behind `dev`; build from the current branch when you need its behavior.
 
 The [source-build workflow](https://github.com/3794432/wrpl-acmi/blob/dev/.github/workflows/source-build.yml) runs the Go tests, synthetic Python decoder tests, PowerShell installer tests, and an exporter-only package build. CI does not convert real terrain because that requires locally installed game files.
 
 ## Maps and terrain
 
-The default is `-terrain-layout geographic`. The catalog contains 69 maps: 14 use reviewed WGS84 estimates (5 high confidence and 9 medium confidence), while 55 fall back to technical Atlas coordinates. Known bad placements for Sinai, Grand Canyon, and Israel are not used.
+The default is `-terrain-layout geographic`. The authoritative catalog contains exactly 69 maps: 14 use reviewed WGS84 estimates (5 high confidence and 9 medium confidence), while 55 use the Atlas fallback. Keep this complete reference set synchronized across the converted terrain, exporter configuration, and installer metadata. Known bad placements for Sinai, Grand Canyon, and Israel are not used.
 
-Terrain elevation XML and aircraft, missile, bomb, ground-unit, and countermeasure tracks share the same GeoReferences transform. Current builds do not guarantee coordinate compatibility with old ACMI files; re-export an existing ACMI from its WRPL. `-terrain-layout atlas` is an explicit technical layout. Only `-terrain-layout legacy` permits manual `-lat`/`-lon`/`-center-x`/`-center-z`.
+Terrain elevation XML and aircraft, missile, bomb, ground-unit, and countermeasure tracks share the same GeoReferences transform. To place an existing ACMI with the current terrain, re-export it directly from its original WRPL. `-terrain-layout atlas` is the current technical layout option. `-alt` remains available as a vertical offset in metres.
 
 Install terrain with (the converted output must contain GeoReferences.json):
 
@@ -86,7 +86,7 @@ Terrain heights and geometry come from the installed War Thunder client's `level
 - [Current export guide](docs/acmi-export.md)
 - [Server shards](docs/ACMI_SERVER_REPLAYS.md) · [Ground units](docs/ACMI_GROUND_UNITS.md) · [Bombs](docs/ACMI_BOMBS.md) · [Radar locks](docs/ACMI_RADAR_LOCKS.md)
 - [Static air-defence ranges](docs/ACMI_AIR_DEFENCE_RANGES.md) · [Missile models](docs/ACMI_MODELS.md) · [Guidance evidence](docs/ACMI_GUIDANCE.md)
-- [Geographic terrain](docs/TERRAIN_GEOGRAPHIC.md) · [Atlas and legacy](docs/terrain-atlas.md) · [Upstream inspector notes](docs/README.md)
+- [Geographic terrain](docs/TERRAIN_GEOGRAPHIC.md) · [Atlas layout](docs/terrain-atlas.md) · [Upstream inspector notes](docs/README.md)
 
 ## Limits of the data
 

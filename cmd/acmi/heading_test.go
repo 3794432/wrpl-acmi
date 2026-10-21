@@ -31,13 +31,10 @@ func TestAircraftHeadingToACMIAppliesClockwiseQuarterTurnAndWraps(t *testing.T) 
 }
 
 func TestACMIPositionFormatterLeavesPositionAttitudeAndYawAxesUnchanged(t *testing.T) {
-	oldCenterX, oldCenterZ := *centerX, *centerZ
-	oldLat, oldLon, oldAlt := *lat0, *lon0, *alt0
-	*centerX, *centerZ = 100, -200
-	*lat0, *lon0, *alt0 = 50, 10, 1000
+	oldLat, oldLon, oldAlt := atlasLatitude, atlasLongitude, *alt0
+	atlasLatitude, atlasLongitude, *alt0 = 50, 10, 1000
 	defer func() {
-		*centerX, *centerZ = oldCenterX, oldCenterZ
-		*lat0, *lon0, *alt0 = oldLat, oldLon, oldAlt
+		atlasLatitude, atlasLongitude, *alt0 = oldLat, oldLon, oldAlt
 	}()
 
 	sample := acmiSample{x: 1250, y: 23.5, z: 600, roll: 12.5, pitch: -7.25, yaw: 350}
@@ -54,8 +51,8 @@ func TestACMIPositionFormatterLeavesPositionAttitudeAndYawAxesUnchanged(t *testi
 		got[i] = value
 	}
 
-	lat := 50 + (600-(-200))/111320.0
-	lon := 10 + (1250-100)/(111320.0*math.Cos(lat*math.Pi/180))
+	lat := 50 + 600/111320.0
+	lon := 10 + 1250/(111320.0*math.Cos(lat*math.Pi/180))
 	want := []float64{lon, lat, 1023.5, 12.5, -7.25, 350}
 	for i := range want {
 		if math.Abs(got[i]-want[i]) > 1e-6 {

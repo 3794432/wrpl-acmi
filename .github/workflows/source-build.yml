@@ -23,7 +23,7 @@ jobs:
         shell: pwsh
         run: |
           $env:CGO_ENABLED = '0'
-          go test ./cmd/acmi ./cmd/acmi-atlas ./cmd/acmi-mapid ./internal/terrainmap ./wrpl/...
+          go test ./cmd/acmi ./internal/terrainmap ./wrpl/...
       - name: Test terrain decoders with synthetic input
         working-directory: tools/terrain/converter
         run: python -m unittest discover -s tests

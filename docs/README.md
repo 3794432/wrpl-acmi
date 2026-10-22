@@ -8,6 +8,8 @@ A Go replay library, the upstream dear-imgui inspector, and the headless `wrpl-a
 
 Start with the [project README](../README.md) for installation, packaging, and the current feature set. For export work, use the [ACMI export guide](acmi-export.md) for command-line options, defaults, input rules, output behavior, and evidence limits.
 
+Build and distribute the two independent executables using the [single-file build guide](standalone-build.md) ([中文](standalone-build.zh-CN.md)).
+
 - [Server replay shards](ACMI_SERVER_REPLAYS.md) · [Ground units](ACMI_GROUND_UNITS.md) · [Airfields](ACMI_AIRFIELDS.md) · [Airfield coverage](ACMI_AIRFIELDS_COVERAGE.md)
 - [Metadata, bookmarks and aircraft estimates](acmi-information.md) · [Countermeasure identity](ACMI_COUNTERMEASURES.md) · [Bombs](ACMI_BOMBS.md) · [Radar designations](ACMI_RADAR_LOCKS.md)
 - [Static air-defence ranges](ACMI_AIR_DEFENCE_RANGES.md) · [Missile models](ACMI_MODELS.md) · [Missile guidance evidence](ACMI_GUIDANCE.md)

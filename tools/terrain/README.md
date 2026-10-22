@@ -2,20 +2,18 @@
 
 [简体中文](README.zh-CN.md) · [Project README](../../README.md)
 
-The source tree includes the converter and the installer. The converter reads compiled terrain from a local War Thunder installation and level configuration from a pinned Datamine checkout. It writes a 69-map package that the installer validates and copies to Tacview. No game terrain assets are stored in Git.
+The source tree includes the converter and installer code. The converter reads compiled terrain from a local War Thunder installation and level configuration from a pinned Datamine checkout, then writes a 69-map package. `build.ps1` turns that package into a single installer executable with the terrain payload appended. No game terrain assets are stored in Git.
 
 ## Prerequisites
 
-- Windows and PowerShell.
-- Go 1.25.6 or newer to build `wrpl-acmi` (`go.mod` currently declares Go 1.25.6).
-- 64-bit Python 3.12 and the converter's pip requirements.
-- Git and a local War Thunder client whose `levels/*.bin` files contain the terrain heights and geometry.
-- A Datamine checkout at the compatible commit `f7952e4291e9fd7b6fe38e84020dddef925c3457`.
-- Tacview only when installing the converted terrain.
+- Windows PowerShell and Go 1.25.6 or newer to build the executables (`go.mod` currently declares Go 1.25.6).
+- To convert terrain from scratch: 64-bit Python 3.12, the converter's pip requirements, Git, a local War Thunder client with the compiled `levels/*.bin` files, and a Datamine checkout at `f7952e4291e9fd7b6fe38e84020dddef925c3457`.
+- To package an existing converted directory with `-TerrainSource`: no Python, Git, game installation, or Tacview is required on the build machine.
+- At install time: Tacview and system Windows PowerShell (`powershell.exe`). The standalone installer needs several gigabytes of free space for temporary extraction and installation. It does not need the game, converter scripts, Python, Go, or Git.
 
 ## Build from scratch
 
-The following PowerShell commands clone the current `dev` branch, create the Python environment, install the converter dependencies, pin Datamine, build the replay exporter together with all 69 converted maps, and put the result under `dist/wrpl-acmi`:
+The following PowerShell commands clone the current `dev` branch, create the Python environment, install the converter dependencies, pin Datamine, convert all 69 maps, and build both executables with the terrain payload embedded in the installer:
 
 ```powershell
 git clone --branch dev --single-branch https://github.com/3794432/wrpl-acmi.git
@@ -33,7 +31,15 @@ git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
 
 The sparse checkout selects only `aces.vromfs.bin_u/levels`; the converter needs the 69 target `.blkx` files listed in `AtlasReferences.json` from the pinned revision, not a full Datamine checkout. `requirements.txt` pins NumPy 2.3.5, Pillow 12.3.0, pyooz 0.0.8, and zstandard 0.25.0.
 
-`build.ps1` accepts `-OutputRoot`, which defaults to `dist\wrpl-acmi`, plus `-WithTerrain`, `-ResumeTerrain`, `-GameRoot`, `-DatamineRoot`, and `-Python` (default `python`). With `-WithTerrain`, the script calls `tools/terrain/build-terrain.ps1` and includes its converted maps in `dist/wrpl-acmi/terrain`. The build does not install anything into Tacview. Use the explicit venv interpreter for `-Python` when that is not the default `python` on `PATH`.
+`build.ps1` accepts `-OutputRoot` (default `dist\wrpl-acmi`), `-TerrainSource`, `-WithTerrain`, `-ResumeTerrain`, `-GameRoot`, `-DatamineRoot`, and `-Python` (default `python`). Every build produces `wrpl-acmi.exe` and `wrpl-terrain-installer.exe`. With `-WithTerrain`, the script calls `tools/terrain/build-terrain.ps1`, stages the converted maps in `dist/wrpl-acmi/terrain`, and appends them to the installer. Use the explicit venv interpreter for `-Python` when that is not the default `python` on `PATH`.
+
+To use an already converted 69-map directory instead:
+
+```powershell
+.\build.ps1 -TerrainSource ".\converted-terrain"
+```
+
+`-TerrainSource` and `-WithTerrain` are mutually exclusive. An ordinary `build.ps1` invocation creates a terrain installer with logic only, not a complete offline terrain package. The build does not install anything into Tacview. Packaging does not change the converter's output rule: omitting converter `-out` still writes to the current working directory.
 
 If conversion stops partway through, rerun the same command with `-ResumeTerrain`; the flag requires `-WithTerrain` and is passed to the converter. Without it, a repeated terrain build refuses the existing nonempty output directory.
 
@@ -50,17 +56,20 @@ The artifact contains:
 ```text
 dist/wrpl-acmi/
   wrpl-acmi.exe
+  wrpl-terrain-installer.exe        # payload included with -TerrainSource or -WithTerrain
+  build-manifest.json
   run.bat
-  data/
+  data/                            # auxiliary package copy; the exporter embeds its defaults
+  docs/
   tools/terrain/                 # converter, installer, metadata and license notices
-  terrain/                       # present after a successful -WithTerrain build
+  terrain/                       # staging source present after a -WithTerrain build
     GeoReferences.json
     maps/<id>/<id>.data
     maps/<id>/metadata.json
     maps/<id>/CustomHeightmapList.xml
 ```
 
-The complete package contains 69 map directories. The raster is signed little-endian 16-bit metres, ordered north-to-south and west-to-east; `metadata.json` records dimensions, sampling bounds, and SHA-256. The XML starts from the zero-origin template expected by the installer. Synthetic `smalltests` terrain is only for installer tests.
+The complete terrain source contains 69 map directories. The raster is signed little-endian 16-bit metres, ordered north-to-south and west-to-east; `metadata.json` records dimensions, sampling bounds, and SHA-256. The XML starts from the zero-origin template expected by the installer. Synthetic `smalltests` terrain is only for installer tests. The standalone EXE appends the payload; it does not depend on adjacent `data/`, `terrain/`, or `tools/` directories. See [Single-file release build](../../docs/standalone-build.md) for distribution details.
 
 ## Input sources and licensing
 
@@ -77,21 +86,31 @@ The GPL-3.0-or-later `ooz` decoder shipped by pyooz handles the Oodle-compressed
 
 ## Install converted terrain
 
-Run from the repository root after a successful `-WithTerrain` build:
+The preferred release path is the standalone installer at the package root:
 
 ```powershell
-.\dist\wrpl-acmi\tools\terrain\Install-All-Terrains.cmd -SourceRoot .\dist\wrpl-acmi\terrain -AtlasReferences .\dist\wrpl-acmi\tools\terrain\AtlasReferences.json
+.\dist\wrpl-acmi\wrpl-terrain-installer.exe
 ```
 
-The installer validates all map metadata and hashes, rewrites the XML placement, and reuses the raster bytes. Its default destination is Tacview's `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`. `-Destination` can select another install location. The authoritative catalog contains exactly 69 maps: 14 use reviewed geographic estimates and 55 use the Atlas fallback. The complete reference set is required for normal geographic export and installation, so keep it synchronized between the converted terrain, exporter configuration, and installer metadata.
+When the installer was built without a payload, or when installing a different converted directory, pass `-source`:
 
-Use `-AtlasOnly` with exporter `-terrain-layout atlas` when deliberately choosing technical coordinates. The exporter's `-alt` option remains a vertical offset in metres. Full details are in [TERRAIN_GEOGRAPHIC.md](../../docs/TERRAIN_GEOGRAPHIC.md), [terrain-atlas.md](../../docs/terrain-atlas.md), and [coverage](georeference/coverage.json).
+```powershell
+.\dist\wrpl-acmi\wrpl-terrain-installer.exe -source "C:\Terrain\converted-terrain"
+```
+
+`-source` is optional for a payload-bearing installer and required for a logic-only build. The default destination is Tacview's `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`; use `-destination <directory>` for another location. The installer verifies source metadata and SHA-256 values before writing the target. `-validate-only` checks the source without writing the destination.
+
+`-profile` selects height encoding: `auto` is the default and detects the installed Tacview version; if Tacview cannot be found, it falls back to `1.9.4`. Explicit values are `1.9.4` and `1.9.5`. Running the installer again can reuse its cache, but temporary extraction plus the installed maps can require several gigabytes of free disk space.
+
+The authoritative catalog contains exactly 69 maps: 14 use reviewed geographic estimates and 55 use the Atlas fallback. The complete reference set is required for normal geographic export and installation, so keep it synchronized between the converted terrain, exporter configuration, and installer metadata.
+
+Use installer `-atlas` with exporter `-terrain-layout atlas` when deliberately choosing technical coordinates. These two settings must come from the same layout; the default on both sides is geographic. The exporter's `-alt` option remains a vertical offset in metres. Full details are in [TERRAIN_GEOGRAPHIC.md](../../docs/TERRAIN_GEOGRAPHIC.md), [terrain-atlas.md](../../docs/terrain-atlas.md), and [coverage](georeference/coverage.json).
 
 Restart Tacview after installation and re-export WRPL files with the current exporter. To place an existing ACMI with the current terrain, use its original WRPL as the input.
 
-### Terrain format profiles
+### Terrain height encoding
 
-After installing the maps, explicitly select the format for your Tacview version:
+The standalone installer applies the encoding selected by `-profile auto`, `1.9.4`, or `1.9.5`. The source-tree format utility remains available when an existing installation needs inspection or a manual profile change:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dist\wrpl-acmi\tools\terrain\Set-Tacview-Terrain-Format.ps1 -Profile 1.9.4
@@ -99,24 +118,24 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dist\wrpl-acmi\tools\t
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dist\wrpl-acmi\tools\terrain\Set-Tacview-Terrain-Format.ps1 -Profile 1.9.5
 ```
 
-The default `-TerrainRoot` is `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`; supply that parameter for a custom installation. The 1.9.4 profile creates a root-level heightmap index and unsigned 16-bit height copies with an altitude offset of -32768 m. Original signed rasters remain unchanged. The 1.9.5 profile restores the native per-map signed-height definitions. Both profiles retain the same map placement and ACMI coordinates. `-ValidateOnly` checks the selected installed profile without changing files.
+The default `-TerrainRoot` is `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`; supply that parameter for a custom installation. The 1.9.4 profile creates a root-level heightmap index and unsigned 16-bit height copies with an altitude offset of -32768 m. Original signed rasters remain unchanged. The 1.9.5 profile restores the native per-map signed-height definitions. Both profiles retain the same map placement and ACMI coordinates. The format utility's `-ValidateOnly` inspects the installed profile; the installer's `-validate-only` checks its source and does not write the target.
 
-Format selection is a separate step: repeat it after rerunning the terrain installer. Restart Tacview after switching. Synthetic format and round-trip tests cover the generated files; these are not a completed GUI rendering test for both Tacview versions.
+Restart Tacview after switching the installed format. Synthetic format and round-trip checks cover generated files; they do not establish GUI rendering for either Tacview version.
 
 ## Export
 
-From the repository root:
+The exporter is a self-contained executable. Run it directly from the package or copy it elsewhere:
 
 ```powershell
-.\dist\wrpl-acmi\run.bat -in "C:\Replays\replay.wrpl" -out "C:\Replays\replay.acmi"
-.\dist\wrpl-acmi\run.bat -in "C:\Replays\server-session" -out "C:\Replays\server-session.acmi"
+.\dist\wrpl-acmi\wrpl-acmi.exe -in "C:\Replays\replay.wrpl" -out "C:\Replays\replay.acmi"
+.\dist\wrpl-acmi\wrpl-acmi.exe -in "C:\Replays\server-session" -out "C:\Replays\server-session.acmi"
 ```
 
-`run.bat` keeps its working directory inside the package so `data/ecshashes.json` and packaged defaults are found. The exporter reads a client `.wrpl` or one match's server shard directory. It writes Tacview ACMI 2.1; it does not extract or install terrain by itself. Use `-terrain-layout geographic` (the default) for the 14-estimate and 55-Atlas-fallback catalog, or `-terrain-layout atlas` with the installer's `-AtlasOnly` for the technical layout. A vertical altitude offset can be applied with `-alt`.
+The exporter reads a client `.wrpl` or one match's server shard directory. Its normal lookup data, including `ecshashes`, is compiled in, so neither `run.bat`, a `data/` directory, nor an installed terrain set is required to export. Tacview is needed only to view the ACMI. Use `-terrain-layout geographic` (the default) for the 14-estimate and 55-Atlas-fallback catalog, or `-terrain-layout atlas` with the installer's `-atlas` for the technical layout. A vertical altitude offset can be applied with `-alt`.
 
 ## Installer checks
 
-These tests use synthetic fixtures and do not read game assets:
+These source-tree checks use synthetic fixtures and do not read game assets:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-install-all-terrains.ps1
@@ -125,3 +144,5 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltes
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-terrain-194-encoding.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-terrain-format.ps1
 ```
+
+The presence of these checks does not assert that every test or build has passed in the current working tree.

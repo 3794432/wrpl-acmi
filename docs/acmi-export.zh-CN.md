@@ -1,6 +1,6 @@
 # wrpl-acmi ACMI 导出指南
 
-[English](acmi-export.md) · [项目说明](../README.zh-CN.md)
+[English](acmi-export.md) · [项目说明](../README.zh-CN.md) · [单文件发布构建](standalone-build.zh-CN.md)
 
 本页对应当前 `dev` 的 `cmd/acmi`。地形定位见[地理地形](TERRAIN_GEOGRAPHIC.md)和 [Atlas 布局](terrain-atlas.md)。
 
@@ -21,9 +21,9 @@
 
 参数要放在位置参数之前，或统一使用 `-in`。不能同时提供 `-in` 和位置参数，也不能给多个位置参数。
 
-未指定 `-out` 时，输出写到当前工作目录：普通文件使用 `<输入基本名>.acmi`；完整分片目录使用 `<目录名>.acmi`；尾片缺失的分片目录使用 `<目录名>.partial.acmi`。把单个文件或单个目录拖到 EXE 也遵循这条规则；一次只拖一个输入。runtime 包中的 `run.bat` 会先切换到包目录。
+未指定 `-out` 时，输出写到当前工作目录：普通文件使用 `<输入基本名>.acmi`；完整分片目录使用 `<目录名>.acmi`；尾片缺失的分片目录使用 `<目录名>.partial.acmi`。把单个文件或单个目录拖到 EXE 也遵循这条规则；单文件构建不改变输出命名。runtime 包中的 `run.bat` 仍是可选包装，会先切换到包目录。
 
-`-ecshashes` 默认读取 `data/ecshashes.json`，也会尝试 EXE 同目录下的相对路径。该表缺失时导出器会降级，实体类名、型号、队伍、飞行员和导弹构造信息可能缺失。
+`-ecshashes` 默认为 `embedded`，因此正常 ECS 组件名称及相关元数据无需相邻 `data/` 目录。显式 JSON 路径会覆盖内嵌表；空字符串会关闭该表。默认查找数据均编译在 `wrpl-acmi.exe` 内，导出也不需要已安装地形、本机《战争雷霆》、Python、Git 或 Tacview。
 
 ## 命令参数
 
@@ -35,7 +35,7 @@
 | `-terrain-layout` | `geographic`（默认）或 `atlas`（当前技术布局） |
 | `-map-id` | 无法自动识别地图时显式指定地图 ID |
 | `-alt` | 垂直高度偏移，单位米；不改变水平摆放 |
-| `-ecshashes` | ECS 组件哈希表，默认 `data/ecshashes.json`；空值表示关闭 |
+| `-ecshashes` | `embedded`（默认）、覆盖用 JSON 路径，或空字符串关闭该表 |
 | `-missile-models` | `embedded`（默认）、`off` 或 schema-1 型号表 JSON 路径 |
 | `-missile-guidance` | `embedded`（默认）、`off` 或 schema-1 制导表 JSON 路径 |
 | `-countermeasures` | 是否导出飞机干扰物；默认 `true` |
@@ -93,17 +93,25 @@
 
 默认 `-terrain-layout geographic`。权威目录恰好包含 69 张地图：14 张使用审核后的 WGS84 估算位置（5 张高置信、9 张中置信），55 张使用 Atlas 回退。地形高程 XML 与飞机、导弹、炸弹、地面单位和干扰物共用同一份 GeoReferences 变换。已有 ACMI 要与当前地形匹配时，应从对应原始 WRPL 重新导出；`-alt` 只增加垂直偏移。
 
-`-terrain-layout atlas` 是当前技术布局，与安装器的 `-AtlasOnly` 配对。地图 `.data` 不纳入 Git，源码仓库不附带地形资产。`-WithTerrain` 构建会把 69 张转换地图放进 `dist/wrpl-acmi/terrain`；使用 `dist/wrpl-acmi/tools/terrain/Install-All-Terrains.cmd` 安装。详见[地理地形](TERRAIN_GEOGRAPHIC.md)、[Atlas 布局](terrain-atlas.md)和[地形工具说明](../tools/terrain/README.zh-CN.md)。
+`-terrain-layout atlas` 是技术布局，与独立安装器的 `-atlas` 配对。地图 `.data` 不纳入 Git，源码仓库不附带地形资产。带 payload 的安装器内含转换地图，安装时不需要 `terrain/`、`data/`、转换脚本、游戏、Python、Go 或 Git；Tacview 只用于查看 ACMI。未安装《战争雷霆》地形时，Tacview 可使用默认海面或默认背景地形，但背景不会改变已导出的回放对象。详见[地理地形](TERRAIN_GEOGRAPHIC.md)、[Atlas 布局](terrain-atlas.md)、[单文件发布构建](standalone-build.zh-CN.md)和[地形工具说明](../tools/terrain/README.zh-CN.md)。
 
 ## 构建与检查
 
-导出器要求 Go 1.25.6 或更高版本（`go.mod` 当前声明 1.25.6）。完整运行包从仓库根目录按[项目说明](../README.zh-CN.md)构建；带地形构建还需要 64 位 Python 3.12、Git 和本机游戏文件：
+导出器要求 Go 1.25.6 或更高版本（`go.mod` 当前声明 1.25.6）。在仓库根目录运行 `build.ps1` 会构建 `wrpl-acmi.exe` 与 `wrpl-terrain-installer.exe`；没有地形参数时，安装器只有逻辑。构建时转换并内嵌地形：
 
 ```powershell
 .\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
 ```
 
-只检查和构建无界面导出器：
+如果已有 69 张地图的转换目录，可在构建机上没有 Python、Git、游戏或 Tacview 的情况下直接打包：
+
+```powershell
+.\build.ps1 -TerrainSource ".\converted-terrain"
+```
+
+`-TerrainSource` 与 `-WithTerrain` 不能同时使用。安装参数、payload、版本配置和磁盘要求见[单文件发布构建](standalone-build.zh-CN.md)。
+
+直接开发构建无界面导出器：
 
 ```powershell
 $env:CGO_ENABLED = "0"
@@ -111,12 +119,12 @@ go build -o .\wrpl-acmi.exe .\cmd\acmi
 go test .\cmd\acmi .\wrpl\...
 ```
 
-包构建会把 `README.md`、`README.zh-CN.md`、`LICENSE`、`docs/`、运行数据 `data/`，以及 `tools/terrain`、`tools/airfields`、`tools/countermeasures` 工具目录复制到 `dist/wrpl-acmi`；`-WithTerrain` 再增加转换后的 `terrain/`。当前树的本地源码构建已成功完成。历史发布物可能落后于 `dev`；需要最新行为时从当前分支构建。
+包构建会把两个 EXE、`README.md`、`README.zh-CN.md`、`LICENSE`、`docs/`、`data/`，以及 `tools/terrain`、`tools/airfields`、`tools/countermeasures` 工具目录复制到 `dist/wrpl-acmi`；`-WithTerrain` 再增加转换后的暂存目录 `terrain/`。`wrpl-acmi.exe` 不依赖这些相邻目录。历史发布物可能落后于 `dev`；需要最新行为时从当前分支构建。
 
-源码构建工作流覆盖导出器与库测试、合成地形解码、机场地形采样、安装器检查、地形格式转换和纯导出器包构建。包级 smoke 检查单独跟踪。真实地形转换依赖本机游戏文件，不在 CI 中执行；CI 不声明 Tacview GUI 加载或渲染兼容性已经完成。
+源码构建工作流配置了导出器与库检查、合成地形解码、机场地形采样、安装器检查、地形格式转换和包构建。真实地形转换依赖本机游戏文件，不在 CI 中执行。本页不声称已有 CI 成功运行；CI 不声明 Tacview GUI 加载或渲染兼容性已经完成。
 
 ## 证据边界
 
 导弹和飞机的运动数据来自记录位置与姿态，未包含完整气动力、推力、质量、燃料、天气或传感器状态。飞机 IAS 是 EAS 近似，不是座舱读数。缺失弹药证据时不能确认干扰物类型，无法判断的记录按 Chaff 显示；无位置记录的干扰物轨迹是显式估算；只有构造记录的炸弹是投放位置标记。静态制导类型与防空范围不证明某一时刻已锁定、雷达已开机或处于可击杀状态。
 
-机场覆盖取决于固定来源目录和条件布局的回放证据；目录条目不保证跑道处于活动状态，未解决来源不用猜测填补。本文档已按实现、测试覆盖和生成的目录核对，没有把 Tacview GUI 加载与实际渲染当作已验证项。
+机场覆盖取决于固定来源目录和条件布局的回放证据；目录条目不保证跑道处于活动状态，未解决来源不用猜测填补。Tacview GUI 加载与实际渲染不属于这些使用说明的验证范围。

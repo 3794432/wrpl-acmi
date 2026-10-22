@@ -25,7 +25,7 @@ jobs:
         shell: pwsh
         run: |
           $env:CGO_ENABLED = '0'
-          go test ./cmd/acmi ./internal/terrainmap ./wrpl/...
+          go test ./cmd/acmi ./cmd/terrain-install ./cmd/terrain-pack ./data ./tools/terrain ./internal/... ./wrpl/...
       - name: Test terrain decoders with synthetic input
         working-directory: tools/terrain/converter
         run: python -m unittest discover -s tests
@@ -49,6 +49,9 @@ jobs:
       - name: Build runtime package without local game assets
         shell: pwsh
         run: ./build.ps1
+      - name: Test standalone terrain installer with synthetic maps
+        shell: pwsh
+        run: ./tools/terrain/smalltests/test-standalone-installer.ps1 -PackageRoot ./dist/wrpl-acmi
       - name: Upload runtime package
         uses: actions/upload-artifact@v4
         with:

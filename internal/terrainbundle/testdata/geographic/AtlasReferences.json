@@ -1,0 +1,18 @@
+{
+    "schema_version":  1,
+    "layout":  "AtlasV1",
+    "columns":  8,
+    "rows":  9,
+    "longitude_step":  40,
+    "latitude_step":  15,
+    "maps":  {
+                 "geo_alpha":  {
+                                   "latitude":  -60,
+                                   "longitude":  -140
+                               },
+                 "geo_beta":  {
+                                  "latitude":  -60,
+                                  "longitude":  -100
+                              }
+             }
+}

@@ -11,6 +11,8 @@ param(
 $ErrorActionPreference = 'Stop'
 
 try {
+    # A Windows PowerShell child may inherit PowerShell 7's module search path.
+    Import-Module (Join-Path $PSHOME 'Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1') -ErrorAction Stop
     . (Join-Path $PSScriptRoot 'Terrain-Format.ps1')
     $result = Set-WTTerrainFormat -TerrainRoot $TerrainRoot -Profile $Profile -ValidateOnly:$ValidateOnly -AllowPartial:$AllowPartial
     $result

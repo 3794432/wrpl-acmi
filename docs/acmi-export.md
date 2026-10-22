@@ -1,6 +1,6 @@
 # wrpl-acmi ACMI export guide
 
-[简体中文](acmi-export.zh-CN.md) · [Project README](../README.md)
+[简体中文](acmi-export.zh-CN.md) · [Project README](../README.md) · [Single-file release build](standalone-build.md)
 
 This page describes the current `dev` implementation of `cmd/acmi`. The exporter converts one War Thunder client replay or one server replay's shard directory into Tacview ACMI. Terrain placement is described in [geographic terrain](TERRAIN_GEOGRAPHIC.md) and [Atlas layout](terrain-atlas.md).
 
@@ -21,9 +21,9 @@ Shards are opened and decompressed one at a time. The process does not load ever
 
 Go's flag parser stops at the first positional argument, so put flags before a positional input, or use `-in`. Do not combine `-in` with a positional path and do not pass more than one positional path.
 
-When `-out` is omitted, the file is written in the current working directory. A client replay uses `<input-base>.acmi`; a complete shard directory uses `<directory-name>.acmi`; a directory missing its final segment uses `<directory-name>.partial.acmi`. Dropping one file or one directory onto the executable follows the same rule. The runtime package's `run.bat` first changes to the package directory so bundled data and defaults resolve.
+When `-out` is omitted, the file is written in the current working directory. A client replay uses `<input-base>.acmi`; a complete shard directory uses `<directory-name>.acmi`; a directory missing its final segment uses `<directory-name>.partial.acmi`. Dropping one file or one directory onto the executable follows the same rule. The single-file executable does not change this output rule. The runtime package's `run.bat` remains an optional wrapper that changes to the package directory.
 
-`-ecshashes` defaults to `data/ecshashes.json`. The exporter also checks the path relative to the executable. If the table is unavailable, export continues with degraded metadata: entity names, models, teams, pilots, and missile construction data may be missing.
+`-ecshashes` defaults to `embedded`, so normal ECS component names and dependent metadata work without an adjacent `data/` directory. An explicit JSON path overrides the embedded table; an empty value disables it. Normal lookup tables are compiled into `wrpl-acmi.exe`, which means export also does not need an installed terrain, the War Thunder client, Python, Git, or Tacview.
 
 ## Command-line options
 
@@ -35,7 +35,7 @@ When `-out` is omitted, the file is written in the current working directory. A 
 | `-terrain-layout` | `geographic` (default) or `atlas` |
 | `-map-id` | Explicit canonical map ID when automatic identification is unavailable |
 | `-alt` | Vertical height offset in metres; it does not change horizontal placement |
-| `-ecshashes` | ECS component hash table, default `data/ecshashes.json`; an empty value disables it |
+| `-ecshashes` | `embedded` (default), an explicit JSON path override, or an empty value to disable the table |
 | `-missile-models` | `embedded` (default), `off`, or a schema-1 model-table JSON path |
 | `-missile-guidance` | `embedded` (default), `off`, or a schema-1 guidance-table JSON path |
 | `-countermeasures` | Export aircraft countermeasure releases; default `true` |
@@ -93,17 +93,25 @@ The embedded static threat table has 255 air-defence models. Gun-only entries wi
 
 The default layout is `-terrain-layout geographic`. The authoritative map catalogue contains 69 maps: 14 use reviewed WGS84 estimates (five high confidence and nine medium confidence), while 55 use the Atlas fallback. Terrain elevation XML and aircraft, missile, bomb, ground-unit and countermeasure tracks share the same GeoReferences transform. Re-export an original WRPL to place an existing ACMI with the current terrain catalogue. `-alt` only adds a vertical offset.
 
-`-terrain-layout atlas` is the current technical alternate layout and pairs with `-AtlasOnly` in the installer. Map `.data` files are not stored in Git, and the source repository does not include terrain assets. A `-WithTerrain` package build writes all 69 converted maps under `dist/wrpl-acmi/terrain`; install using `dist/wrpl-acmi/tools/terrain/Install-All-Terrains.cmd`. See [geographic terrain](TERRAIN_GEOGRAPHIC.md), [Atlas layout](terrain-atlas.md), and the [terrain conversion and installation guide](../tools/terrain/README.md).
+`-terrain-layout atlas` is the technical alternate layout and pairs with `-atlas` in the standalone installer. Map `.data` files are not stored in Git, and the source repository does not include terrain assets. A payload-bearing installer contains the converted maps; it does not require `terrain/`, `data/`, converter scripts, the game, Python, Go, or Git at install time. Tacview is needed only to view the ACMI. Without War Thunder terrain installed, Tacview may use its default ocean or background terrain, but that backdrop does not change the exported replay objects. See [geographic terrain](TERRAIN_GEOGRAPHIC.md), [Atlas layout](terrain-atlas.md), the [single-file release guide](standalone-build.md), and the [terrain conversion and installation guide](../tools/terrain/README.md).
 
 ## Build and checks
 
-The exporter requires Go 1.25.6 or newer; `go.mod` currently declares version 1.25.6. Build the full runtime package from the repository root with the project instructions in the [README](../README.md). A terrain build additionally needs a 64-bit Python 3.12 environment, Git, and the local War Thunder client files:
+The exporter requires Go 1.25.6 or newer; `go.mod` currently declares version 1.25.6. From the repository root, `build.ps1` builds `wrpl-acmi.exe` and `wrpl-terrain-installer.exe`. A build without terrain options produces a terrain installer with logic only. Convert and embed terrain with:
 
 ```powershell
 .\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
 ```
 
-For an exporter-only check and build:
+Package an existing converted 69-map directory without Python, Git, a game installation, or Tacview:
+
+```powershell
+.\build.ps1 -TerrainSource ".\converted-terrain"
+```
+
+`-TerrainSource` and `-WithTerrain` are mutually exclusive. See the [single-file release guide](standalone-build.md) for installer options, payload behavior, profile selection, and disk requirements.
+
+For a direct development build of the exporter:
 
 ```powershell
 $env:CGO_ENABLED = "0"
@@ -111,12 +119,12 @@ go build -o .\wrpl-acmi.exe .\cmd\acmi
 go test .\cmd\acmi .\wrpl\...
 ```
 
-The package build copies `README.md`, `README.zh-CN.md`, `LICENSE`, `docs/`, runtime `data/`, and the `tools/terrain`, `tools/airfields`, and `tools/countermeasures` tool trees into `dist/wrpl-acmi`; `-WithTerrain` adds the converted `terrain/` directory. A local source build of the current tree completed successfully. Existing releases can lag behind `dev`; build from the current branch for current behavior.
+The package build copies both executables, `README.md`, `README.zh-CN.md`, `LICENSE`, `docs/`, `data/`, and the `tools/terrain`, `tools/airfields`, and `tools/countermeasures` tool trees into `dist/wrpl-acmi`; `-WithTerrain` adds the converted `terrain/` staging directory. `wrpl-acmi.exe` runs without those adjacent folders. Existing releases can lag behind `dev`; build from the current branch for current behavior.
 
-The source-build workflow covers exporter and library tests, synthetic terrain decoding, airfield terrain sampling, installer checks, terrain format conversion, and an exporter-only package build. Package-level smoke coverage is tracked separately. Real terrain conversion is not run in CI because it needs local game files. CI does not claim Tacview GUI loading or rendering compatibility.
+The source-build workflow is configured for exporter and library checks, synthetic terrain decoding, airfield terrain sampling, installer checks, terrain format conversion, and a package build. Real terrain conversion is not run in CI because it needs local game files. No CI success is claimed here, and CI does not claim Tacview GUI loading or rendering compatibility.
 
 ## Evidence limits
 
 Missile and aircraft motion values are derived from recorded position and attitude, not complete aerodynamic, thrust, mass, fuel, weather or sensor state. Aircraft IAS is an EAS approximation and is not a cockpit reading. Countermeasure types remain uncertain when ammunition evidence is missing, and unresolved types are displayed as Chaff by policy. Countermeasure paths without recorded positions are labelled estimates. Bombs with only construction records are release-position markers. Static guidance types and air-defence ranges do not prove that a target was locked, a radar was radiating, or an engagement was possible at a particular time.
 
-Airfield coverage depends on the pinned source catalogue and on replay evidence for conditional layouts. A catalogue entry does not guarantee an active runway, and an unresolved source is not filled by guessing. This documentation was checked against the implementation, test coverage, and generated catalogues. Tacview GUI loading and visual rendering were not tested as part of this documentation update.
+Airfield coverage depends on the pinned source catalogue and on replay evidence for conditional layouts. A catalogue entry does not guarantee an active runway, and an unresolved source is not filled by guessing. Tacview GUI loading and visual rendering remain outside the scope of these instructions.

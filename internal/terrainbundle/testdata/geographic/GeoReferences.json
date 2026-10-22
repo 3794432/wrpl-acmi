@@ -1,0 +1,47 @@
+{
+    "schema":  1,
+    "source":  {
+                   "repository":  "https://github.com/example/wt-map-analyze",
+                   "commit":  "1111111111111111111111111111111111111111"
+               },
+    "maps":  {
+                 "geo_alpha":  {
+                                   "enabled":  true,
+                                   "confidence":  "high",
+                                   "method":  "fixture+dem-match",
+                                   "source":  "fixture://geo",
+                                   "local_bounds":  [
+                                                        -65536,
+                                                        -65536,
+                                                        65536,
+                                                        65536
+                                                    ],
+                                   "geo_bounds":  [
+                                                      68.5,
+                                                      34.2,
+                                                      70.1,
+                                                      35.5
+                                                  ],
+                                   "uncertainty_km":  1
+                               },
+                 "geo_beta":  {
+                                  "enabled":  true,
+                                  "confidence":  "high",
+                                  "method":  "fixture+dem-match",
+                                  "source":  "fixture://geo",
+                                  "local_bounds":  [
+                                                       -32768,
+                                                       -32768,
+                                                       32768,
+                                                       32768
+                                                   ],
+                                  "geo_bounds":  [
+                                                     74,
+                                                     36,
+                                                     75.5,
+                                                     37.2
+                                                 ],
+                                  "uncertainty_km":  2
+                              }
+             }
+}

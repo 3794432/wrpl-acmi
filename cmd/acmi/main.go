@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	inspectordata "github.com/maxsupermanhd/wrpl-inspector/v3/data"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/internal/terrainmap"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet"
@@ -34,7 +35,7 @@ var (
 	mapIDOverride        = flag.String("map-id", "", "explicit map id: canonical name, WarThunder.Geo1.<name>, or WarThunder.Atlas1.<name>")
 	terrainLayoutName    = flag.String("terrain-layout", "geographic", "terrain placement: geographic (default, reviewed georeferences with atlas fallback) or atlas")
 	alt0                 = flag.Float64("alt", 0, "altitude offset in meters")
-	hashPath             = flag.String("ecshashes", "data/ecshashes.json", "ECS component hash map (empty to disable)")
+	hashPath             = flag.String("ecshashes", "embedded", "ECS component hash map: embedded (default), empty to disable, or a JSON path")
 	namesPath            = flag.String("names", "", "optional JSON map: air:<uid> / ground:<eid> / missile:<eid> -> display name")
 	listPath             = flag.String("list", "", "optional CSV listing of tracks and current names")
 	missileFlightLogPath = flag.String("missile-flight-log", "", "optional CSV of missile flight parameters and raw motion evidence")
@@ -262,7 +263,7 @@ func runACMIMain() (retErr error) {
 
 	chms, err := readHashes(*hashPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: ECS names disabled: %v\n", err)
+		return err
 	}
 	var ecs *packetecs2.PacketECSParser
 	var mgr *packetecs2.EntityManager
@@ -468,21 +469,28 @@ func runACMIMain() (retErr error) {
 	return nil
 }
 
-func readHashes(path string) (*packetecs2.ComponentHashMaps, error) {
-	if path == "" {
-		return nil, fmt.Errorf("disabled")
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if exe, exeErr := os.Executable(); exeErr == nil {
-			alt := filepath.Join(filepath.Dir(exe), path)
-			data, err = os.ReadFile(alt)
+func readHashes(spec string) (*packetecs2.ComponentHashMaps, error) {
+	switch strings.ToLower(strings.TrimSpace(spec)) {
+	case "":
+		return nil, nil
+	case "embedded":
+		chms, err := packetecs2.ReadComponentHashMaps(bytes.NewReader(inspectordata.ECSHashesJSON()))
+		if err != nil {
+			return nil, fmt.Errorf("parsing embedded ECS component hash map: %w", err)
 		}
+		return chms, nil
+	default:
+		f, err := os.Open(spec)
+		if err != nil {
+			return nil, fmt.Errorf("opening ECS component hash map %q: %w", spec, err)
+		}
+		defer f.Close()
+		chms, err := packetecs2.ReadComponentHashMaps(f)
+		if err != nil {
+			return nil, fmt.Errorf("parsing ECS component hash map %q: %w", spec, err)
+		}
+		return chms, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	return packetecs2.ReadComponentHashMaps(bytes.NewReader(data))
 }
 
 func resolveReplayMapID(header wrpl.WRPLHeader, override string) (string, error) {

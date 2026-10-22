@@ -279,9 +279,18 @@ func TestNormalInstallValidatesThenRestores194ThenInstalls(t *testing.T) {
 		t.Fatalf("first call is not source validation: %q", calls[0])
 	}
 	if filepath.Base(argumentFor(calls[1], "-File")) != installWrapper ||
-		!hasArgument(calls[1], "-RestoreOnly") || argumentFor(calls[1], "-Profile") != profile195 ||
-		argumentFor(calls[1], "-Destination") != destination {
+		!hasArgument(calls[1], "-RestoreOnly") || argumentFor(calls[1], "-Profile") != profile195 {
 		t.Fatalf("second call is not the native restoration: %q", calls[1])
+	}
+	// Windows temp paths can use an 8.3 alias; the installer resolves it before
+	// launching PowerShell. Verify directory identity rather than its spelling.
+	wantDir, err := os.Stat(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotDir, err := os.Stat(argumentFor(calls[1], "-Destination"))
+	if err != nil || !os.SameFile(wantDir, gotDir) {
+		t.Fatalf("restoration destination does not identify %q: %v", destination, err)
 	}
 	if filepath.Base(argumentFor(calls[2], "-File")) != installWrapper || hasArgument(calls[2], "-ValidateOnly") ||
 		argumentFor(calls[2], "-Profile") != profile194 {

@@ -507,6 +507,94 @@ function Get-TerrainRootNodeMap {
     return $result
 }
 
+function Test-TerrainEquivalentText {
+    param([string]$Candidate, [string]$Desired, [string]$Path)
+    if ($Path -cmatch '/(BottomLeft|BottomRight|TopRight|TopLeft)/(Longitude|Latitude)$') {
+        $candidateValue = 0.0
+        $desiredValue = 0.0
+        if (-not [double]::TryParse($Candidate, [Globalization.NumberStyles]::Float, $script:TerrainInvariant, [ref]$candidateValue) -or
+            -not [double]::TryParse($Desired, [Globalization.NumberStyles]::Float, $script:TerrainInvariant, [ref]$desiredValue) -or
+            [double]::IsNaN($candidateValue) -or [double]::IsInfinity($candidateValue)) {
+            return $false
+        }
+        return [Math]::Abs($candidateValue - $desiredValue) -le 2e-12
+    }
+    if ($Path -cmatch '/(Width|Height|AltitudeFactor|AltitudeOffset|BigEndian)$') {
+        $candidateValue = [decimal]::Zero
+        $desiredValue = [decimal]::Zero
+        return ([decimal]::TryParse($Candidate, [Globalization.NumberStyles]::Float, $script:TerrainInvariant, [ref]$candidateValue) -and
+            [decimal]::TryParse($Desired, [Globalization.NumberStyles]::Float, $script:TerrainInvariant, [ref]$desiredValue) -and
+            $candidateValue -eq $desiredValue)
+    }
+    return $Candidate -ceq $Desired
+}
+
+function Test-TerrainEquivalentElement {
+    param(
+        [System.Xml.XmlNode]$Candidate,
+        [System.Xml.XmlNode]$Desired,
+        [string]$Path = ''
+    )
+    if ($null -eq $Candidate -or $null -eq $Desired -or
+        $Candidate.NodeType -ne [System.Xml.XmlNodeType]::Element -or
+        $Desired.NodeType -ne [System.Xml.XmlNodeType]::Element -or
+        $Candidate.LocalName -cne $Desired.LocalName -or $Candidate.NamespaceURI -cne $Desired.NamespaceURI) {
+        return $false
+    }
+    $nodePath = $Path + '/' + $Candidate.LocalName
+    $candidateAttributes = @($Candidate.Attributes)
+    $desiredAttributes = @($Desired.Attributes)
+    if ($candidateAttributes.Count -ne $desiredAttributes.Count) { return $false }
+    foreach ($desiredAttribute in $desiredAttributes) {
+        $candidateAttribute = $Candidate.Attributes.GetNamedItem($desiredAttribute.LocalName, $desiredAttribute.NamespaceURI)
+        if ($null -eq $candidateAttribute -or $candidateAttribute.Value -cne $desiredAttribute.Value) { return $false }
+    }
+
+    $candidateElements = @($Candidate.ChildNodes | Where-Object { $_.NodeType -eq [System.Xml.XmlNodeType]::Element })
+    $desiredElements = @($Desired.ChildNodes | Where-Object { $_.NodeType -eq [System.Xml.XmlNodeType]::Element })
+    $candidateText = @($Candidate.ChildNodes | Where-Object {
+        $_.NodeType -in @([System.Xml.XmlNodeType]::Text, [System.Xml.XmlNodeType]::CDATA) -and $_.Value.Trim()
+    })
+    $desiredText = @($Desired.ChildNodes | Where-Object {
+        $_.NodeType -in @([System.Xml.XmlNodeType]::Text, [System.Xml.XmlNodeType]::CDATA) -and $_.Value.Trim()
+    })
+    foreach ($node in @($Candidate.ChildNodes)) {
+        if ($node.NodeType -notin @(
+            [System.Xml.XmlNodeType]::Element,
+            [System.Xml.XmlNodeType]::Text,
+            [System.Xml.XmlNodeType]::CDATA,
+            [System.Xml.XmlNodeType]::Whitespace,
+            [System.Xml.XmlNodeType]::SignificantWhitespace,
+            [System.Xml.XmlNodeType]::Comment)) {
+            return $false
+        }
+    }
+    if ($candidateElements.Count -ne $desiredElements.Count) { return $false }
+    if ($candidateElements.Count -eq 0) {
+        if ($desiredElements.Count -ne 0 -or $candidateText.Count -gt 1 -or $desiredText.Count -gt 1) { return $false }
+        $candidateValue = if ($candidateText.Count -eq 0) { '' } else { $candidateText[0].Value.Trim() }
+        $desiredValue = if ($desiredText.Count -eq 0) { '' } else { $desiredText[0].Value.Trim() }
+        return Test-TerrainEquivalentText $candidateValue $desiredValue $nodePath
+    }
+    if ($candidateText.Count -ne 0 -or $desiredText.Count -ne 0) { return $false }
+
+    $candidateNames = @{}
+    foreach ($candidateElement in $candidateElements) {
+        $name = $candidateElement.LocalName
+        if ($candidateNames.ContainsKey($name)) { return $false }
+        $candidateNames[$name] = $true
+        $matches = @($desiredElements | Where-Object { $_.LocalName -ceq $name })
+        if ($matches.Count -ne 1) { return $false }
+        if (-not (Test-TerrainEquivalentElement $candidateElement $matches[0] $nodePath)) { return $false }
+    }
+    return $true
+}
+
+function Test-TerrainAggregateNodeEquivalent {
+    param([System.Xml.XmlNode]$Candidate, [System.Xml.XmlNode]$Desired)
+    return Test-TerrainEquivalentElement $Candidate $Desired ''
+}
+
 function New-TerrainAggregateNode {
     param([object]$Context, [object]$Record)
     $node = $Context.RootDocument.ImportNode($Record.NativeNode, $true)
@@ -535,10 +623,15 @@ function Invoke-TerrainProfile194 {
         $desiredHashes[$id] = $desiredHash
         if ($existing.ContainsKey($record.XmlId)) {
             $nodes = $existing[$record.XmlId]
-            if ($nodes.Count -ne 1 -or -not $owned.ContainsKey($id)) {
-                throw "Aggregate terrain XML contains a foreign or duplicate collision for $($record.XmlId)"
+            if ($nodes.Count -ne 1) {
+                throw "Aggregate terrain XML contains a duplicate collision for $($record.XmlId)"
             }
-            if (-not $ownedHashes.ContainsKey($id) -or $ownedHashes[$id] -cne (Get-TerrainNodeHash $nodes.Item(0))) {
+            if (-not $owned.ContainsKey($id)) {
+                if ($null -ne $Context.State -or -not (Test-TerrainAggregateNodeEquivalent $nodes.Item(0) $desired)) {
+                    throw "Aggregate terrain XML contains a foreign collision for $($record.XmlId)"
+                }
+            }
+            elseif (-not $ownedHashes.ContainsKey($id) -or $ownedHashes[$id] -cne (Get-TerrainNodeHash $nodes.Item(0))) {
                 throw "Aggregate terrain XML node no longer matches format state for $id"
             }
             if ((Get-TerrainNodeHash $nodes.Item(0)) -cne $desiredHash) {

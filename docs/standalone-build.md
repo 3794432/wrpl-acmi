@@ -76,6 +76,8 @@ The supported options are:
 
 The installer verifies source data against its SHA-256 metadata before writing the target. Validation confirms the supplied data and supported encoding path; it does not establish that a Tacview GUI loaded or rendered the terrain correctly.
 
+An old 1.9.4 aggregate index can remain after its cache or format state has been removed. Matching War Thunder entries are adopted and their missing height copies rebuilt. Entries with another file path, different geometry or duplicate IDs remain protected and produce an error instead of being overwritten. A failed format-selection step does not complete the 1.9.4 installation; retain the reported `install.log` when diagnosing it.
+
 ## Coordinate layout
 
 Geographic placement is the default. It combines the reviewed georeferences with the Atlas fallback. Choose installer `-atlas` for technical Atlas coordinates only when the matching ACMI export uses:

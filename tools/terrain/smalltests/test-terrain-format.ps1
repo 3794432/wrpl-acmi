@@ -155,6 +155,74 @@ function New-Fixture {
     return $default
 }
 
+function Add-LegacyAggregateNode {
+    param(
+        [System.Xml.XmlDocument]$Document,
+        [string]$TerrainRoot,
+        [string]$Id,
+        [switch]$BadFile,
+        [switch]$UnknownField,
+        [double]$LongitudeShift = 0.0
+    )
+    $nativePath = Join-Path (Join-Path $TerrainRoot $Id) 'CustomHeightmapList.xml'
+    [xml]$native = Get-Content -LiteralPath $nativePath -Raw -Encoding UTF8
+    $sourceNode = $native.SelectSingleNode('/Resources/CustomHeightmapList/CustomHeightmap')
+    $node = $Document.ImportNode($sourceNode, $true)
+
+    # Attribute order and XML whitespace are serialization details, not node semantics.
+    $attributes = @($node.Attributes | ForEach-Object { [pscustomobject]@{ Name = $_.Name; Value = $_.Value } })
+    foreach ($attribute in $attributes) { [void]$node.Attributes.RemoveNamedItem($attribute.Name) }
+    [array]::Reverse($attributes)
+    foreach ($attribute in $attributes) { $node.SetAttribute($attribute.Name, $attribute.Value) }
+
+    $file = if ($BadFile) { 'elsewhere/_uint16/' + $Id + '.data' } else { 'WarThunderMaps/_uint16/' + $Id + '.data' }
+    $node.SelectSingleNode('File').InnerText = $file
+    $node.SelectSingleNode('AltitudeFactor').InnerText = '1'
+    $node.SelectSingleNode('AltitudeOffset').InnerText = '-32768'
+    $signed = $node.SelectSingleNode('Signed')
+    if ($null -ne $signed) { [void]$node.RemoveChild($signed) }
+    if ($LongitudeShift -ne 0.0) {
+        $longitude = $node.SelectSingleNode('BottomLeft/Longitude')
+        $value = [double]::Parse($longitude.InnerText, $invariant)
+        $longitude.InnerText = ($value + $LongitudeShift).ToString('F12', $invariant)
+    }
+    if ($UnknownField) { Add-Text $Document $node 'UnexpectedField' 'unknown' }
+    return $node
+}
+
+function New-LegacyAggregateFixture {
+    param([string]$FixtureRoot, [string]$Mode = 'Valid')
+    $terrainRoot = New-Fixture $FixtureRoot
+    $rootPath = Join-Path (Join-Path $FixtureRoot 'Custom') 'CustomHeightmapList.xml'
+    [xml]$document = Get-Content -LiteralPath $rootPath -Raw -Encoding UTF8
+    $list = $document.SelectSingleNode('/Resources/CustomHeightmapList')
+    switch ($Mode) {
+        'Valid' {
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_alpha' -LongitudeShift 1e-12))
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_bravo'))
+        }
+        'BadFile' {
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_alpha' -BadFile))
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_bravo'))
+        }
+        'BadGeometry' {
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_alpha' -LongitudeShift 5e-12))
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_bravo'))
+        }
+        'UnknownField' {
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_alpha' -UnknownField))
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_bravo'))
+        }
+        'Duplicate' {
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_alpha'))
+            [void]$list.AppendChild((Add-LegacyAggregateNode $document $terrainRoot 'air_alpha'))
+        }
+        default { throw "Unknown legacy fixture mode: $Mode" }
+    }
+    Write-XmlDocument $document $rootPath
+    return $terrainRoot
+}
+
 function Get-TreeSnapshot {
     param([string]$Root)
     $items = @(Get-ChildItem -LiteralPath $Root -Recurse -Force | Sort-Object FullName)
@@ -249,6 +317,73 @@ try {
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $terrainRoot '_uint16'))) 'collision rejection created cache output'
     Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $terrainRoot 'WarThunderMaps.format.json'))) 'collision rejection created format state'
     Write-TestLog 'PASS foreign aggregate collision is rejected before writes'
+
+    $legacyFixture = Join-Path $runtimeRoot 'legacy-no-state'
+    $legacyRoot = New-LegacyAggregateFixture $legacyFixture
+    $legacyParent = Join-Path $legacyFixture 'Custom'
+    $legacyXmlPath = Join-Path $legacyParent 'CustomHeightmapList.xml'
+    $legacyStatePath = Join-Path $legacyRoot 'WarThunderMaps.format.json'
+    $legacyCacheDir = Join-Path $legacyRoot '_uint16'
+    $legacyCachePath = Join-Path $legacyCacheDir 'cache.json'
+    Assert-Condition (-not (Test-Path -LiteralPath $legacyStatePath)) 'legacy fixture unexpectedly has format state'
+    Assert-Condition (-not (Test-Path -LiteralPath $legacyCacheDir)) 'legacy fixture unexpectedly has an encoding cache'
+
+    $beforeLegacyValidate = Get-TreeSnapshot $legacyFixture
+    $legacyValidated = Invoke-Set $legacyRoot '1.9.4' -ValidateOnly
+    Assert-Condition $legacyValidated.ValidateOnly 'legacy ValidateOnly result is missing'
+    Assert-Condition (-not $legacyValidated.Changed) 'legacy ValidateOnly claimed an installation change'
+    Assert-Condition (-not (Test-Path -LiteralPath $legacyStatePath)) 'legacy ValidateOnly created format state'
+    Assert-Condition (-not (Test-Path -LiteralPath $legacyCacheDir)) 'legacy ValidateOnly created an encoding cache'
+    Assert-TreeUnchanged $legacyFixture $beforeLegacyValidate 'legacy ValidateOnly changed installed files or aggregate XML'
+    Write-TestLog 'PASS state-less legacy XML validates without writes or an installed claim'
+
+    $legacyFirst = Invoke-Set $legacyRoot '1.9.4'
+    Assert-Equal $legacyFirst.Converted 2 'legacy takeover conversion count'
+    Assert-Condition $legacyFirst.RootChanged 'legacy rounding normalization did not rewrite aggregate XML'
+    Assert-Condition (Test-Path -LiteralPath $legacyStatePath -PathType Leaf) 'legacy takeover did not create format state'
+    Assert-Condition (Test-Path -LiteralPath $legacyCachePath -PathType Leaf) 'legacy takeover did not create the encoding cache'
+    $legacyState = Get-Content -LiteralPath $legacyStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    [xml]$legacyActive = Get-Content -LiteralPath $legacyXmlPath -Raw -Encoding UTF8
+    Assert-Condition ($null -ne $legacyActive.SelectSingleNode('/Resources/Unrelated[@Keep="yes"]')) 'legacy takeover removed a foreign root node'
+    Assert-Equal (@($legacyActive.SelectNodes('//comment()[contains(., "foreign-")]')).Count) 2 'legacy takeover removed foreign comments'
+    Assert-Equal (@($legacyActive.SelectNodes('/Resources/CustomHeightmapList/CustomHeightmap')).Count) 3 'legacy takeover removed or duplicated a node'
+    foreach ($id in @('air_alpha', 'air_bravo')) {
+        $node = $legacyActive.SelectSingleNode('/Resources/CustomHeightmapList/CustomHeightmap[@ID="WarThunder.Geo1.' + $id + '"]')
+        Assert-Condition ($null -ne $node) "legacy aggregate node was not adopted for $id"
+        $recordedHash = [string]$legacyState.individual_node_hashes.PSObject.Properties[$id].Value
+        Assert-Equal $recordedHash (Get-TerrainNodeHash $node) "legacy state hash differs from the adopted XML for $id"
+        Assert-Equal ([string]$node.AltitudeOffset) '-32768' "legacy altitude offset changed for $id"
+        Assert-Equal $node.SelectNodes('Signed').Count 0 "legacy signed declaration remained for $id"
+    }
+    $legacyAlphaLongitude = [double]::Parse($legacyActive.SelectSingleNode('/Resources/CustomHeightmapList/CustomHeightmap[@ID="WarThunder.Geo1.air_alpha"]/BottomLeft/Longitude').InnerText, $invariant)
+    Assert-Equal $legacyAlphaLongitude -10.0 'legacy coordinate rounding was not normalized to desired geometry'
+
+    $legacyRepeat = Invoke-Set $legacyRoot '1.9.4'
+    Assert-Condition (-not $legacyRepeat.Changed) 'adopted legacy profile rerun reported a change'
+    Assert-Equal $legacyRepeat.Converted 0 'adopted legacy profile rerun reconverted data'
+    Assert-Equal $legacyRepeat.Reused 2 'adopted legacy profile rerun did not reuse the cache'
+    $legacyBack = Invoke-Set $legacyRoot '1.9.5'
+    Assert-Condition $legacyBack.Changed 'adopted legacy profile did not switch to 1.9.5'
+    [xml]$legacyRestored = Get-Content -LiteralPath $legacyXmlPath -Raw -Encoding UTF8
+    Assert-Equal (@($legacyRestored.SelectNodes('/Resources/CustomHeightmapList/CustomHeightmap')).Count) 1 '1.9.5 did not remove only adopted nodes'
+    Assert-Condition ($null -ne $legacyRestored.SelectSingleNode('/Resources/CustomHeightmapList/CustomHeightmap[@ID="WarThunder.Atlas1.foreign"]')) '1.9.5 removed the foreign node after legacy takeover'
+    foreach ($id in @('air_alpha', 'air_bravo')) {
+        Assert-Condition (Test-Path -LiteralPath (Join-Path (Join-Path $legacyRoot $id) 'CustomHeightmapList.xml') -PathType Leaf) "1.9.5 did not restore native XML for $id"
+    }
+    Write-TestLog 'PASS state-less legacy takeover creates cache/state, reruns, and switches to 1.9.5'
+
+    foreach ($rejectMode in @('BadFile', 'BadGeometry', 'UnknownField', 'Duplicate')) {
+        $rejectFixture = Join-Path $runtimeRoot ('legacy-reject-' + $rejectMode)
+        $rejectRoot = New-LegacyAggregateFixture $rejectFixture $rejectMode
+        $beforeReject = Get-TreeSnapshot $rejectFixture
+        $rejectFailed = $false
+        try { Invoke-Set $rejectRoot '1.9.4' | Out-Null } catch { $rejectFailed = $true }
+        Assert-Condition $rejectFailed "$rejectMode legacy aggregate was accepted"
+        Assert-TreeUnchanged $rejectFixture $beforeReject "$rejectMode rejection changed the installed tree"
+        Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $rejectRoot '_uint16'))) "$rejectMode rejection created cache output"
+        Assert-Condition (-not (Test-Path -LiteralPath (Join-Path $rejectRoot 'WarThunderMaps.format.json'))) "$rejectMode rejection created format state"
+    }
+    Write-TestLog 'PASS legacy path, geometry, unknown-field, and duplicate candidates are rejected before writes'
 
     [xml]$clean = Get-Content -LiteralPath $rootPath -Raw -Encoding UTF8
     $bad = $clean.SelectSingleNode('/Resources/CustomHeightmapList/CustomHeightmap[@ID="WarThunder.Geo1.air_alpha"]')

@@ -42,13 +42,30 @@ try {
         }
         & $installer -destination $destination -profile 1.9.4 -allow-partial
         if ($LASTEXITCODE -ne 0) { throw 'Standalone repeat installation failed.' }
+        # Reproduce an older index left behind after its state/cache were lost.
+        foreach ($id in @('geo_alpha', 'geo_beta')) {
+            Copy-Item -LiteralPath (Join-Path $destination "$id/CustomHeightmapList.native195") -Destination (Join-Path $destination "$id/CustomHeightmapList.xml") -Force
+        }
+        [IO.File]::Delete((Join-Path $destination 'WarThunderMaps.format.json'))
+        $cache = Join-Path $destination '_uint16'
+        foreach ($name in @('geo_alpha.data', 'geo_beta.data', 'cache.json')) {
+            [IO.File]::Delete((Join-Path $cache $name))
+        }
+        [IO.Directory]::Delete($cache, $false)
+        & $installer -destination $destination -profile 1.9.4 -allow-partial
+        if ($LASTEXITCODE -ne 0) { throw 'Legacy index without state/cache could not be repaired.' }
+        $state = Get-Content -LiteralPath (Join-Path $destination 'WarThunderMaps.format.json') -Raw | ConvertFrom-Json
+        if ($state.profile -ne '1.9.4') { throw 'Legacy repair did not restore the 1.9.4 state.' }
+        foreach ($id in @('geo_alpha', 'geo_beta')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $destination "_uint16/$id.data"))) { throw "Legacy cache repair missing: $id" }
+        }
         & $installer -destination $destination -profile 1.9.5 -allow-partial
         if ($LASTEXITCODE -ne 0) { throw 'Standalone 1.9.5 installation failed.' }
         $state = Get-Content -LiteralPath (Join-Path $destination 'WarThunderMaps.format.json') -Raw | ConvertFrom-Json
         if ($state.profile -ne '1.9.5') { throw 'Profile switch did not complete.' }
         if (@(Get-ChildItem -LiteralPath $single -Force).Count -ne 1) { throw 'Installer left dependencies beside the executable.' }
     } finally { Pop-Location }
-    Write-Host 'PASS: single-file payload validation, offline installation, repeat installation, both profiles, and canonical raster hashes.'
+    Write-Host 'PASS: single-file payload validation, offline installation, repeat installation, legacy index repair, both profiles, and canonical raster hashes.'
 } finally {
     $env:TEMP = $oldTemp
     $env:TMP = $oldTmp

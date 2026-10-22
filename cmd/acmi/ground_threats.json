@@ -4170,9 +4170,9 @@
       "envelopes": [
         {
           "kind": "gun",
-          "range_m": 4000.0,
-          "source": "WT-datamine@f7952e4291e9fd7b6fe38e84020dddef925c3457 (2.59.0.74) aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/37mm_2a11_user_cannon.blkx#/attackMaxDist",
-          "basis": "Referenced weapon attackMaxDist.",
+          "range_m": 2000.0,
+          "source": "User-configured ZSU-37-2 display radius: 2000 m; original WT-datamine@f7952e4291e9fd7b6fe38e84020dddef925c3457 (2.59.0.74) 37mm_2a11_user_cannon.blkx#/attackMaxDist=4000 m",
+          "basis": "User override of the static threat-circle radius to 2000 m; not the original weapon attackMaxDist.",
           "field_path": "aces.vromfs.bin_u/gamedata/units/tankmodels/ussr_zsu_37_2.blkx#/commonWeapons/Weapon/0 -> aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/37mm_2a11_user_cannon.blkx#/attackMaxDist",
           "reference_mode": "StaticModelReference"
         }

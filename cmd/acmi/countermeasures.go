@@ -59,6 +59,7 @@ type countermeasureTrackInput struct {
 	HasEnd    bool
 	Estimated bool
 	Source    *projectiles.Projectile
+	identity  countermeasureIdentity
 }
 
 type acmiEvent struct {
@@ -71,21 +72,26 @@ type acmiEvent struct {
 // countermeasureRecord is retained for every trigger-14 construction, even
 // when no WeaponSync position exists.
 type countermeasureRecord struct {
-	EID        uint64
-	LifetimeID uint64
-	SpawnTime  uint32
-	EndTime    uint32
-	HasEnd     bool
-	OwnerEID   uint64
-	ParentUID  uint64
-	HasParent  bool
-	WeaponRef  uint32
-	Template   string
-	SpawnX     float64
-	SpawnY     float64
-	SpawnZ     float64
-	SyncCount  int
-	Display    string
+	EID            uint64
+	LifetimeID     uint64
+	SpawnTime      uint32
+	EndTime        uint32
+	HasEnd         bool
+	OwnerEID       uint64
+	ParentUID      uint64
+	HasParent      bool
+	WeaponRef      uint32
+	Template       string
+	SpawnX         float64
+	SpawnY         float64
+	SpawnZ         float64
+	SyncCount      int
+	Display        string
+	Kind           string
+	TypeSource     string
+	TypeConfidence string
+	Launcher       string
+	Bullet         string
 }
 
 type countermeasureExport struct {
@@ -120,6 +126,7 @@ func decodedCountermeasures(metadata *projectiles.MetadataParser, positions *pro
 	if metadata == nil || positions == nil {
 		return nil, nil, nil
 	}
+	identities := countermeasureIdentities(metadata)
 	byEntity := make(map[uint64][]projectiles.Sample)
 	for wireID, samples := range positions.Samples {
 		if id, ok := projectileEntityID(wireID); ok {
@@ -152,6 +159,7 @@ func decodedCountermeasures(metadata *projectiles.MetadataParser, positions *pro
 			filtered := filterCountermeasureSamples(byEntity[eid], source, nextSpawnTime, hasNextConstruction)
 			syncCount := len(filtered)
 			display := "event"
+			identity := identities[source]
 			input := countermeasureTrackInput{
 				ID:        lifetimeID,
 				ParentUID: source.ParentUID,
@@ -159,6 +167,7 @@ func decodedCountermeasures(metadata *projectiles.MetadataParser, positions *pro
 				EndTime:   source.EndTime,
 				HasEnd:    source.HasEnd,
 				Source:    source,
+				identity:  identity,
 			}
 			if syncCount > 0 {
 				// Real WeaponSync samples always win over any estimate.
@@ -172,8 +181,11 @@ func decodedCountermeasures(metadata *projectiles.MetadataParser, positions *pro
 			inputs = append(inputs, input)
 
 			text := countermeasureEventText
+			if identity.Kind == "Flare" || identity.Kind == "Chaff" {
+				text = identity.Kind + " released"
+			}
 			if syncCount == 0 {
-				text = countermeasureEstimatedEventText
+				text += "; trajectory estimated"
 			}
 			events = append(events, acmiEvent{
 				t:         source.SpawnSample.Time,
@@ -182,21 +194,26 @@ func decodedCountermeasures(metadata *projectiles.MetadataParser, positions *pro
 				text:      text,
 			})
 			records = append(records, countermeasureRecord{
-				EID:        eid,
-				LifetimeID: lifetimeID,
-				SpawnTime:  source.SpawnSample.Time,
-				EndTime:    source.EndTime,
-				HasEnd:     source.HasEnd,
-				OwnerEID:   source.OwnerEID,
-				ParentUID:  source.ParentUID,
-				HasParent:  source.HasParent,
-				WeaponRef:  source.WeaponRef,
-				Template:   source.Template,
-				SpawnX:     source.SpawnSample.X,
-				SpawnY:     source.SpawnSample.Y,
-				SpawnZ:     source.SpawnSample.Z,
-				SyncCount:  syncCount,
-				Display:    display,
+				EID:            eid,
+				LifetimeID:     lifetimeID,
+				SpawnTime:      source.SpawnSample.Time,
+				EndTime:        source.EndTime,
+				HasEnd:         source.HasEnd,
+				OwnerEID:       source.OwnerEID,
+				ParentUID:      source.ParentUID,
+				HasParent:      source.HasParent,
+				WeaponRef:      source.WeaponRef,
+				Template:       source.Template,
+				SpawnX:         source.SpawnSample.X,
+				SpawnY:         source.SpawnSample.Y,
+				SpawnZ:         source.SpawnSample.Z,
+				SyncCount:      syncCount,
+				Display:        display,
+				Kind:           countermeasureKind(identity),
+				TypeSource:     identity.Source,
+				TypeConfidence: identity.Confidence,
+				Launcher:       identity.Launcher,
+				Bullet:         identity.Bullet,
 			})
 		}
 	}
@@ -341,6 +358,7 @@ func appendCountermeasureTracks(tracks []*track, inputs []countermeasureTrackInp
 			end:               end,
 			hasEnd:            hasEnd,
 			projectileSource:  input.Source,
+			countermeasure:    input.identity,
 			estimated:         estimated,
 			estimatedVelocity: estimatedVelocity,
 		}
@@ -600,8 +618,27 @@ func decoyTrackEnd(tr *track) (uint32, bool) {
 	return tr.samples[len(tr.samples)-1].t, true
 }
 
-func countermeasureType(*projectiles.Projectile) string {
+func countermeasureKind(identity countermeasureIdentity) string {
+	return effectiveCountermeasureIdentity(identity).Kind
+}
+
+func countermeasureType(tr *track) string {
+	if tr != nil {
+		return countermeasureACMIType + "+" + countermeasureKind(tr.countermeasure)
+	}
 	return countermeasureACMIType
+}
+
+func countermeasureIdentityProperties(tr *track) []string {
+	if tr == nil || !tr.key.decoy {
+		return nil
+	}
+	identity := effectiveCountermeasureIdentity(tr.countermeasure)
+	return []string{
+		"WT_CountermeasureType=" + identity.Kind,
+		"WT_CountermeasureTypeSource=" + escapeACMIValue(identity.Source),
+		"WT_CountermeasureTypeConfidence=" + escapeACMIValue(identity.Confidence),
+	}
 }
 
 func writeCountermeasureLog(path string, records []countermeasureRecord) error {
@@ -621,6 +658,7 @@ func writeCountermeasureLog(path string, records []countermeasureRecord) error {
 		"eid", "eid_hex", "lifetime_id", "spawn_ms", "end_ms", "has_end",
 		"owner_eid", "parent_uid", "has_parent", "weapon_ref", "weapon_ref_hex",
 		"template", "spawn_x", "spawn_y", "spawn_z", "sync_samples", "display",
+		"kind", "type_source", "type_confidence", "launcher", "bullet",
 	}
 	if err := w.Write(header); err != nil {
 		return err
@@ -630,6 +668,8 @@ func writeCountermeasureLog(path string, records []countermeasureRecord) error {
 		if record.HasEnd {
 			end = strconv.FormatUint(uint64(record.EndTime), 10)
 		}
+		identity := effectiveCountermeasureIdentity(countermeasureIdentity{Kind: record.Kind, Source: record.TypeSource, Confidence: record.TypeConfidence})
+		kind := identity.Kind
 		row := []string{
 			strconv.FormatUint(record.EID, 10),
 			fmt.Sprintf("%X", record.EID),
@@ -648,6 +688,11 @@ func writeCountermeasureLog(path string, records []countermeasureRecord) error {
 			strconv.FormatFloat(record.SpawnZ, 'g', -1, 64),
 			strconv.Itoa(record.SyncCount),
 			record.Display,
+			kind,
+			identity.Source,
+			identity.Confidence,
+			record.Launcher,
+			record.Bullet,
 		}
 		if err := w.Write(row); err != nil {
 			return err

@@ -81,6 +81,9 @@ func isGroundTrack(tr *track) bool {
 }
 
 func groundTrackType(tr *track) string {
+	if tr != nil && tr.groundStatic {
+		return "Ground+Static+Building"
+	}
 	if tr != nil {
 		if typ := groundModelType(tr.groundModel); typ != "" {
 			return typ

@@ -102,7 +102,7 @@ func TestEmbeddedThreatCatalogRangesAreExplicit(t *testing.T) {
 }
 
 func TestPinnedAirDefenceProfilesKeepCoreRangesAndExcludeAuxiliaries(t *testing.T) {
-	for raw, want := range map[string]float64{"fr_crotale_ng": 12000, "sw_crotale_ng": 12000, "uk_rooikat_za_35": 3000, "ussr_zsu_23_4": 2500, "ussr_zsu_37_2": 4000} {
+	for raw, want := range map[string]float64{"fr_crotale_ng": 12000, "sw_crotale_ng": 12000, "uk_rooikat_za_35": 3000, "ussr_zsu_23_4": 2500, "ussr_zsu_37_2": 2000} {
 		envelopes := modelThreatEnvelopes("tankModels/" + raw)
 		if len(envelopes) != 1 || envelopes[0].Range != want {
 			t.Errorf("%s: got %+v, want one radius %v", raw, envelopes, want)

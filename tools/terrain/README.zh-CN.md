@@ -89,6 +89,20 @@ pyooz 附带的 GPL-3.0-or-later `ooz` 解码器负责处理 Oodle 压缩的地�
 
 安装完成后完全退出并重启 Tacview，再用当前导出器重新导出 WRPL。若已有 ACMI 要与当前地形匹配，请以对应的原始 WRPL 直接重新导出。
 
+### 地形格式配置
+
+安装地图后，显式选择对应 Tacview 版本的格式：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dist\wrpl-acmi\tools\terrain\Set-Tacview-Terrain-Format.ps1 -Profile 1.9.4
+# 恢复原生有符号高程布局：
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dist\wrpl-acmi\tools\terrain\Set-Tacview-Terrain-Format.ps1 -Profile 1.9.5
+```
+
+`-TerrainRoot` 默认为 `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`；自定义安装位置时需显式传入。1.9.4 配置创建根目录高程索引与无符号 16 位高程副本，配合 -32768 米高度偏移，原始有符号栅格保持不变。1.9.5 配置恢复逐地图的原生有符号高程定义。两种配置使用相同的地图位置与 ACMI 坐标。`-ValidateOnly` 可检查已安装内容是否符合所选配置而不修改文件。
+
+格式切换是单独步骤：重新运行地形安装器后需再次选择格式。切换后重启 Tacview。合成格式与往返转换测试覆盖生成文件，不代表已经完成两个 Tacview 版本的 GUI 渲染验证。
+
 ## 导出
 
 从仓库根目录执行：
@@ -108,4 +122,6 @@ pyooz 附带的 GPL-3.0-or-later `ooz` 解码器负责处理 Oodle 压缩的地�
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-install-all-terrains.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\geographic\New-Fixture.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\geographic\test-install-geographic-terrains.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-terrain-194-encoding.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-terrain-format.ps1
 ```

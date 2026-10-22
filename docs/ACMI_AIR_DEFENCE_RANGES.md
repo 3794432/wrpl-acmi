@@ -1,28 +1,36 @@
-# SPAA / SPAAM 静态威胁范围
+# Static SPAA / SPAAM threat ranges
 
-导出器内嵌 `cmd/acmi/ground_threats.json`，不依赖 Tacview 自带型号数据库给这些单位补射程。表中每条记录以游戏内部型号 basename 关联回放的明确地面 UID，匹配时统一大小写；不按名称相似、国别或位置猜测型号。
+[简体中文](ACMI_AIR_DEFENCE_RANGES.zh-CN.md)
 
-数据固定到 War Thunder Datamine `f7952e4291e9fd7b6fe38e84020dddef925c3457`（`2.59.0.74`）。清单取自 `unittags.blkx` 的全部 193 个 `type_spaa` 条目，另有 `gamedata/units/air_defence` 下 62 个固定/AI 条目。只有雷达、火控或探照灯的条目仍保留在表中，但不生成武器圈。整体 Git tree 响应虽被截断，该防空目录的独立子 tree 已核对完整，193 个标签条目也均找到对应资产。
+The exporter embeds `cmd/acmi/ground_threats.json`; it does not rely on Tacview's object database to supply ranges for these units. Each entry associates a game model basename with an explicit ground UID from the replay. Matching is case-insensitive and never guesses a model from a similar name, country, or position.
 
-## 范围规则
+The data is pinned to War Thunder Datamine `f7952e4291e9fd7b6fe38e84020dddef925c3457` (`2.59.0.74`). The table contains 255 models, drawn from the `type_spaa` entries in `unittags.blkx` and fixed/AI entries under `gamedata/units/air_defence`. Radar, fire-control, or searchlight-only units may remain in the source catalogue but do not produce a weapon circle.
 
-- 火炮先取真实武器配置的 `attackMaxDist`；缺失时依次取同一武器挂载的 `AttackShellMaxRadius`、`AttackMaxRadius`。仍缺失时，保留武器 `aimMaxDist` 作为低置信度瞄准参考，并标为 `StaticAimLimitReference`，不称为实际交战上限。
-- 导弹从 `bullet.rocket` 正确读取参数，先取 `rangeMax`；缺失时依次取制导控制距离、同一挂载的 `AttackMaxRadius`、发射器 `attackMaxDist`。不跨不同语义字段取最大值，也不以弹体飞行极限、雷达搜索距离或 `guaranteedRange` 代替交战上限。
-- 同一类武器的不同配置保留有来源的最大静态能力。实际回放装弹、雷达开关、地形遮挡、目标运动和制导效果不由这张表确定。
-- 火炮有多种挂载时优先主防空炮口径，再在同口径候选中选有来源的范围。烟雾、诱饵、假武器、无制导火箭不当作防空炮；SAM 车的低口径自卫机枪不另画防空炮圈。
-- 已由完整单位/传感器配置确认无搜索或跟踪雷达、且只有火炮/机枪范围的单位，不输出威胁圈。M16 等无雷达炮车也适用；型号、轨迹和阵营照常保留。光学或红外传感器不能当作雷达。雷达装备未知时不推定为无雷达。
-- 有雷达的炮车，以及有有效导弹范围的 SAM 或弹炮混合系统，继续输出其武器范围；无雷达的红外或光学制导导弹系统不会因此被删除。这里判断的是静态装备配置，不是回放中的雷达开关状态。
+## Range selection
 
-## ACMI 字段
+- For guns, use the real weapon configuration's `attackMaxDist`. If absent, use `AttackShellMaxRadius` and then `AttackMaxRadius` on the same weapon mount. If all are absent, retain `aimMaxDist` as a low-confidence aiming reference, mark it `StaticAimLimitReference`, and do not call it the engagement limit.
+- For missiles, read `bullet.rocket` and prefer `rangeMax`. If absent, use the guidance-control distance, then `AttackMaxRadius` on the same mount, then the launcher's `attackMaxDist`. Do not take a maximum across fields with different meanings, and do not substitute body-flight range, radar search range, or `guaranteedRange` for the engagement limit.
+- Preserve the largest sourced static ability among configurations of one weapon class, with at most one primary range per class. The table does not determine the loadout, radar power state, terrain masking, moving target, or guidance result in a replay.
+- For a multi-mount gun system, prefer the main anti-air gun calibre and then a sourced range on a candidate of that calibre. Smoke, decoys, dummy weapons, and unguided rockets are not anti-air guns. A SAM vehicle's low-calibre self-defence machine gun does not get a separate anti-air circle.
+- Hide a gun circle only when the source confirms the absence of search or tracking radar and the profile has no valid missile range. The current 255-model table has 142 profiles meeting that policy; model names, tracks and coalitions remain. Optical or infrared sensors are not radar, and unknown radar equipment is not treated as confirmed absence.
+- Radar-equipped guns and SAM or gun-missile systems with a valid missile range keep their weapon range. A radarless infrared or optical guided missile system is not removed merely because it lacks radar. This classification describes static equipment, not radar activity in a replay.
 
-主范围写入 `EngagementRange`（米，半径）和 `EngagementMode=1`。附带 `WT_EngagementRangeSource`、`WT_EngagementRangeMode`、`WT_EngagementRangeKind`、`WT_EngagementRangeBasis`，区分导弹、火炮、参数出处与瞄准参考。该 Mode 只是启用静态圈显示，不表示从回放读取到了雷达开机。
+## ZSU-37-2 display radius
 
-混合系统的最大范围始终放在第一圈。第二类武器同时保留为历史兼容的 `EngagementRange2` / `EngagementMode2` 及对应来源字段。当前 Tacview 文档仅明确第一圈，第二圈字段可见于旧版官方文档；本次未在 GUI 验证同时绘制两圈，因此只保证导出最大主范围与保留次级范围数据。
+`ussr_zsu_37_2` uses the user-approved 2,000 m display radius. It emits `EngagementRange=2000` and `EngagementMode=1`. `WT_EngagementRangeBasis` explicitly identifies this as a user override rather than the original weapon `attackMaxDist`.
 
-普通飞机、非防空地面载具、导弹轨迹、雷达锁定和干扰物不采用此型号范围表。`-ground-models=false` 会关闭型号及衍生的范围显示，阵营识别仍独立运行；`-ground-units=false` 关闭批量地面轨迹路径。
+The provenance is retained: `WT_EngagementRangeSource` records both `User-configured ZSU-37-2 display radius: 2000 m` and the pinned Datamine value `37mm_2a11_user_cannon.blkx#/attackMaxDist=4000 m`. The ACMI therefore distinguishes the 2,000 m display choice from the original 4,000 m upstream source value. The displayed circle must not be read as a Datamine-derived range.
 
-## 验证边界
+## ACMI fields
 
-Go 测试覆盖混合系统、无来源/非法数字、雷达支援排除、大小写、型号与空地身份隔离。真实回放只使用 `#2026.09.21 16.33.02.wrpl`，在 2 GiB Windows Job Object 限制下转换。前后比较保护对象 ID、位置、时间、生命周期、名称、阵营和所有非地面数据，仅允许已有地面对象的范围字段和有证据的防空分类改变。
+The primary range is written as `EngagementRange` (radius in metres) with `EngagementMode=1`. `WT_EngagementRangeSource`, `WT_EngagementRangeMode`, `WT_EngagementRangeKind`, and `WT_EngagementRangeBasis` distinguish missile or gun data, parameter provenance, and aiming references. The Mode enables a static reference circle; it does not mean that a radar was observed as active.
 
-此表对应固定版本的静态资料，不能保证与任意回放版本完全一致。未做 Tacview 界面渲染验收。
+For a mixed system, the largest range is always the primary circle. A second weapon class is retained in the historical-compatibility `EngagementRange2` / `EngagementMode2` fields and their matching provenance fields. Current Tacview documentation explicitly covers the first circle; the second-circle fields appear in older official documentation. This update did not verify simultaneous two-circle rendering in the GUI, so it guarantees export of the primary range and preservation of the secondary range data.
+
+This model table does not apply to ordinary aircraft, non-air-defence vehicles, missile tracks, radar designations, or countermeasures. `-ground-models=false` disables model-derived presentation and threat ranges while coalition evidence remains independent. `-ground-units=false` disables the bulk ground-track export path.
+
+## Validation boundary
+
+Go tests cover mixed systems, missing or invalid values, radarless suppression, case handling, and isolation between ground and air identities. The controlled real-replay check used only `#2026.09.21 16.33.02.wrpl`, converted under a 2 GiB Windows Job Object limit. Before/after checks protected object ID, position, time, lifetime, names, coalitions, and all non-ground data; only existing ground range fields and evidence-backed air-defence classification were allowed to change.
+
+The catalogue is a fixed-version static reference and cannot guarantee exact agreement with every replay version. These data, outputs and tests do not constitute Tacview GUI or visual-rendering validation.

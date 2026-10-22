@@ -89,6 +89,20 @@ Use `-AtlasOnly` with exporter `-terrain-layout atlas` when deliberately choosin
 
 Restart Tacview after installation and re-export WRPL files with the current exporter. To place an existing ACMI with the current terrain, use its original WRPL as the input.
 
+### Terrain format profiles
+
+After installing the maps, explicitly select the format for your Tacview version:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dist\wrpl-acmi\tools\terrain\Set-Tacview-Terrain-Format.ps1 -Profile 1.9.4
+# To restore the native signed-height layout:
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\dist\wrpl-acmi\tools\terrain\Set-Tacview-Terrain-Format.ps1 -Profile 1.9.5
+```
+
+The default `-TerrainRoot` is `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`; supply that parameter for a custom installation. The 1.9.4 profile creates a root-level heightmap index and unsigned 16-bit height copies with an altitude offset of -32768 m. Original signed rasters remain unchanged. The 1.9.5 profile restores the native per-map signed-height definitions. Both profiles retain the same map placement and ACMI coordinates. `-ValidateOnly` checks the selected installed profile without changing files.
+
+Format selection is a separate step: repeat it after rerunning the terrain installer. Restart Tacview after switching. Synthetic format and round-trip tests cover the generated files; these are not a completed GUI rendering test for both Tacview versions.
+
 ## Export
 
 From the repository root:
@@ -108,4 +122,6 @@ These tests use synthetic fixtures and do not read game assets:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-install-all-terrains.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\geographic\New-Fixture.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\geographic\test-install-geographic-terrains.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-terrain-194-encoding.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltests\test-terrain-format.ps1
 ```

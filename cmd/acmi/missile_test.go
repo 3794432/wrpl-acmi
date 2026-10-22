@@ -96,7 +96,7 @@ func TestACMIMissileLifecycleCreatesAtFirstSampleAndDeletesAtEnd(t *testing.T) {
 		t.Fatal("missile object existed before its first recorded sample")
 	}
 	create := frameFindingLine(frames, 2.000, missileID+",")
-	wantPrefix := "2,Name=R-73M,CallSign=R-73M,Parent=1,Type=Weapon+Missile,Coalition=Blue,Color=Blue,T="
+	wantPrefix := "2,Name=R-73M,CallSign=R-73M,Parent=1,Type=Weapon+Missile,Coalition=Blue,Color=Blue,Group=War Thunder Blue,T="
 	if !strings.HasPrefix(create, wantPrefix) {
 		t.Fatalf("missile creation line = %q, want prefix %q", create, wantPrefix)
 	}
@@ -123,10 +123,10 @@ func TestACMIMissileOneSampleWritesCreationBeforeDeletion(t *testing.T) {
 	if len(frames) != 1 {
 		t.Fatalf("one-sample missile produced %d frames, want 1", len(frames))
 	}
-	if len(frames[0].lines) != 2 {
+	if len(frames[0].lines) != 3 {
 		t.Fatalf("one-sample frame lines = %v, want creation then deletion", frames[0].lines)
 	}
-	if !strings.HasPrefix(frames[0].lines[0], "1,Name=AIM-9M,") || frames[0].lines[1] != "-1" {
+	if !strings.HasPrefix(frames[0].lines[0], "1,Name=AIM-9M,") || !strings.HasPrefix(frames[0].lines[1], "0,Event=Bookmark|") || frames[0].lines[2] != "-1" {
 		t.Fatalf("one-sample frame order = %v, want creation then -1", frames[0].lines)
 	}
 }

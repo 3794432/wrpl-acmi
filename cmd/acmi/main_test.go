@@ -15,7 +15,7 @@ func TestACMISeparatesModelPilotAndCallSign(t *testing.T) {
 	tr, slot := newTestTrack(true, 42, "F-16C Block 50", "Alpha", 1)
 	line := renderFirstTrack(t, tr, slot, nil)
 
-	want := "1,Name=F-16C Block 50,CallSign=F-16C Block 50,Pilot=Alpha,Type=Air+FixedWing,Coalition=Blue,Color=Blue"
+	want := "1,Name=F-16C Block 50,CallSign=F-16C Block 50,Pilot=Alpha,Type=Air+FixedWing,Coalition=Blue,Color=Blue,Group=War Thunder Blue"
 	if line != want {
 		t.Fatalf("unexpected track header:\n got: %q\nwant: %q", line, want)
 	}
@@ -29,7 +29,7 @@ func TestACMINameManualOverrideWinsAndStillSeparatesPilot(t *testing.T) {
 	for _, overrideKey := range []string{"air:42", "42", "2A"} {
 		t.Run(overrideKey, func(t *testing.T) {
 			line := renderFirstTrack(t, tr, slot, map[string]string{overrideKey: "F-14A Tomcat"})
-			want := "1,Name=F-14A Tomcat,CallSign=F-14A Tomcat,Pilot=Alpha,Type=Air+FixedWing,Coalition=Blue,Color=Blue"
+			want := "1,Name=F-14A Tomcat,CallSign=F-14A Tomcat,Pilot=Alpha,Type=Air+FixedWing,Coalition=Blue,Color=Blue,Group=War Thunder Blue"
 			if line != want {
 				t.Fatalf("unexpected overridden track header:\n got: %q\nwant: %q", line, want)
 			}
@@ -66,19 +66,19 @@ func TestACMINameUsesExplicitUIDFallbackAndNeverPilot(t *testing.T) {
 			name: "air without entity",
 			air:  true,
 			id:   77,
-			want: "1,Name=air:77,CallSign=air:77,Type=Air+FixedWing,Coalition=Neutral,Color=White",
+			want: "1,Name=air:77,CallSign=air:77,Type=Air+FixedWing,Coalition=Neutral,Color=White,Group=War Thunder Neutral",
 		},
 		{
 			name: "ground without entity",
 			id:   8,
-			want: "1,Name=ground:8,CallSign=ground:8,Type=Ground+Vehicle,Coalition=Neutral,Color=White",
+			want: "1,Name=ground:8,CallSign=ground:8,Type=Ground+Vehicle,Coalition=Neutral,Color=White,Group=War Thunder Neutral",
 		},
 		{
 			name:  "pilot present while model unresolved",
 			air:   true,
 			id:    77,
 			pilot: "Alpha",
-			want:  "1,Name=air:77,CallSign=air:77,Pilot=Alpha,Type=Air+FixedWing,Coalition=Blue,Color=Blue",
+			want:  "1,Name=air:77,CallSign=air:77,Pilot=Alpha,Type=Air+FixedWing,Coalition=Blue,Color=Blue,Group=War Thunder Blue",
 		},
 	}
 	for _, tt := range tests {

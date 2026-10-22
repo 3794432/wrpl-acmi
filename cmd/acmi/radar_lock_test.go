@@ -3,10 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/csv"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -49,6 +51,44 @@ func radarTestSample(t uint32, x float64) acmiSample {
 func radarTestTrack(uid uint64, samples ...acmiSample) *track {
 	sort.Slice(samples, func(i, j int) bool { return samples[i].t < samples[j].t })
 	return &track{key: trackKey{air: true, id: uid}, samples: samples}
+}
+
+func radarTestPoseSample(t uint32, east, up, north, yaw, pitch, roll float64) acmiSample {
+	return acmiSample{t: t, x: east, y: up, z: north, yaw: yaw, pitch: pitch, roll: roll}
+}
+
+func parseRadarTestProps(props string) map[string]string {
+	out := map[string]string{}
+	for _, part := range strings.Split(props, ",") {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) == 2 {
+			out[kv[0]] = kv[1]
+		}
+	}
+	return out
+}
+
+func requireRadarTestAngle(t *testing.T, props, name string, want float64) {
+	t.Helper()
+	value, ok := parseRadarTestProps(props)[name]
+	if !ok {
+		t.Fatalf("%s missing from %q", name, props)
+	}
+	got, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		t.Fatalf("%s = %q in %q: %v", name, value, props, err)
+	}
+	if math.Abs(got-want) > 0.006 {
+		t.Fatalf("%s = %.4f, want %.4f; props=%q", name, got, want, props)
+	}
+}
+
+func requireRadarTestEmptyAngle(t *testing.T, props, name string) {
+	t.Helper()
+	value, ok := parseRadarTestProps(props)[name]
+	if !ok || value != "" {
+		t.Fatalf("%s must be present and empty, got %q in %q", name, value, props)
+	}
 }
 
 func radarTestPrepare(t *testing.T, fm *packetfm.PacketFlightModelParser, tracks []*track) *radarLockExport {
@@ -379,6 +419,235 @@ func TestRadarLockRangeNeverUsesFuturePositions(t *testing.T) {
 	}
 }
 
+func TestRadarLockAnglesCardinalBodyDirections(t *testing.T) {
+	tests := []struct {
+		name        string
+		yaw         float64
+		east        float64
+		up          float64
+		north       float64
+		wantAzimuth float64
+		azimuthOK   bool
+		wantElev    float64
+	}{
+		{name: "ahead", yaw: 0, north: 1000, wantAzimuth: 0, azimuthOK: true},
+		{name: "right of northbound", yaw: 0, east: 1000, wantAzimuth: 90, azimuthOK: true},
+		{name: "left of northbound", yaw: 0, east: -1000, wantAzimuth: -90, azimuthOK: true},
+		{name: "left of eastbound", yaw: 90, north: 1000, wantAzimuth: -90, azimuthOK: true},
+		{name: "right of eastbound", yaw: 90, north: -1000, wantAzimuth: 90, azimuthOK: true},
+		{name: "above", yaw: 0, up: 1000, wantElev: 90},
+		{name: "below", yaw: 0, up: -1000, wantElev: -90},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			source := radarTestTrack(5, radarTestPoseSample(1000, 0, 0, 0, tt.yaw, 0, 0))
+			target := radarTestTrack(7, radarTestPoseSample(1000, tt.east, tt.up, tt.north, 0, 0, 0))
+			x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+				radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+			}}, []*track{source, target})
+			props := radarTestProps(x, 5, 1000, source)
+			if tt.azimuthOK {
+				requireRadarTestAngle(t, props, "LockedTargetAzimuth", tt.wantAzimuth)
+			} else {
+				requireRadarTestEmptyAngle(t, props, "LockedTargetAzimuth")
+			}
+			requireRadarTestAngle(t, props, "LockedTargetElevation", tt.wantElev)
+			if rangeValue := parseRadarTestProps(props)["LockedTargetRange"]; rangeValue != "1000" {
+				t.Fatalf("range = %q in %q, want 1000", rangeValue, props)
+			}
+		})
+	}
+}
+
+func TestRadarLockAnglesPitchBankAndInverted(t *testing.T) {
+	const cosThirty = 0.8660254037844386
+	tests := []struct {
+		name        string
+		yaw         float64
+		pitch       float64
+		roll        float64
+		east        float64
+		up          float64
+		north       float64
+		wantAzimuth float64
+		azimuthOK   bool
+		wantElev    float64
+	}{
+		{name: "pitch up along flight path", pitch: 30, up: 500, north: 1000 * cosThirty, wantAzimuth: 0, azimuthOK: true},
+		{name: "pitch down along flight path", pitch: -30, up: -500, north: 1000 * cosThirty, wantAzimuth: 0, azimuthOK: true},
+		{name: "bank right puts east under body", roll: 90, east: 1000, wantElev: 90},
+		{name: "bank left puts east behind body up", roll: -90, east: 1000, wantElev: -90},
+		{name: "inverted puts east left", roll: 180, east: 1000, wantAzimuth: -90, azimuthOK: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			source := radarTestTrack(5, radarTestPoseSample(1000, 0, 0, 0, tt.yaw, tt.pitch, tt.roll))
+			target := radarTestTrack(7, radarTestPoseSample(1000, tt.east, tt.up, tt.north, 0, 0, 0))
+			x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+				radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+			}}, []*track{source, target})
+			props := radarTestProps(x, 5, 1000, source)
+			if tt.azimuthOK {
+				requireRadarTestAngle(t, props, "LockedTargetAzimuth", tt.wantAzimuth)
+			} else {
+				requireRadarTestEmptyAngle(t, props, "LockedTargetAzimuth")
+			}
+			requireRadarTestAngle(t, props, "LockedTargetElevation", tt.wantElev)
+		})
+	}
+}
+
+func TestRadarLockAnglesClearOnTargetLifecycleChanges(t *testing.T) {
+	t.Run("primary target change publishes new geometry", func(t *testing.T) {
+		source := radarTestTrack(5,
+			radarTestPoseSample(1000, 0, 0, 0, 0, 0, 0),
+			radarTestPoseSample(2000, 0, 0, 0, 0, 0, 0),
+			radarTestPoseSample(3000, 0, 0, 0, 0, 0, 0))
+		east := radarTestTrack(7,
+			radarTestPoseSample(1000, 1000, 0, 0, 0, 0, 0),
+			radarTestPoseSample(2000, 1000, 0, 0, 0, 0, 0),
+			radarTestPoseSample(3000, 1000, 0, 0, 0, 0, 0))
+		north := radarTestTrack(8,
+			radarTestPoseSample(1000, 0, 0, 1000, 0, 0, 0),
+			radarTestPoseSample(2000, 0, 0, 1000, 0, 0, 0),
+			radarTestPoseSample(3000, 0, 0, 1000, 0, 0, 0))
+		coincident := radarTestTrack(9,
+			radarTestPoseSample(1000, 0, 0, 0, 0, 0, 0),
+			radarTestPoseSample(2000, 0, 0, 0, 0, 0, 0),
+			radarTestPoseSample(3000, 0, 0, 0, 0, 0, 0))
+		x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+			radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+			radarTestFrameTargets(2000, 5, []packetfm.FMTargetData{radarTestLock(8)}),
+			radarTestFrameTargets(3000, 5, []packetfm.FMTargetData{radarTestLock(9)}),
+		}}, []*track{source, east, north, coincident})
+
+		requireRadarTestAngle(t, radarTestProps(x, 5, 1000, source), "LockedTargetAzimuth", 90)
+		changed := radarTestProps(x, 5, 2000, source)
+		requireRadarTestAngle(t, changed, "LockedTargetAzimuth", 0)
+		requireRadarTestAngle(t, changed, "LockedTargetElevation", 0)
+		degenerate := radarTestProps(x, 5, 3000, source)
+		requireRadarTestEmptyAngle(t, degenerate, "LockedTargetAzimuth")
+		requireRadarTestEmptyAngle(t, degenerate, "LockedTargetElevation")
+		if rangeValue := parseRadarTestProps(degenerate)["LockedTargetRange"]; rangeValue != "0" {
+			t.Fatalf("degenerate target-change range = %q in %q", rangeValue, degenerate)
+		}
+	})
+
+	t.Run("sample gap", func(t *testing.T) {
+		source := radarTestTrack(5,
+			radarTestPoseSample(1000, 0, 0, 0, 0, 0, 0),
+			radarTestPoseSample(2500, 0, 0, 0, 0, 0, 0))
+		target := radarTestTrack(7, radarTestPoseSample(1000, 1000, 0, 0, 0, 0, 0))
+		x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+			radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+			radarTestFrameTargets(2500, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+		}}, []*track{source, target})
+		props := radarTestProps(x, 5, 2500, source)
+		requireRadarTestEmptyAngle(t, props, "LockedTargetAzimuth")
+		requireRadarTestEmptyAngle(t, props, "LockedTargetElevation")
+		if !strings.Contains(props, "LockedTargetMode=0") || !strings.Contains(props, "LockedTargetRange=0") {
+			t.Fatalf("gap did not clear the full lock geometry: %q", props)
+		}
+	})
+
+	t.Run("target destruction", func(t *testing.T) {
+		source := radarTestTrack(5,
+			radarTestPoseSample(1000, 0, 0, 0, 0, 0, 0),
+			radarTestPoseSample(2000, 0, 0, 0, 0, 0, 0))
+		target := radarTestTrack(7, radarTestPoseSample(1000, 1000, 0, 0, 0, 0, 0))
+		target.hasEnd, target.end = true, 2000
+		x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+			radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+		}}, []*track{source, target})
+		if len(x.extra) != 1 {
+			t.Fatalf("death clears = %+v, want one", x.extra)
+		}
+		requireRadarTestEmptyAngle(t, x.extra[0].line, "LockedTargetAzimuth")
+		requireRadarTestEmptyAngle(t, x.extra[0].line, "LockedTargetElevation")
+	})
+
+	t.Run("explicit unlock", func(t *testing.T) {
+		source := radarTestTrack(5,
+			radarTestPoseSample(1000, 0, 0, 0, 0, 0, 0),
+			radarTestPoseSample(2000, 0, 0, 0, 0, 0, 0))
+		target := radarTestTrack(7,
+			radarTestPoseSample(1000, 1000, 0, 0, 0, 0, 0),
+			radarTestPoseSample(2000, 1000, 0, 0, 0, 0, 0))
+		x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+			radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+			radarTestEmptyFrame(2000, 5),
+		}}, []*track{source, target})
+		props := radarTestProps(x, 5, 2000, source)
+		requireRadarTestEmptyAngle(t, props, "LockedTargetAzimuth")
+		requireRadarTestEmptyAngle(t, props, "LockedTargetElevation")
+	})
+}
+
+func TestRadarLockAnglesNoFutureInterpolationAndMissingGeometry(t *testing.T) {
+	t.Run("earlier target sample is used", func(t *testing.T) {
+		source := radarTestTrack(5,
+			radarTestPoseSample(1000, 0, 0, 0, 0, 0, 0),
+			radarTestPoseSample(2000, 0, 0, 0, 0, 0, 0))
+		target := radarTestTrack(7,
+			radarTestPoseSample(1000, 1000, 0, 0, 0, 0, 0),
+			radarTestPoseSample(3000, 0, 0, 1000, 0, 0, 0))
+		x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+			radarTestFrameTargets(2000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+		}}, []*track{source, target})
+		requireRadarTestAngle(t, radarTestProps(x, 5, 2000, source), "LockedTargetAzimuth", 90)
+	})
+
+	t.Run("future-only target is unavailable", func(t *testing.T) {
+		source := radarTestTrack(5, radarTestPoseSample(2000, 0, 0, 0, 0, 0, 0))
+		target := radarTestTrack(7, radarTestPoseSample(3000, 1000, 0, 0, 0, 0, 0))
+		x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+			radarTestFrameTargets(2000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+		}}, []*track{source, target})
+		if got := radarTestProps(x, 5, 2000, source); got != "" {
+			t.Fatalf("future target sample produced properties: %q", got)
+		}
+	})
+
+	t.Run("coincident positions keep zero range", func(t *testing.T) {
+		source := radarTestTrack(5, radarTestPoseSample(1000, 10, 20, 30, 45, 20, -15))
+		target := radarTestTrack(7, radarTestPoseSample(1000, 10, 20, 30, 0, 0, 0))
+		x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+			radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+		}}, []*track{source, target})
+		props := radarTestProps(x, 5, 1000, source)
+		if rangeValue := parseRadarTestProps(props)["LockedTargetRange"]; rangeValue != "0" {
+			t.Fatalf("coincident range = %q in %q", rangeValue, props)
+		}
+		requireRadarTestEmptyAngle(t, props, "LockedTargetAzimuth")
+		requireRadarTestEmptyAngle(t, props, "LockedTargetElevation")
+	})
+
+	for _, attitude := range []struct {
+		name  string
+		yaw   float64
+		pitch float64
+		roll  float64
+	}{
+		{name: "yaw", yaw: math.NaN()},
+		{name: "pitch", pitch: math.Inf(1)},
+		{name: "roll", roll: math.Inf(-1)},
+	} {
+		t.Run("nonfinite "+attitude.name+" keeps range", func(t *testing.T) {
+			source := radarTestTrack(5, radarTestPoseSample(1000, 0, 0, 0, attitude.yaw, attitude.pitch, attitude.roll))
+			target := radarTestTrack(7, radarTestPoseSample(1000, 1000, 0, 0, 0, 0, 0))
+			x := radarTestPrepare(t, &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+				radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+			}}, []*track{source, target})
+			props := radarTestProps(x, 5, 1000, source)
+			if rangeValue := parseRadarTestProps(props)["LockedTargetRange"]; rangeValue != "1000" {
+				t.Fatalf("nonfinite attitude range = %q in %q", rangeValue, props)
+			}
+			requireRadarTestEmptyAngle(t, props, "LockedTargetAzimuth")
+			requireRadarTestEmptyAngle(t, props, "LockedTargetElevation")
+		})
+	}
+}
+
 func TestWriteACMIWithRadarLockIndependentClearOnTargetDestruction(t *testing.T) {
 	source := radarTestTrack(5, radarTestSample(1000, 0), radarTestSample(2000, 0), radarTestSample(3000, 0))
 	target := radarTestTrack(7, radarTestSample(1000, 1000), radarTestSample(2000, 1000))
@@ -476,7 +745,7 @@ func TestACMIWriterNilRadarContextMatchesLegacyWrapper(t *testing.T) {
 		t.Fatal(err)
 	}
 	current := renderRadarTestACMI(t, tracks, nil)
-	if !bytes.Equal(legacy, []byte(current)) {
+	if !bytes.Equal([]byte(radarTestStableRecording(string(legacy))), []byte(radarTestStableRecording(current))) {
 		t.Fatal("nil radar context changed the legacy ACMI bytes")
 	}
 	if strings.Contains(current, "LockedTarget") {
@@ -494,13 +763,25 @@ func TestRadarLockRepeatedExportDoesNotLeakSlotState(t *testing.T) {
 	radar := radarTestPrepare(t, fm, tracks)
 	first := renderRadarTestACMI(t, tracks, radar)
 	second := renderRadarTestACMI(t, tracks, radar)
-	if first != second {
+	if radarTestStableRecording(first) != radarTestStableRecording(second) {
 		t.Fatal("reusing the radar export changed a later ACMI")
 	}
 	locked, changes := radar.stats()
 	if locked != 1 || changes != 1 || radar.aircraft != 1 {
 		t.Fatalf("stats leaked across exports: aircraft=%d locked=%d changes=%d", radar.aircraft, locked, changes)
 	}
+}
+
+// Separate files may be created on opposite sides of a UTC second boundary.
+// Their creation time is expected to differ; all replay/radar data must match.
+func radarTestStableRecording(data string) string {
+	lines := strings.Split(data, "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, "0,RecordingTime=") {
+			lines[i] = "0,RecordingTime=<creation time>"
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func TestRadarLockLogRecordsChangesAndDoesNotClaimSTT(t *testing.T) {

@@ -7,8 +7,40 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet"
 	ecs "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/ecs2"
 )
+
+func TestConstructionPositionIsCopiedAndTimestamped(t *testing.T) {
+	p := &Parser{}
+	e := entityFor(0, "structures/unit_airfield_main_radar_char", "unit_storage__fortification", ecs.UnitStorage{}, 1)
+	e.Data.AddComponent(&ecs.Component{Value: ecs.TMatrix{V4: ecs.Point3{X: 100, Y: 200, Z: 300}}}, "transform")
+	info, ok := p.ObserveEntityAt(7, e, 1234)
+	if !ok || !info.HasConstructionTime || info.ConstructionTime != 1234 || info.Position == nil || info.Position.X != 100 {
+		t.Fatalf("missing real construction evidence: %+v", info)
+	}
+	e.Data.Components[len(e.Data.Components)-1].Comp.Value = ecs.TMatrix{V4: ecs.Point3{X: 999}}
+	if info.Position.X != 100 {
+		t.Fatal("retained translation aliased mutable entity")
+	}
+	if err := p.observeDestructions(&packet.Packet{CurrentTime: 2000, PacketPayload: []byte{0x26, 0, 0x1d, 0}}); err != nil {
+		t.Fatal(err)
+	}
+	if p.Ends[7] != 2000 {
+		t.Fatalf("ground end=%v", p.Ends)
+	}
+	before := len(p.Ends)
+	if err := p.observeDestructions(&packet.Packet{CurrentTime: 3000, PacketPayload: []byte{0x26, 1, 0x1d, 0}}); err == nil {
+		t.Fatal("truncated destruction accepted")
+	}
+	if len(p.Ends) != before || p.Ends[7] != 2000 {
+		t.Fatal("bad destruction modified lifetime")
+	}
+	untimed, ok := p.ObserveEntity(7, e)
+	if !ok || untimed.Position != nil || untimed.HasConstructionTime {
+		t.Fatal("API without timestamp invented positional evidence")
+	}
+}
 
 func fixture(t *testing.T, name string) []byte {
 	t.Helper()

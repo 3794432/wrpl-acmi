@@ -6,12 +6,16 @@
 
 ## 导出内容
 
-- 飞机与地面单位使用回放中的位置；飞机带飞行模型姿态，地面单位带精确轨迹、型号、队伍和可确认的销毁记录。
+- 按地图和任务选择机场跑道，默认 `-airfields=true`。目录包含 69 张地图、457 条任务记录，其中 67 张地图有可用源定义；条件布局需要匹配的回放雷达身份。PhiPhi 的 8 条竞速任务为空中出发且没有陆地跑道来源；Caribbean 没有可靠的任务或跑道来源。雷达名称保留游戏缩写 `AFF Radar` 和 `AFM Radar`（机场飞行雷达与主雷达），完整型号保存在 `WT_GroundModel`。详见[机场定位](docs/ACMI_AIRFIELDS.zh-CN.md)和[逐地图覆盖](docs/ACMI_AIRFIELDS_COVERAGE.zh-CN.md)。
+- 文件元数据（`Title`、`Author`、`RecordingTime`、类别与来源备注）、事件时间轴书签、阵营分组和机体相对的雷达指定角度。飞机 `HDG`、`TAS`、`Mach`、`IAS`、`AOA` 与三轴 G 估算默认开启；设置 `-estimate-telemetry=false` 可关闭，详见[字段与估算边界](docs/acmi-information.zh-CN.md)。
+- 飞机与地面单位使用回放中的位置；飞机带飞行模型姿态，地面单位带精确轨迹、型号、队伍和可确认的销毁记录。没有同步轨迹的静态建筑或工事可使用带时间戳的真实 ECS 构造位置，并通过 `WT_GroundStatic` 来源字段区分。
  - 导弹使用实际同步位置，并附带由位置序列估计的速度、加速度、转向和 G 值；型号候选、静态制导类型与 INS 秒数保留在 ACMI 字段和 `INS x.xx s` 标签中。
 - 炸弹有 WeaponSync 时导出真实位置序列；只有构造记录时明确标为 `Release position only`，不补造飞行轨迹。
-- 干扰措施有真实位置时直接导出；否则从释放点生成明确标记的短时估算轨迹。
-- 雷达目标指定写成 Tacview 原生 `LockedTarget` 属性；重新导出并开启 Display Radar Locks 可查看。
-- 防空范围表覆盖 255 个型号。经固定版本资料确认无雷达的纯炮/机枪配置不画威胁圈（审计清单中的 142 个在列）；ZA-35、ZSU-23-4、ZSU-37-2 以及红外或混合制导 SAM 保留。范围是静态型号参考，不代表回放中的雷达开关或实时包线。
+- 干扰物按可靠弹药证据区分 Flare/Chaff；无法判断的统一按 Chaff 显示并注明默认归类，不推测弹种。有真实位置时直接导出，否则保留明确标记的短时估算轨迹，详见[干扰物类型](docs/ACMI_COUNTERMEASURES.zh-CN.md)。
+- 雷达目标指定写成 Tacview 原生 `LockedTarget` 属性；在回放位置支持时附带几何斜距和机体相对的方位角、俯仰角。重新导出并开启 Display Radar Locks 可查看。这不证明 STT 硬锁、雷达开机状态或武器制导模式。
+- 轨迹清单、导弹飞行证据、干扰物构造和雷达锁定变化四类 CSV 默认不输出；只有分别通过 `-list`、`-missile-flight-log`、`-countermeasure-log`、`-radar-lock-log` 显式提供输出路径时才写出对应文件。
+- 防空范围表覆盖 255 个型号。经来源确认无雷达的纯炮/机枪配置不画威胁圈（共 142 个）；ZA-35、ZSU-23-4、ZSU-37-2 以及红外或混合制导 SAM 保留。ZSU-37-2 使用用户确认的 2,000 米显示半径；来源字段同时记录固定 Datamine 中的 `attackMaxDist` 原值为 4,000 米。范围是静态型号参考，不代表回放中的雷达开关或实时包线。
+- ACMI 2.1 仍是兼容性默认值；`-acmi-version 2.2` 为显式选用。
 
 在项目核对过的回放中，69 架飞机和 140 个地面单位的型号与队伍均已关联；可确认的销毁记录按证据保留。其他版本、地图和服务器分片的覆盖情况仍需逐场核对。
 
@@ -61,9 +65,9 @@ git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
 
 `-Python` 请使用实际的 64 位 Python 3.12 解释器；默认值为 `python`。`-OutputRoot` 默认为 `dist\wrpl-acmi`。只构建导出器时省略 `-WithTerrain`、`-GameRoot` 和 `-DatamineRoot`。构建过程不会自动向 Tacview 安装地形。地形转换中断后，可用同样参数加上 `-ResumeTerrain` 继续；再次使用 `-WithTerrain` 时，若已有非空 `terrain` 目录且没有该开关，构建会拒绝覆盖。
 
-运行包仅包含 `wrpl-acmi.exe`、`run.bat`、`data/` 和 `tools/terrain/`；`-WithTerrain` 成功后还会包含带全部 69 张地图的转换目录 `terrain/`。可执行文件以关闭 CGO 的方式构建。历史 release 可能落后于当前 `dev`；需要最新行为时请从当前分支构建。
+运行包包含 `wrpl-acmi.exe`、`run.bat`、`README.md`、`README.zh-CN.md`、`LICENSE`、复制进包的 `docs/`、运行数据 `data/`，以及 `tools/terrain/`、`tools/airfields/` 和 `tools/countermeasures/`；`-WithTerrain` 成功后还会包含带全部 69 张地图的转换目录 `terrain/`。可执行文件以关闭 CGO 的方式构建。当前树的本地源码构建已成功完成。历史 release 可能落后于当前 `dev`；需要最新行为时请从当前分支构建。
 
-[源码构建工作流](https://github.com/3794432/wrpl-acmi/blob/dev/.github/workflows/source-build.yml)会运行 Go 测试、Python 解码器的合成输入测试、PowerShell 安装器测试，并构建不含地形的导出器包。真实地形转换依赖本机安装的游戏文件，因此不在 CI 中执行。
+[源码构建工作流](https://github.com/3794432/wrpl-acmi/blob/dev/.github/workflows/source-build.yml)覆盖导出器与库测试、合成地形解码、机场地形采样、安装器检查、地形格式转换和纯导出器包构建。真实地形转换依赖本机安装的游戏文件，因此不在 CI 中执行；CI 也不验证 Tacview GUI 加载或渲染。
 
 ## 地图与地形
 
@@ -83,13 +87,16 @@ Atlas 配套安装使用同一工具的 `-AtlasOnly`。地图 `.data` 不纳入 
 
 ## 文档
 
-- [当前导出指南](docs/acmi-export.md)
-- [服务器分片](docs/ACMI_SERVER_REPLAYS.md) · [地面单位](docs/ACMI_GROUND_UNITS.md) · [炸弹](docs/ACMI_BOMBS.md) · [雷达锁定](docs/ACMI_RADAR_LOCKS.md)
-- [防空静态范围](docs/ACMI_AIR_DEFENCE_RANGES.md) · [导弹型号](docs/ACMI_MODELS.md) · [制导证据](docs/ACMI_GUIDANCE.md)
+- [导出指南与命令参数](docs/acmi-export.zh-CN.md)
+- [服务器分片](docs/ACMI_SERVER_REPLAYS.md) · [地面单位](docs/ACMI_GROUND_UNITS.md) · [机场](docs/ACMI_AIRFIELDS.zh-CN.md) · [机场逐图覆盖](docs/ACMI_AIRFIELDS_COVERAGE.zh-CN.md)
+- [元数据、书签与飞机估算](docs/acmi-information.zh-CN.md) · [干扰物类型](docs/ACMI_COUNTERMEASURES.zh-CN.md) · [炸弹](docs/ACMI_BOMBS.md) · [雷达锁定](docs/ACMI_RADAR_LOCKS.md)
+- [防空静态范围](docs/ACMI_AIR_DEFENCE_RANGES.zh-CN.md) · [导弹型号](docs/ACMI_MODELS.md) · [制导证据](docs/ACMI_GUIDANCE.md)
 - [地理地形](docs/TERRAIN_GEOGRAPHIC.md) · [Atlas 布局](docs/terrain-atlas.md) · [上游检查器说明](docs/README.md)
 
 ## 解释边界
 
-导弹速度、加速度与 G 值来自同步位置的时间差分；无同步的干扰物轨迹是显式估算；只有构造记录的炸弹只是投放位置标记。静态制导类型和防空范围不表示某一帧已经锁定、雷达已经开机或处于可击杀状态。Tacview 中的实际渲染效果未作为本次验收项。
+导弹速度、加速度与 G 值来自同步位置的时间差分。飞机遥测由记录的位置和姿态在明确的无风、标准大气假设下估算；IAS 是 EAS 近似，三轴 G 是比力估算。无同步的干扰物轨迹是显式估算，无法判断弹种时按 Chaff 显示且不声称已识别；只有构造记录的炸弹只是投放位置标记。静态制导类型和防空范围不表示某一帧已经锁定、雷达已经开机或处于可击杀状态。跑道标记保留源几何和覆盖边界，不证明某一局中跑道实际处于活动状态。
+
+本文档已按实现、测试覆盖和生成的目录核对；Tacview GUI 加载与实际渲染不在这些验证范围内。
 
 本项目及 `wrpl` 库按 GNU Affero General Public License v3 发布，详见 [LICENSE](LICENSE)。上游项目与版权声明予以保留。地图和游戏资源归 Gaijin Entertainment 所有；地理定位来自 WT-MAP-ANALYZE 固定 commit 的估算，存在不确定性。本项目与 Gaijin 无隶属或背书关系。

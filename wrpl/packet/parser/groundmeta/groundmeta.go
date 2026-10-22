@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet"
 	ecs "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/ecs2"
 )
@@ -45,6 +46,11 @@ type Info struct {
 	ClassConflict bool
 	Conflict      bool
 	Entity        *ecs.Entity
+	// A copied translation with the actual construction timestamp; no rotation
+	// or position is inferred from a template declaration.
+	Position            *ecs.Point3
+	ConstructionTime    uint32
+	HasConstructionTime bool
 }
 
 // Parser is a packet.PacketParser for packet type 6. Models is keyed by the
@@ -52,6 +58,7 @@ type Info struct {
 type Parser struct {
 	Models map[uint64]Info
 	All    []Info
+	Ends   map[uint64]uint32
 
 	ParsedPackets  int
 	GroundEntities int
@@ -95,6 +102,11 @@ func (p *Parser) Parse(pk *packet.Packet) (any, error) {
 	if p.ecs == nil {
 		return nil, fmt.Errorf("groundmeta parser is not initialized")
 	}
+	if len(pk.PacketPayload) > 0 && pk.PacketPayload[0] == 0x26 {
+		if err := p.observeDestructions(pk); err != nil {
+			return nil, err
+		}
+	}
 	raw, err := p.ecs.Parse(pk)
 	p.ecs.Messages = p.ecs.Messages[:0]
 	if err != nil {
@@ -116,7 +128,7 @@ func (p *Parser) Parse(pk *packet.Packet) (any, error) {
 			if !ok || entity == nil {
 				continue
 			}
-			p.ObserveEntity(msg.EID, entity)
+			p.ObserveEntityAt(msg.EID, entity, pk.CurrentTime)
 		}
 	}
 	return len(p.Models), nil
@@ -125,6 +137,14 @@ func (p *Parser) Parse(pk *packet.Packet) (any, error) {
 // ObserveEntity can be used by integrations that already parsed an ECS entity
 // with AllowMissingPODDataComponents enabled.
 func (p *Parser) ObserveEntity(eid uint64, entity *ecs.Entity) (Info, bool) {
+	return p.observeEntity(eid, entity, nil)
+}
+
+func (p *Parser) ObserveEntityAt(eid uint64, entity *ecs.Entity, stamp uint32) (Info, bool) {
+	return p.observeEntity(eid, entity, &stamp)
+}
+
+func (p *Parser) observeEntity(eid uint64, entity *ecs.Entity, stamp *uint32) (Info, bool) {
 	if p == nil || entity == nil {
 		return Info{}, false
 	}
@@ -148,6 +168,13 @@ func (p *Parser) ObserveEntity(eid uint64, entity *ecs.Entity) (Info, bool) {
 		Kind:    kindOf(entity.Template, storageName),
 		Storage: storageName,
 		Entity:  entity,
+	}
+	if stamp != nil {
+		info.ConstructionTime, info.HasConstructionTime = *stamp, true
+		if transform, found := ecs.GetObjectData[ecs.TMatrix](&entity.Data, "transform"); found {
+			position := transform.V4
+			info.Position = &position
+		}
 	}
 	info.ClassModel, _ = ecs.GetObjectData[string](&entity.Data, "unit__className")
 	info.MissionName, _ = ecs.GetObjectData[string](&entity.Data, "unit__missionName")
@@ -215,6 +242,38 @@ func (p *Parser) ObserveEntity(eid uint64, entity *ecs.Entity) (Info, bool) {
 	p.Models[key] = info
 	p.All = append(p.All, info)
 	return info, true
+}
+
+func (p *Parser) observeDestructions(pk *packet.Packet) error {
+	if len(pk.PacketPayload) < 2 {
+		return fmt.Errorf("short ground metadata destruction packet")
+	}
+	count := int(pk.PacketPayload[1]) + 1
+	if count > (len(pk.PacketPayload)-2)/2 {
+		return fmt.Errorf("ground metadata destruction count exceeds remaining payload")
+	}
+	r := danet.NewBitReader(pk.PacketPayload[2:])
+	// Validate the entire bounded packet before publishing any lifetime changes.
+	eids := make([]uint64, 0, count)
+	for i := 0; i < count; i++ {
+		eid, err := packet.ReadEID(r)
+		if err != nil {
+			return fmt.Errorf("ground metadata destruction EID: %w", err)
+		}
+		eids = append(eids, eid)
+	}
+	if p.Ends == nil {
+		p.Ends = map[uint64]uint32{}
+	}
+	for _, eid := range eids {
+		for _, info := range p.Models {
+			if info.EID == eid {
+				p.Ends[eid] = pk.CurrentTime
+				break
+			}
+		}
+	}
+	return nil
 }
 
 func (p *Parser) ensureEvidenceMaps() {

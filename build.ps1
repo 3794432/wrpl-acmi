@@ -63,6 +63,8 @@ try {
     $tools = Join-Path $output 'tools'
     New-Item -ItemType Directory -Path $tools -Force | Out-Null
     Copy-PackageTree (Join-Path $repoRoot 'tools/terrain') (Join-Path $tools 'terrain')
+    Copy-PackageTree (Join-Path $repoRoot 'tools/airfields') (Join-Path $tools 'airfields')
+    Copy-PackageTree (Join-Path $repoRoot 'tools/countermeasures') (Join-Path $tools 'countermeasures')
     foreach ($name in @('README.md', 'README.zh-CN.md', 'LICENSE')) {
         Copy-Item -LiteralPath (Join-Path $repoRoot $name) -Destination $output -Force
     }

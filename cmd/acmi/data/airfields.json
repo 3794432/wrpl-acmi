@@ -1,0 +1,289 @@
+{
+  "schema": 1,
+  "commit": "f7952e4291e9fd7b6fe38e84020dddef925c3457",
+  "version": "2.59.0.74",
+  "sources": [
+    {
+      "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands_bfd_norespawn.blkx",
+      "sha256_lf": "0e95ce4075649dc1d13fced118d661837c9a2d2db37bcea2df343ae760e5ef5d"
+    },
+    {
+      "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields_part.blkx",
+      "sha256_lf": "ebffc8a880bd4a99f88f21b8daf48783b68fc4f8994e2bb7cc9989941db0089b"
+    },
+    {
+      "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_top_ranks.blkx",
+      "sha256_lf": "a59b3f73acac5400ef3caf52c9b09fc356a80f3f32a52aaf0512fa779b992c1f"
+    },
+    {
+      "path": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_high_ranks.blkx",
+      "sha256_lf": "aab3fc7ed5d97a805d3c177859948faf5b53408f42cf4ab5565887781ec0900a"
+    },
+    {
+      "path": "aces.vromfs.bin_u/gamedata/objectgroups/dynaf_pg_1line_3000_universal.blkx",
+      "sha256_lf": "9dfd162a92dcf43e1604fc40cdee0b56669645fac1fa8eb8649c40fed81a0579"
+    },
+    {
+      "path": "aces.vromfs.bin_u/gamedata/units/structures/unit_airfield_main_radar_char.blkx",
+      "sha256_lf": "7029c56aeb511ef94839ee3343b02f4d1f749a336ca46e8f494ac2f26766c5f1"
+    },
+    {
+      "path": "aces.vromfs.bin_u/gamedata/units/structures/unit_airfield_flight_radar_char.blkx",
+      "sha256_lf": "f52fad72350fcd0786e2d1f3032328e44dd3233313656151ca24ff3ec08b4198"
+    },
+    {
+      "path": "mis.vromfs.bin_u/gamedata/missions/templates/units_sets/airfields_decor/air_radar_decor.blkx",
+      "sha256_lf": "6799d3ec0bb7c9da368635310e6baca5889fb780691a4288575ad05a724d63ec"
+    }
+  ],
+  "map_id": "air_falklands",
+  "mission": "air_falklands_BfD_norespawn",
+  "prefab": "dynaf_pg_1line_3000_universal",
+  "geometry_source": "aces.vromfs.bin_u/gamedata/objectgroups/dynaf_pg_1line_3000_universal.blkx",
+  "radars": [
+    [
+      -451.95,
+      0.0,
+      -153.95
+    ],
+    [
+      -990.548,
+      6.10352e-05,
+      -136.521
+    ],
+    [
+      -990.548,
+      6.10352e-05,
+      -120.783
+    ]
+  ],
+  "start": [
+    1700.0,
+    0.0,
+    -208.5
+  ],
+  "end": [
+    -1500.0,
+    0.0,
+    -208.5
+  ],
+  "width": 120.0,
+  "placements": [
+    {
+      "name": "t1_airfield_top",
+      "team": 1,
+      "tm": [
+        [
+          0.988114,
+          0.0,
+          0.153721
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.153721,
+          0.0,
+          0.988114
+        ],
+        [
+          51423.9,
+          205.837,
+          15662.2
+        ]
+      ],
+      "source": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_top_ranks.blkx"
+    },
+    {
+      "name": "t2_airfield_top",
+      "team": 2,
+      "tm": [
+        [
+          -0.962237,
+          0.0,
+          -0.272219
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.272219,
+          0.0,
+          -0.962237
+        ],
+        [
+          -35865.6,
+          304.253,
+          -22408.1
+        ]
+      ],
+      "source": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_top_ranks.blkx"
+    },
+    {
+      "name": "t1_airfield_top_reload",
+      "team": 1,
+      "tm": [
+        [
+          0.945046,
+          0.0,
+          0.326941
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.326941,
+          0.0,
+          0.945046
+        ],
+        [
+          32739.5,
+          124.135,
+          8650.76
+        ]
+      ],
+      "source": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_top_ranks.blkx"
+    },
+    {
+      "name": "t2_airfield_top_reload",
+      "team": 2,
+      "tm": [
+        [
+          -0.977552,
+          0.0,
+          0.210695
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.210695,
+          0.0,
+          -0.977552
+        ],
+        [
+          -20173.8,
+          231.257,
+          -6688.61
+        ]
+      ],
+      "source": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_top_ranks.blkx"
+    },
+    {
+      "name": "t2_airfield_high",
+      "team": 2,
+      "tm": [
+        [
+          -0.885739,
+          0.0,
+          0.464185
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.464185,
+          0.0,
+          -0.885739
+        ],
+        [
+          -20070.2,
+          132.978,
+          -6892.66
+        ]
+      ],
+      "source": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_high_ranks.blkx"
+    },
+    {
+      "name": "t1_airfield_high",
+      "team": 1,
+      "tm": [
+        [
+          0.945046,
+          0.0,
+          0.326941
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.326941,
+          0.0,
+          0.945046
+        ],
+        [
+          33301.2,
+          132.465,
+          8690.44
+        ]
+      ],
+      "source": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_high_ranks.blkx"
+    },
+    {
+      "name": "t2_airfield_high_reload",
+      "team": 2,
+      "tm": [
+        [
+          -0.999737,
+          0.0,
+          0.0229462
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          -0.0229462,
+          0.0,
+          -0.999737
+        ],
+        [
+          -9331.6,
+          157.274,
+          6130.66
+        ]
+      ],
+      "source": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_high_ranks.blkx"
+    },
+    {
+      "name": "t1_airfield_high_reload",
+      "team": 1,
+      "tm": [
+        [
+          0.89186,
+          0.0,
+          -0.45231
+        ],
+        [
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.45231,
+          0.0,
+          0.89186
+        ],
+        [
+          23894.3,
+          133.815,
+          -8181.1
+        ]
+      ],
+      "source": "mis.vromfs.bin_u/gamedata/missions/cta/planes/historical/bfd/air_falklands/airfields/template_airfields_high_ranks.blkx"
+    }
+  ]
+}

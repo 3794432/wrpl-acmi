@@ -41,8 +41,8 @@ func TestGroundSpecificNamesAndConflicts(t *testing.T) {
 	if got := groundDisplayModelName("tankModels/ussr_t_80bvm"); got != "T-80BVM" {
 		t.Fatalf("replay model path did not resolve: %q", got)
 	}
-	if got := groundDisplayModelName("structures/unit_airfield_main_radar_char"); got != "unit_airfield_main_radar_char" {
-		t.Fatalf("static generic label hides internal model: %q", got)
+	if got := groundDisplayModelName("structures/unit_airfield_main_radar_char"); got != "AFM Radar" {
+		t.Fatalf("airport radar abbreviation missing: %q", got)
 	}
 	old := modelDisplayNames["test_generic_ground"]
 	modelDisplayNames["test_generic_ground"] = "AAA"

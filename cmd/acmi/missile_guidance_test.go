@@ -222,7 +222,7 @@ func TestMissileGuidanceOffIsNoOp(t *testing.T) {
 		t.Fatalf("off resolved %d missiles", got)
 	}
 	after := renderTestACMI(t, tracks, nil, nil)
-	if stripReferenceTime(before) != stripReferenceTime(after) {
+	if stripReferenceTime(radarTestStableRecording(before)) != stripReferenceTime(radarTestStableRecording(after)) {
 		t.Fatal("off changed ACMI output")
 	}
 	if strings.Contains(after, "WT_Guidance") {

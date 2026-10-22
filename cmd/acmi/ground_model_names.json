@@ -40,14 +40,20 @@
     "kind_source": "mission units category structures"
   },
   "unit_airfield_flight_radar_char": {
-    "name": null,
+    "name": "AFF Radar",
     "kind": "building",
     "kind_source": "mission units category structures"
   },
   "unit_airfield_main_radar_char": {
-    "name": null,
+    "name": "AFM Radar",
     "kind": "building",
     "kind_source": "mission units category structures"
+  },
+  "unit_airfield_flight_radar_snow_char": {
+    "name": "AFF Radar"
+  },
+  "unit_airfield_main_radar_snow_char": {
+    "name": "AFM Radar"
   },
   "cn_m42_duster": {
     "name": "M42",

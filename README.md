@@ -6,12 +6,16 @@ Export War Thunder replays to Tacview ACMI. wrpl-acmi inherits the Go replay lib
 
 ## What it exports
 
-- Aircraft and ground units use recorded positions. Aircraft carry flight-model attitude; ground units carry exact tracks, model and team evidence, and confirmable destruction records.
+- Airport runways selected by map and mission (`-airfields=true`). The catalogue covers 69 maps and 457 mission entries: 67 maps have usable source definitions. Conditional layouts require a matching replay radar identity. PhiPhi's eight race missions define air starts and no sourced land runway; Caribbean has no reliable mission or runway source. Radar labels remain the game abbreviations `AFF Radar` and `AFM Radar` (flight and main airfield radar), with full models in `WT_GroundModel`. See [airport positioning](docs/ACMI_AIRFIELDS.md) and [map coverage](docs/ACMI_AIRFIELDS_COVERAGE.md).
+- File metadata (`Title`, `Author`, `RecordingTime`, category and provenance comments), event bookmarks, coalition groups, and body-relative radar designation angles. Estimated aircraft `HDG`, `TAS`, `Mach`, `IAS`, `AOA`, and three body-axis G values are enabled by default; set `-estimate-telemetry=false` to omit them. See [fields and estimation limits](docs/acmi-information.md).
+- Aircraft and ground units use recorded positions. Aircraft carry flight-model attitude; ground units carry exact tracks, model and team evidence, and confirmable destruction records. Static buildings and fortifications without synchronized tracks can use a timestamped ECS construction position and the `WT_GroundStatic` provenance fields.
  - Missiles use actual synchronized positions, with speed, acceleration, turn rate, and G values estimated from the position sequence. Model candidates, static guidance type, and INS seconds remain in ACMI fields and the `INS x.xx s` label.
 - Bombs with WeaponSync records export their actual position sequence. Bombs with only a construction record are marked `Release position only`; no flight path is invented.
-- Countermeasures export recorded positions when present; otherwise a short trajectory is estimated from the release point and marked as estimated.
-- Radar target designations become native Tacview `LockedTarget` properties. Re-export and enable Display Radar Locks to view them.
-- The static air-defence range table covers 255 models. Gun or machine-gun configurations with verified radar absence get no threat circle (142 are in the audited set); ZA-35, ZSU-23-4, ZSU-37-2, and infrared or mixed-guidance SAMs remain. These ranges are static model references, not replay radar state or a live engagement envelope.
+- Countermeasures use native Flare/Chaff types when ammunition evidence identifies them. Unresolved releases default to Chaff with an explicit fallback marker; no type heuristic is used. Recorded positions take priority over labelled trajectory estimates. See [countermeasure identity](docs/ACMI_COUNTERMEASURES.md).
+- Radar target designations become native Tacview `LockedTarget` properties, with geometric slant range and body-relative azimuth/elevation where the recorded positions support them. Re-export and enable Display Radar Locks to view the designation. This does not establish STT lock, radar power state, or a guidance mode.
+- CSV diagnostics for track listings, missile flight evidence, countermeasure constructions, and radar lock changes are disabled by default. Each file is written only when its output path is supplied with `-list`, `-missile-flight-log`, `-countermeasure-log`, or `-radar-lock-log`.
+- The static air-defence range table covers 255 models. Gun or machine-gun configurations with sourced radar absence get no threat circle (142 entries); ZA-35, ZSU-23-4, ZSU-37-2, and infrared or mixed-guidance SAMs remain. ZSU-37-2 displays the user-approved 2,000 m radius; its source field records that the pinned Datamine `attackMaxDist` was 4,000 m. These ranges are static model references, not replay radar state or a live engagement envelope.
+- ACMI 2.1 remains the compatibility default. `-acmi-version 2.2` is an explicit opt-in.
 
 In the replay set checked by the project, model and team evidence was linked for all 69 aircraft and 140 ground units; confirmable destruction records are retained only when the evidence supports them. Coverage for other game versions, maps, and server shards still needs to be checked per replay.
 
@@ -61,9 +65,9 @@ The sparse checkout selects only `aces.vromfs.bin_u/levels`; a full Datamine clo
 
 Use an actual 64-bit Python 3.12 interpreter for `-Python`; `python` is the default. `-OutputRoot` defaults to `dist\wrpl-acmi`. Omit `-WithTerrain`, `-GameRoot`, and `-DatamineRoot` for an exporter-only build. The build does not install terrain into Tacview. If terrain conversion is interrupted, rerun with the same parameters plus `-ResumeTerrain`; a repeated `-WithTerrain` build rejects the existing nonempty terrain directory unless that switch is present.
 
-The runtime package contains `wrpl-acmi.exe`, `run.bat`, `data/`, and `tools/terrain/`. When `-WithTerrain` succeeds, it also contains `terrain/` with all 69 converted maps. The executable is built with CGO disabled. An older release may lag behind `dev`; build from the current branch when you need its behavior.
+The runtime package contains `wrpl-acmi.exe`, `run.bat`, `README.md`, `README.zh-CN.md`, `LICENSE`, the copied `docs/`, runtime `data/`, and `tools/terrain/`, `tools/airfields/`, and `tools/countermeasures/`. When `-WithTerrain` succeeds, it also contains `terrain/` with all 69 converted maps. The executable is built with CGO disabled. A local source build of the current tree completed successfully. An older release may lag behind `dev`; build from the current branch when you need its behavior.
 
-The [source-build workflow](https://github.com/3794432/wrpl-acmi/blob/dev/.github/workflows/source-build.yml) runs the Go tests, synthetic Python decoder tests, PowerShell installer tests, and an exporter-only package build. CI does not convert real terrain because that requires locally installed game files.
+The [source-build workflow](https://github.com/3794432/wrpl-acmi/blob/dev/.github/workflows/source-build.yml) covers exporter and library tests, synthetic terrain decoding, airfield terrain sampling, installer checks, terrain format conversion, and an exporter-only package build. CI does not convert real terrain because that requires locally installed game files, and it does not validate Tacview GUI loading or rendering.
 
 ## Maps and terrain
 
@@ -83,13 +87,16 @@ Terrain heights and geometry come from the installed War Thunder client's `level
 
 ## Documentation
 
-- [Current export guide](docs/acmi-export.md)
-- [Server shards](docs/ACMI_SERVER_REPLAYS.md) · [Ground units](docs/ACMI_GROUND_UNITS.md) · [Bombs](docs/ACMI_BOMBS.md) · [Radar locks](docs/ACMI_RADAR_LOCKS.md)
+- [Export guide and command options](docs/acmi-export.md)
+- [Server shards](docs/ACMI_SERVER_REPLAYS.md) · [Ground units](docs/ACMI_GROUND_UNITS.md) · [Airfields](docs/ACMI_AIRFIELDS.md) · [Airfield coverage](docs/ACMI_AIRFIELDS_COVERAGE.md)
+- [Metadata, bookmarks and aircraft estimates](docs/acmi-information.md) · [Countermeasure identity](docs/ACMI_COUNTERMEASURES.md) · [Bombs](docs/ACMI_BOMBS.md) · [Radar locks](docs/ACMI_RADAR_LOCKS.md)
 - [Static air-defence ranges](docs/ACMI_AIR_DEFENCE_RANGES.md) · [Missile models](docs/ACMI_MODELS.md) · [Guidance evidence](docs/ACMI_GUIDANCE.md)
 - [Geographic terrain](docs/TERRAIN_GEOGRAPHIC.md) · [Atlas layout](docs/terrain-atlas.md) · [Upstream inspector notes](docs/README.md)
 
 ## Limits of the data
 
-Missile speed, acceleration, and G values come from time differences between synchronized positions. Countermeasure paths without position records are explicitly estimated. A bomb with only a construction record is a release-position marker. Static guidance types and air-defence ranges do not mean a target was locked, a radar was on, or an engagement was possible at a given moment. Visual rendering in Tacview was not part of this validation.
+Missile speed, acceleration, and G values come from time differences between synchronized positions. Aircraft telemetry is estimated from recorded position and attitude under stated zero-wind, standard-atmosphere assumptions; IAS is an EAS approximation, and the body-axis G fields are specific-force estimates. Countermeasure paths without position records are explicitly estimated, and an unresolved countermeasure type defaults to Chaff without claiming identity. A bomb with only a construction record is a release-position marker. Static guidance types and air-defence ranges do not mean a target was locked, a radar was on, or an engagement was possible at a given moment. Runway markers preserve source geometry and coverage limits; they do not prove that a runway was active in a particular game state.
+
+These notes were checked against the implementation, test coverage, and generated catalogues. Tacview GUI loading and rendering were not included in that validation.
 
 This project and the `wrpl` library are released under the GNU Affero General Public License v3; see [LICENSE](LICENSE). Upstream attribution is preserved. Map and game assets belong to Gaijin Entertainment. Geographic placement is estimated from a pinned WT-MAP-ANALYZE commit and remains uncertain. This project is not affiliated with or endorsed by Gaijin.

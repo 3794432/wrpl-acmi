@@ -51,6 +51,23 @@ type radarLockLogRow struct {
 	hasRng bool
 }
 
+// radarLockAngles are expressed in degrees when formatted for ACMI.
+// Azimuth is positive to the aircraft's right and elevation is positive up.
+type radarLockAngles struct {
+	azimuthDeg   float64
+	elevationDeg float64
+	hasAzimuth   bool
+	hasElevation bool
+}
+
+// radarLockGeometry is computed from one pair of source and target samples so
+// range and angles cannot disagree about target availability or sample time.
+type radarLockGeometry struct {
+	rangeM   float64
+	hasRange bool
+	angles   radarLockAngles
+}
+
 // radarLockExport maps kind-6 FM target designations to Tacview LockedTarget
 // properties. All writer-visible state is rebuilt by prepare, so exporting the
 // same replay twice cannot leak slot state from the first write.
@@ -254,9 +271,10 @@ func (x *radarLockExport) prepareSource(source uint64, endTimes map[uint64][]uin
 		}
 		slots, targets := x.resolveSlotsAt(source, current, t)
 		on := len(targets) > 0
-		rng, hasRange := x.primaryRangeAt(source, tr, targets, t)
+		geometry := x.primaryGeometryAt(source, tr, targets, t)
 		changed := slots != prev || on != prevOn
-		props := radarLockProperties(prev, slots, prevOn, on, rng, hasRange, prevHasRng)
+		props := radarLockPropertiesWithAngles(prev, slots, prevOn, on,
+			geometry, prevHasRng)
 		if len(props) > 0 {
 			if isSync {
 				events := x.events[source]
@@ -285,13 +303,13 @@ func (x *radarLockExport) prepareSource(source uint64, endTimes map[uint64][]uin
 				source: source,
 				slots:  slots,
 				uids:   append([]uint64(nil), targets...),
-				rangeM: rng,
-				hasRng: hasRange,
+				rangeM: geometry.rangeM,
+				hasRng: geometry.hasRange,
 			})
 		}
 		prev = slots
 		prevOn = on
-		prevHasRng = hasRange
+		prevHasRng = geometry.hasRange
 	}
 	if everLock {
 		x.aircraft++
@@ -359,44 +377,137 @@ func sampleAtOrBefore(tr *track, t uint32, maxAge uint32) (acmiSample, bool) {
 	return s, true
 }
 
-// primaryRangeAt computes slant range only when both the source and its primary
-// target have usable positions at or before t. It never interpolates from a
-// future sample.
-func (x *radarLockExport) primaryRangeAt(source uint64, tr *track, targets []uint64, t uint32) (float64, bool) {
+// primaryGeometryAt computes the primary target's range and body-relative
+// angles from one pair of fresh at-or-before samples. The source and target
+// use the same availability checks as the exported range. Future samples are
+// never interpolated or borrowed.
+func (x *radarLockExport) primaryGeometryAt(source uint64, tr *track, targets []uint64, t uint32) radarLockGeometry {
 	if len(targets) == 0 || tr == nil {
-		return 0, false
+		return radarLockGeometry{}
 	}
 	if tr.hasEnd && t >= tr.end {
-		return 0, false
+		return radarLockGeometry{}
 	}
 	target := targets[0]
 	if !x.targetAvailableAt(target, t) {
-		return 0, false
+		return radarLockGeometry{}
 	}
 	dst := x.tracks[target]
 	if dst == nil {
-		return 0, false
+		return radarLockGeometry{}
 	}
 	a, ok := sampleAtOrBefore(tr, t, radarLockPositionMaxAgeMs)
 	if !ok {
-		return 0, false
+		return radarLockGeometry{}
 	}
 	b, ok := sampleAtOrBefore(dst, t, radarLockPositionMaxAgeMs)
 	if !ok {
-		return 0, false
+		return radarLockGeometry{}
 	}
 	dx := b.x - a.x
 	dy := b.y - a.y
 	dz := b.z - a.z
 	rng := math.Sqrt(dx*dx + dy*dy + dz*dz)
 	if math.IsNaN(rng) || math.IsInf(rng, 0) {
-		return 0, false
+		return radarLockGeometry{}
 	}
-	return rng, true
+	return radarLockGeometry{
+		rangeM:   rng,
+		hasRange: true,
+		angles:   radarLockAnglesAt(a, dx, dy, dz),
+	}
+}
+
+// primaryRangeAt is kept as the range-only API used by existing callers and
+// tests. Angle failures never affect the validity of a finite range.
+func (x *radarLockExport) primaryRangeAt(source uint64, tr *track, targets []uint64, t uint32) (float64, bool) {
+	geometry := x.primaryGeometryAt(source, tr, targets, t)
+	return geometry.rangeM, geometry.hasRange
+}
+
+// radarLockAnglesAt converts the local east/up/north offset (dx, dy, dz) into
+// Tacview body coordinates. Yaw is clockwise from north, pitch is positive up,
+// and roll is positive with the right wing down. The resulting azimuth is
+// positive right and elevation is positive up.
+func radarLockAnglesAt(source acmiSample, dx, dy, dz float64) radarLockAngles {
+	if !radarLockFinite(dx, dy, dz, source.yaw, source.pitch, source.roll) {
+		return radarLockAngles{}
+	}
+	if dx == 0 && dy == 0 && dz == 0 {
+		return radarLockAngles{}
+	}
+
+	yaw := source.yaw * math.Pi / 180
+	pitch := source.pitch * math.Pi / 180
+	roll := source.roll * math.Pi / 180
+	sy, cy := math.Sin(yaw), math.Cos(yaw)
+	sp, cp := math.Sin(pitch), math.Cos(pitch)
+	sr, cr := math.Sin(roll), math.Cos(roll)
+
+	// Aircraft basis in local east/up/north coordinates before roll.
+	forwardEast, forwardUp, forwardNorth := sy*cp, sp, cy*cp
+	rightEast, rightUp, rightNorth := cy, 0.0, -sy
+	upEast := -sy * sp
+	upUp := cp
+	upNorth := -cy * sp
+
+	// Positive roll lowers the right wing and tilts the body's up axis right.
+	bodyRightEast := rightEast*cr - upEast*sr
+	bodyRightUp := rightUp*cr - upUp*sr
+	bodyRightNorth := rightNorth*cr - upNorth*sr
+	bodyUpEast := upEast*cr + rightEast*sr
+	bodyUpUp := upUp*cr + rightUp*sr
+	bodyUpNorth := upNorth*cr + rightNorth*sr
+
+	forward := dx*forwardEast + dy*forwardUp + dz*forwardNorth
+	right := dx*bodyRightEast + dy*bodyRightUp + dz*bodyRightNorth
+	up := dx*bodyUpEast + dy*bodyUpUp + dz*bodyUpNorth
+	if !radarLockFinite(forward, right, up) {
+		return radarLockAngles{}
+	}
+
+	angles := radarLockAngles{}
+	horizontal := math.Hypot(forward, right)
+	norm := math.Hypot(math.Hypot(dx, dy), dz)
+	if horizontal > norm*1e-12 {
+		angles.azimuthDeg = radarLockDegrees(math.Atan2(right, forward))
+		angles.hasAzimuth = true
+	}
+	// A target directly above or below the nose has a defined elevation even
+	// though its azimuth is undefined. Coincident and nonfinite geometry return
+	// above without either angle.
+	angles.elevationDeg = radarLockDegrees(math.Atan2(up, horizontal))
+	angles.hasElevation = true
+	return angles
+}
+
+func radarLockFinite(values ...float64) bool {
+	for _, value := range values {
+		if math.IsNaN(value) || math.IsInf(value, 0) {
+			return false
+		}
+	}
+	return true
+}
+
+func radarLockDegrees(radians float64) float64 {
+	degrees := radians * 180 / math.Pi
+	if degrees == 0 {
+		return 0
+	}
+	if degrees <= -180+1e-10 {
+		return 180
+	}
+	return degrees
 }
 
 func radarLockProperties(prev, next [maxTacviewLockedTargets]string, prevOn, on bool, rng float64, hasRange, prevHasRange bool) []string {
-	props := make([]string, 0, maxTacviewLockedTargets+3)
+	return radarLockPropertiesWithAngles(prev, next, prevOn, on,
+		radarLockGeometry{rangeM: rng, hasRange: hasRange}, prevHasRange)
+}
+
+func radarLockPropertiesWithAngles(prev, next [maxTacviewLockedTargets]string, prevOn, on bool, geometry radarLockGeometry, prevHasRange bool) []string {
+	props := make([]string, 0, maxTacviewLockedTargets+5)
 	for i := range maxTacviewLockedTargets {
 		if prev[i] == next[i] {
 			continue
@@ -411,20 +522,37 @@ func radarLockProperties(prev, next [maxTacviewLockedTargets]string, prevOn, on 
 		if !prevOn {
 			props = append(props, "LockedTargetMode=1")
 		}
-		if hasRange {
-			props = append(props, "LockedTargetRange="+strconv.FormatFloat(rng, 'f', 0, 64))
+		if geometry.hasRange {
+			props = append(props, "LockedTargetRange="+strconv.FormatFloat(geometry.rangeM, 'f', 0, 64))
 		} else if prevHasRange {
 			// A primary-target change without a usable fresh range must not leave
 			// the previous target's distance displayed.
 			props = append(props, "LockedTargetRange=0")
 		}
+		props = appendRadarLockAngleProperties(props, geometry.angles)
 	} else if prevOn {
 		props = append(props, "LockedTargetMode=0")
 		if prevHasRange {
 			props = append(props, "LockedTargetRange=0")
 		}
+		props = appendRadarLockAngleProperties(props, radarLockAngles{})
 	}
 	return props
+}
+
+func appendRadarLockAngleProperties(props []string, angles radarLockAngles) []string {
+	azimuth := ""
+	if angles.hasAzimuth {
+		azimuth = strconv.FormatFloat(angles.azimuthDeg, 'f', 2, 64)
+	}
+	elevation := ""
+	if angles.hasElevation {
+		elevation = strconv.FormatFloat(angles.elevationDeg, 'f', 2, 64)
+	}
+	return append(props,
+		"LockedTargetAzimuth="+azimuth,
+		"LockedTargetElevation="+elevation,
+	)
 }
 
 func radarLockSlotName(index int) string {

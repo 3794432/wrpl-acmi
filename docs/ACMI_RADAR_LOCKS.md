@@ -14,6 +14,7 @@ wrpl-acmi.exe -in "replay.wrpl" -out "without-locks.acmi" -radar-locks=false
 - 主目标写入 `LockedTarget`，其余目标写入 `LockedTarget2` 至 `LockedTarget9`；当前 FM 格式最多携带 8 条指定。
 - 有有效目标时写 `LockedTargetMode=1`，移除目标时清空对应槽位，完全解除时写 `LockedTargetMode=0` 和 `LockedTargetRange=0`。
 - `LockedTargetRange` 为双方本地坐标算出的斜距，单位米；使用当前或过去 1 秒内的位置，不从未来位置估算。
+- `LockedTargetAzimuth`、`LockedTargetElevation` 使用同一份有效几何，分别为机体相对方位角（右正）与俯仰角（上正），单位度。解锁、目标销毁或几何无效时清空；位置重合时保留零距离但不输出角度。默认时间轴书签也记录目标指定变化，可用 `-bookmarks=false` 关闭书签。
 - 完整的空列表表示解除；缺失或解码失败的列表不冒充空列表。未知单位、自指、重复指定，以及尚未出现或已销毁的目标不输出。
 - 目标销毁时，即使源机在该时刻没有位置同步，也会增加必要的清锁行。关闭雷达导出后，输出与本次修改前的工具保持一致。
 - 保留既有飞机、导弹、炸弹、干扰物、地形布局和不完整服务器回放功能。

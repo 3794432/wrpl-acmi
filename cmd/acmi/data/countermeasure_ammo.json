@@ -1,0 +1,56 @@
+{
+  "commit": "f7952e4291e9fd7b6fe38e84020dddef925c3457",
+  "launchers": {
+    "countermeasure_large_split_launcher_jet": {
+      "bullet": "Flare",
+      "countermeasures_launcher_chaff_large": "Chaff"
+    },
+    "countermeasure_split_large_launcher_jet_maw": {
+      "bullet": "Flare",
+      "maw_countermeasures_launcher_chaff_large": "Chaff"
+    },
+    "countermeasure_split_launcher_jet": {
+      "bullet": "Flare",
+      "countermeasures_launcher_chaff": "Chaff"
+    },
+    "countermeasure_split_launcher_jet_bol": {
+      "bullet": "Flare",
+      "countermeasures_launcher_chaff_bol_pod": "Chaff"
+    }
+  },
+  "provenance": {
+    "builder": "tools/countermeasures/build_catalog.py",
+    "bullet_key": "Exact direct block name; bullet is the default for an empty storage bullet string.",
+    "classification": "Outer bulletType only: flr=Flare; chff=Chaff. Mixed or unknown entries omitted.",
+    "launcher_key": "Exact .blkx filename stem, without extension.",
+    "repository": "https://github.com/gszabi99/War-Thunder-Datamine",
+    "sources": {
+      "countermeasure_large_split_launcher_jet": {
+        "bytes": 16543,
+        "path": "aces.vromfs.bin_u/gamedata/weapons/rocketguns/countermeasure_large_split_launcher_jet.blkx",
+        "sha256": "7138cdd0f6f7feac4679dff73aa22d15cde9456d57d84b2aa47ad374eb5583a6",
+        "url": "https://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/f7952e4291e9fd7b6fe38e84020dddef925c3457/aces.vromfs.bin_u/gamedata/weapons/rocketguns/countermeasure_large_split_launcher_jet.blkx"
+      },
+      "countermeasure_split_large_launcher_jet_maw": {
+        "bytes": 16547,
+        "path": "aces.vromfs.bin_u/gamedata/weapons/rocketguns/countermeasure_split_large_launcher_jet_maw.blkx",
+        "sha256": "22358795502318b1f67659aa7fadc0e943731f26e1f0d7186f54f35f5db2eddb",
+        "url": "https://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/f7952e4291e9fd7b6fe38e84020dddef925c3457/aces.vromfs.bin_u/gamedata/weapons/rocketguns/countermeasure_split_large_launcher_jet_maw.blkx"
+      },
+      "countermeasure_split_launcher_jet": {
+        "bytes": 16543,
+        "path": "aces.vromfs.bin_u/gamedata/weapons/rocketguns/countermeasure_split_launcher_jet.blkx",
+        "sha256": "61697c8f33ba79e60756281f2c1cbd2b82878e2d3a836755387d3329fa27d4e1",
+        "url": "https://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/f7952e4291e9fd7b6fe38e84020dddef925c3457/aces.vromfs.bin_u/gamedata/weapons/rocketguns/countermeasure_split_launcher_jet.blkx"
+      },
+      "countermeasure_split_launcher_jet_bol": {
+        "bytes": 16502,
+        "path": "aces.vromfs.bin_u/gamedata/weapons/rocketguns/countermeasure_split_launcher_jet_bol.blkx",
+        "sha256": "1832bad6ffdd94f80aade4a5b36b915e1e0a59609a477cfb887481d9093d5215",
+        "url": "https://raw.githubusercontent.com/gszabi99/War-Thunder-Datamine/f7952e4291e9fd7b6fe38e84020dddef925c3457/aces.vromfs.bin_u/gamedata/weapons/rocketguns/countermeasure_split_launcher_jet_bol.blkx"
+      }
+    }
+  },
+  "schema": 1,
+  "unclassified": {}
+}

@@ -94,11 +94,11 @@ func TestCountermeasureRecycledEIDKeepsLifetimesAndRealSync(t *testing.T) {
 	if !strings.Contains(data, "Type="+countermeasureACMIType) {
 		t.Fatalf("decoy type missing from ACMI:\n%s", data)
 	}
-	create := frameFindingLine(frames, 0.100, "2,Name=Countermeasure")
+	create := frameFindingLine(frames, 0.100, "2,Name=Chaff")
 	if !strings.Contains(create, "Parent=1") || !strings.Contains(create, "Coalition=Blue") || !strings.Contains(create, "Color=Blue") {
 		t.Fatalf("decoy creation/link = %q\n%s", create, data)
 	}
-	if got := frameFindingLine(frames, 0.100, "0,Event=Message|1|"); got != "0,Event=Message|1|"+countermeasureEventText {
+	if got := frameFindingLine(frames, 0.100, "0,Event=Message|1|"); got != "0,Event=Message|1|Chaff released" {
 		t.Fatalf("release event = %q", got)
 	}
 	if countObjectLines(frames, "2,") != 2 || countObjectLines(frames, "3,") != 2 {
@@ -214,7 +214,7 @@ func TestCountermeasureSpawnOnlyGetsEstimatedTrajectory(t *testing.T) {
 	if decoy.estimatedVelocity {
 		t.Fatal("aircraft has one sample, so velocity must fall back to zero")
 	}
-	if len(export.Events) != 1 || export.Events[0].text != countermeasureEstimatedEventText {
+	if len(export.Events) != 1 || export.Events[0].text != "Chaff released; trajectory estimated" {
 		t.Fatalf("spawn-only events = %+v", export.Events)
 	}
 	if len(export.Records) != 1 || export.Records[0].SyncCount != 0 || export.Records[0].Display != "event" {
@@ -224,7 +224,7 @@ func TestCountermeasureSpawnOnlyGetsEstimatedTrajectory(t *testing.T) {
 	data := renderTestACMIWithEvents(t, wrpl.WRPLHeader{}, export.Tracks, slot, nil, export.Events)
 	frames := parseTestACMI(data)
 	create := frameFindingLine(frames, 0.300, "2,")
-	if !strings.Contains(create, "Name="+countermeasureEstimatedDisplayName) ||
+	if !strings.Contains(create, "Name=Chaff (estimated)") ||
 		!strings.Contains(create, "WT_TrajectorySource="+countermeasureEstimatedSource) ||
 		!strings.Contains(create, "WT_Estimated=1") ||
 		!strings.Contains(create, "WT_VelocitySource="+countermeasureVelocityNone) ||
@@ -237,7 +237,7 @@ func TestCountermeasureSpawnOnlyGetsEstimatedTrajectory(t *testing.T) {
 	if frameFindingLine(frames, 0.900, "-2") != "-2" {
 		t.Fatal("estimated decoy was not deleted at its EndTime")
 	}
-	if got := frameFindingLine(frames, 0.300, "0,Event=Message|1|"); got != "0,Event=Message|1|"+countermeasureEstimatedEventText {
+	if got := frameFindingLine(frames, 0.300, "0,Event=Message|1|"); got != "0,Event=Message|1|Chaff released; trajectory estimated" {
 		t.Fatalf("spawn-only event = %q", got)
 	}
 }
@@ -375,7 +375,7 @@ func TestCountermeasureEstimateIsDeterministic(t *testing.T) {
 	header := wrpl.WRPLHeader{StartTime: 1700000000}
 	a := renderACMIWithHeader(t, header, first.Tracks, slot, nil, first.Events)
 	b := renderACMIWithHeader(t, header, second.Tracks, slot, nil, second.Events)
-	if a != b {
+	if radarTestStableRecording(a) != radarTestStableRecording(b) {
 		t.Fatal("two exports of the same input produced different ACMI")
 	}
 }
@@ -482,7 +482,7 @@ func TestCountermeasureParentTeamAndMissingParent(t *testing.T) {
 	if got := trackName(linked, slot, names); got != "Flares" {
 		t.Fatalf("countermeasure name override = %q", got)
 	}
-	if got := trackName(orphan, slot, names); got != countermeasureDisplayName {
+	if got := trackName(orphan, slot, names); got != "Chaff" {
 		t.Fatalf("default countermeasure name = %q", got)
 	}
 

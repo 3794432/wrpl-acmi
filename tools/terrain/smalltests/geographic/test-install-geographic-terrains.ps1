@@ -449,3 +449,6 @@ finally {
         }
     }
 }
+
+# The wrapper check above intentionally expects exit code 42; leave callers a clean result.
+$global:LASTEXITCODE = 0

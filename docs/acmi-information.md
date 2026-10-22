@@ -1,0 +1,39 @@
+# ACMI metadata, bookmarks, and estimated aircraft telemetry
+
+[中文](acmi-information.zh-CN.md)
+
+Files include a map/mode/replay-time `Title`, `Author` (default `wrpl-acmi`, override with `-author`), UTC export `RecordingTime`, `Category=War Thunder`, `DataRecorder=wrpl-acmi`, and `Comments`. Comments record the exporter build, requested terrain layout, georeference commit, and estimation policy. `ReferenceTime` remains the replay time origin; it is independent of file creation time. Existing georeference properties describe the effective geographic/Atlas layout.
+
+`-bookmarks=true` is the default. Timeline bookmarks identify confirmed aircraft destruction, missile launch or first recorded observation, bomb release or first observation, countermeasure release, and changes in radar target designations. Original messages and destruction events remain. Identical bookmarks at the same timestamp are deduplicated. Radar designations do not establish STT lock or radar power state. Use `-bookmarks=false` to omit the additional timeline highlights.
+
+Objects gain a `Group` derived from their explicit coalition. The two known airport radar models gain display priority `Importance=0.75`; this is presentation priority, not measured operational state. `Name`, `CallSign`, and `Pilot` retain their existing meanings. Per the [official ACMI specification](https://www.tacview.net/documentation/acmi/en/), `ShortName`, `LongName`, and `FullName` belong in Tacview's object database, and `Registration` is a tail/registration number. The exporter does not fill them with player names or invented manufacturer names.
+
+## Aircraft telemetry estimates
+
+```powershell
+.\wrpl-acmi.exe -in "replay.wrpl" -out "replay.acmi" -estimate-telemetry=false
+```
+
+Aircraft telemetry estimates are enabled by default. The example above disables them; omit `-estimate-telemetry=false` to keep the default. When enabled, aircraft position updates also contain native `HDG`, `TAS`, `Mach`, `IAS`, `VerticalGForce`, `LongitudinalGForce`, `LateralGForce`, and `AOA` properties. No missile label or existing missile flight field is changed.
+
+- Heading comes from recorded attitude. TAS assumes zero wind, equating path speed with airspeed. Mach uses a layered standard atmosphere; game altitude approximates geopotential height. IAS uses `TAS * sqrt(density / sea-level density)`, an **EAS approximation**, not exact compressible IAS/CAS. Weather and wind are not reconstructed.
+- Body-axis G is specific force: `(coordinate acceleration - gravity) / g`, projected onto forward, right, and up axes using recorded heading, pitch, and bank. Level unaccelerated flight is +1 normal G, freefall is 0 G, and inverted unaccelerated flight is -1 normal G. These differ from the existing missile coordinate-acceleration magnitude.
+- AOA comes from the direction of the zero-wind velocity relative to the body axes. It is unavailable for zero/negative forward velocity. It is not a decoded aerodynamic sensor.
+- A bounded local quadratic fit reduces packet jitter. Estimates never bridge gaps over two seconds or rejected intervals. Nonfinite data, duplicate/reversed chronology, speeds over 1200 m/s, and acceleration over 100 coordinate G are rejected. Atmosphere estimates stop above 84.852 km. Missing fields are explicitly cleared with empty assignments.
+- Aircraft positions, attitude, object ids, and destruction times are retained. Comments explicitly identify estimates as position/attitude derivatives, not recorded game telemetry. Estimates are unsuitable as proof of actual cockpit readings, airframe loads, or aerodynamic limits.
+
+## Optional CSV diagnostics
+
+Track listings (`-list`), missile flight evidence (`-missile-flight-log`), countermeasure constructions (`-countermeasure-log`), and radar lock state changes (`-radar-lock-log`) are not written by default. Supply an explicit CSV path for each report you want; the corresponding file is written only when its path is nonempty.
+
+## Static ground objects
+
+When ground export is enabled, a structure/fortification without a synchronized track may use a successfully decoded ECS construction `transform` translation and its actual packet time. Only explicit static-category evidence is accepted. UID/model conflicts, recycled identities, nonfinite or changing translations, missing timestamps, and `dummy`/`dummy_immortal` mission placeholders are excluded. Existing synchronized ground tracks take precedence.
+
+Accepted objects use `Type=Ground+Static+Building`, keep model/team evidence, add `WT_GroundPositionSource=ECSConstructionTransform` and `WT_GroundStatic=1`, and are removed on an explicitly matched ECS destruction. No vehicle is frozen merely because its trajectory is missing. Object counts depend on the replay; existing synchronized ground tracks are retained.
+
+## Radar geometry and file version
+
+`LockedTargetAzimuth` (positive right) and `LockedTargetElevation` (positive up) are body-relative angles in degrees. They share the existing slant-range checks: positions at or before the event, no more than one second old, and valid object lifetimes. Invalid geometry, unlocks, and target destruction clear angles. A fresh target switch immediately publishes the new geometry. Coincident targets have valid zero range but no angles.
+
+The default header remains `FileVersion=2.1` to retain the existing compatibility baseline. `-acmi-version 2.2` is an explicit opt-in. These fields do not require a default format upgrade. Generated text and tests were checked; this change does not claim a completed Tacview 1.9.4/1.9.5 GUI loading or rendering test, nor does it complete the separate terrain-loader compatibility work.

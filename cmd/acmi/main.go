@@ -46,6 +46,11 @@ var (
 	radarLockLog         = flag.String("radar-lock-log", "", "optional CSV of every radar lock state change")
 	groundUnits          = flag.Bool("ground-units", true, "export recorded GroundModelPositions surface-unit tracks")
 	groundModels         = flag.Bool("ground-models", true, "identify surface-unit models from explicit replay metadata")
+	estimateTelemetry    = flag.Bool("estimate-telemetry", true, "estimate aircraft telemetry from position and attitude (default on; set false to disable; zero wind, ISA; not recorded game telemetry)")
+	timelineBookmarks    = flag.Bool("bookmarks", true, "highlight recorded destruction, weapon releases, countermeasures and radar designation changes")
+	recordingAuthor      = flag.String("author", "wrpl-acmi", "recording author/operator for ACMI file properties")
+	acmiFormatVersion    = flag.String("acmi-version", "2.1", "ACMI file version: 2.1 (default for compatibility) or 2.2 (opt-in)")
+	airfields            = flag.Bool("airfields", true, "export source-configured map runways, validating conditional airport variants with replay radars")
 )
 
 // Atlas anchors are selected from the shared catalog, never from manual flags.
@@ -127,12 +132,14 @@ type track struct {
 	end              uint32
 	hasEnd           bool
 	projectileSource *projectiles.Projectile
+	countermeasure   countermeasureIdentity
 	missileModel     *missileModelInfo
 	missileGuidance  *missileGuidanceInfo
 	bombPositionOnly bool
 	groundModel      *groundModelInfo
 	groundTeam       int32
 	groundTeamSource string
+	groundStatic     bool
 	// estimated marks a countermeasure track reconstructed from a release
 	// point and the parent aircraft velocity, not from WeaponSync telemetry.
 	estimated         bool
@@ -153,6 +160,9 @@ func main() {
 
 func runACMIMain() (retErr error) {
 	flag.Parse()
+	if err := validateACMIVersion(*acmiFormatVersion); err != nil {
+		return err
+	}
 	inputPath, err := resolveCLIInput(*inPath, flag.Args())
 	if err != nil {
 		return err
@@ -263,7 +273,7 @@ func runACMIMain() (retErr error) {
 		ecs.ConstructionReservedByte = replay.Header.Version == 0x00018C1C
 		mgr = &ecs.Mgr
 		missileMetadata = projectiles.NewMetadataParser(*chms, replay.Header.Version == 0x00018C1C)
-		if *groundUnits {
+		if *groundUnits || *airfields {
 			groundMetadata = groundmeta.NewParser(*chms, replay.Header.Version == 0x00018C1C)
 		}
 	}
@@ -306,7 +316,8 @@ func runACMIMain() (retErr error) {
 	if *groundUnits {
 		tracks = appendGroundTracks(tracks, paths.GroundPaths, paths.GroundEntities, paths.GroundEnds)
 	}
-	if groundMetadata != nil {
+	if groundMetadata != nil && *groundUnits {
+		tracks = appendStaticGroundTracks(tracks, groundMetadata)
 		applyGroundTeamEvidence(tracks, groundMetadata.Models)
 		if *groundModels {
 			applyGroundModelEvidence(tracks, replayGroundModelEvidence(groundMetadata.Models))
@@ -336,6 +347,10 @@ func runACMIMain() (retErr error) {
 	if err != nil {
 		return err
 	}
+	var airportMarkers []airfieldMarker
+	if *airfields {
+		airportMarkers = prepareAirfields(replay.Header, resolvedMapID, groundMetadata)
+	}
 	if *listPath != "" {
 		if err := writeTrackList(*listPath, tracks, slot, names); err != nil {
 			return err
@@ -343,7 +358,7 @@ func runACMIMain() (retErr error) {
 		fmt.Printf("wrote track list %s\n", *listPath)
 	}
 	source := acmiSourceContext{directory: input.directory}
-	if err := writeACMIWithContext(*outPath, replay.Header, tracks, slot, names, cmExport.Events, resolvedMapID, source, acmiWriterContext{radarLocks: radarExport}); err != nil {
+	if err := writeACMIWithContext(*outPath, replay.Header, tracks, slot, names, cmExport.Events, resolvedMapID, source, acmiWriterContext{radarLocks: radarExport, estimateTelemetry: *estimateTelemetry, airfields: airportMarkers}); err != nil {
 		return err
 	}
 	if radarExport != nil && *radarLockLog != "" {
@@ -405,6 +420,16 @@ func runACMIMain() (retErr error) {
 		}
 	}
 	fmt.Printf("wrote %s: %d tracks, %d samples\n", *outPath, len(tracks), samples)
+	if len(airportMarkers) > 0 {
+		fmt.Printf("airfield markers exported: %d (%d airports)\n", len(airportMarkers), countAirportMarkers(airportMarkers))
+		runways := 0
+		for _, marker := range airportMarkers {
+			if marker.Role == "Airport" && marker.HasHeading && marker.Length > 0 {
+				runways++
+			}
+		}
+		fmt.Printf("airfield runways: %d source-configured, %d facility-only anchors\n", runways, countAirportMarkers(airportMarkers)-runways)
+	}
 	fmt.Printf("aircraft names identified: %d/%d\n", identified, aircraft)
 	fmt.Printf("aircraft removed after destruction: %d\n", destroyedAircraft)
 	fmt.Printf("ground/surface units exported: %d (%d recorded positions)\n", groundUnitsExported, groundSamples)
@@ -420,6 +445,18 @@ func runACMIMain() (retErr error) {
 		decoys, decoySamples, len(cmExport.Events), cmExport.Constructions)
 	fmt.Printf("countermeasure estimated trajectories: %d tracks (%d synthesized positions)\n",
 		estimatedDecoys, estimatedSamples)
+	cmFlares, cmChaff, cmFallback := 0, 0, 0
+	for _, record := range cmExport.Records {
+		if record.Kind == "Flare" {
+			cmFlares++
+		} else {
+			cmChaff++
+		}
+		if record.TypeConfidence == "fallback" {
+			cmFallback++
+		}
+	}
+	fmt.Printf("countermeasure types: %d Flare, %d Chaff (%d unresolved releases defaulted to Chaff)\n", cmFlares, cmChaff, cmFallback)
 	if radarExport != nil {
 		lockedSyncs, transitions := radarExport.stats()
 		fmt.Printf("radar locks exported: %d aircraft, %d locked syncs, %d state changes\n",
@@ -644,10 +681,16 @@ func writeACMIWithEventsMapIDAndSource(path string, header wrpl.WRPLHeader, trac
 // acmiWriterContext carries optional exporters without mutating package globals.
 // A zero context writes the object stream without optional radar state.
 type acmiWriterContext struct {
-	radarLocks *radarLockExport
+	radarLocks        *radarLockExport
+	estimateTelemetry bool
+	recordingTime     time.Time
+	airfields         []airfieldMarker
 }
 
 func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, slot *packetslot.PacketSlotParser, names map[string]string, events []acmiEvent, mapID string, source acmiSourceContext, ctx acmiWriterContext) error {
+	if err := validateACMIVersion(*acmiFormatVersion); err != nil {
+		return err
+	}
 	layout, err := currentTerrainLayout()
 	if err != nil {
 		return err
@@ -696,7 +739,7 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 	}
 
 	fmt.Fprintln(w, "FileType=text/acmi/tacview")
-	fmt.Fprintln(w, "FileVersion=2.1")
+	fmt.Fprintln(w, "FileVersion="+*acmiFormatVersion)
 	fmt.Fprintf(w, "0,ReferenceTime=%s\n", ref.Format("2006-01-02T15:04:05Z"))
 	// T is already absolute longitude, latitude, and altitude. Keeping the
 	// global reference at zero prevents Tacview from adding the anchor twice.
@@ -704,6 +747,9 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 	fmt.Fprintln(w, "0,ReferenceLatitude=0.0000000")
 	fmt.Fprintln(w, "0,ReferenceAltitude=0.0")
 	fmt.Fprintln(w, "0,DataSource=War Thunder replay via wrpl-inspector")
+	for _, property := range acmiMetadata(header, mapID, layout, ctx) {
+		fmt.Fprintf(w, "0,%s\n", property)
+	}
 	for _, property := range source.properties() {
 		fmt.Fprintf(w, "0,%s\n", property)
 	}
@@ -852,7 +898,15 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 			}
 			continue
 		}
-		for _, s := range tr.samples {
+		var telemetry [][]string
+		if tr.key.air && ctx.estimateTelemetry {
+			samples := tr.samples
+			if tr.hasEnd {
+				samples = samples[:sort.Search(len(samples), func(i int) bool { return samples[i].t > tr.end })]
+			}
+			telemetry = aircraftTelemetryProperties(samples)
+		}
+		for i, s := range tr.samples {
 			if tr.key.air && tr.hasEnd && s.t > tr.end {
 				break
 			}
@@ -861,6 +915,9 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 				times = append(times, s.t)
 			}
 			line := fmt.Sprintf("%s,T=%s", id, acmiPositionValue(s))
+			if i < len(telemetry) {
+				line += "," + strings.Join(telemetry[i], ",")
+			}
 			if ctx.radarLocks != nil && tr.key.air {
 				if extra := ctx.radarLocks.lineProperties(tr.key.id, s.t, tr); len(extra) > 0 {
 					line += "," + strings.Join(extra, ",")
@@ -892,6 +949,22 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 			times = append(times, event.t)
 		}
 		updates[event.t] = append(updates[event.t], acmiEventLine(event, ids))
+	}
+	if *timelineBookmarks {
+		for t, lines := range acmiBookmarks(tracks, events, ctx.radarLocks, ids, slot, names) {
+			if !timesSeen[t] {
+				timesSeen[t] = true
+				times = append(times, t)
+			}
+			updates[t] = append(updates[t], lines...)
+		}
+	}
+	for t, lines := range airfieldLines(ctx.airfields, len(tracks)) {
+		if !timesSeen[t] {
+			timesSeen[t] = true
+			times = append(times, t)
+		}
+		updates[t] = append(updates[t], lines...)
 	}
 	sort.Slice(times, func(i, j int) bool { return times[i] < times[j] })
 	for _, t := range times {
@@ -1005,7 +1078,7 @@ func acmiTrackProperties(tr *track, slot *packetslot.PacketSlotParser, names map
 		typ = "Weapon+Bomb"
 	}
 	if tr.key.decoy {
-		typ = countermeasureType(tr.projectileSource)
+		typ = countermeasureType(tr)
 	}
 	name := trackName(tr, slot, names)
 	props := []string{
@@ -1025,6 +1098,10 @@ func acmiTrackProperties(tr *track, slot *packetslot.PacketSlotParser, names map
 		"Coalition="+coalition,
 		"Color="+color,
 	)
+	props = append(props, presentationProperties(tr, coalition)...)
+	if tr.groundStatic {
+		props = append(props, "WT_GroundPositionSource=ECSConstructionTransform", "WT_GroundStatic=1")
+	}
 	if tr.key.groundEntity {
 		if tr.key.id&groundUnitUIDNamespace != 0 {
 			props = append(props, "WT_IdentitySource=ReplayUnitUID", "WT_UnitUID="+strconv.FormatUint(tr.key.id&^groundUnitUIDNamespace, 10))
@@ -1034,6 +1111,7 @@ func acmiTrackProperties(tr *track, slot *packetslot.PacketSlotParser, names map
 	}
 	props = append(props, groundModelProperties(tr)...)
 	props = append(props, groundTeamProperties(tr)...)
+	props = append(props, countermeasureIdentityProperties(tr)...)
 	if tr.estimated {
 		props = append(props, countermeasureEstimatedProperties(tr)...)
 	}
@@ -1240,10 +1318,11 @@ func trackName(tr *track, slot *packetslot.PacketSlotParser, names map[string]st
 		return name
 	}
 	if tr.key.decoy {
+		name := countermeasureKind(tr.countermeasure)
 		if tr.estimated {
-			return countermeasureEstimatedDisplayName
+			return name + " (estimated)"
 		}
-		return countermeasureDisplayName
+		return name
 	}
 	if tr.key.bomb {
 		return bombDisplayName

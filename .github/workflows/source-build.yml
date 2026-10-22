@@ -8,6 +8,8 @@ on:
 jobs:
   windows:
     runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -27,15 +29,23 @@ jobs:
       - name: Test terrain decoders with synthetic input
         working-directory: tools/terrain/converter
         run: python -m unittest discover -s tests
-      - name: Test terrain installers
+      - name: Test runway terrain sampling
+        run: python -m unittest discover -s tools/airfields -p 'test_*.py'
+      - name: Test all-map terrain installer
         shell: powershell
-        run: |
-          & ./tools/terrain/smalltests/test-install-all-terrains.ps1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & ./tools/terrain/smalltests/geographic/New-Fixture.ps1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & ./tools/terrain/smalltests/geographic/test-install-geographic-terrains.ps1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        run: ./tools/terrain/smalltests/test-install-all-terrains.ps1
+      - name: Generate geographic installer fixtures
+        shell: powershell
+        run: ./tools/terrain/smalltests/geographic/New-Fixture.ps1
+      - name: Test geographic terrain installer
+        shell: powershell
+        run: ./tools/terrain/smalltests/geographic/test-install-geographic-terrains.ps1
+      - name: Test Tacview 1.9.4 height encoding
+        shell: powershell
+        run: ./tools/terrain/smalltests/test-terrain-194-encoding.ps1
+      - name: Test terrain format profiles
+        shell: powershell
+        run: ./tools/terrain/smalltests/test-terrain-format.ps1
       - name: Build runtime package without local game assets
         shell: pwsh
         run: ./build.ps1

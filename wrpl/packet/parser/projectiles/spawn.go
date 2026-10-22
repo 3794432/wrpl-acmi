@@ -7,6 +7,7 @@ import (
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/danet"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet"
 	ecsp "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/ecs2"
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/groundmeta"
 	"github.com/pierrec/lz4/v4"
 )
 
@@ -31,9 +32,12 @@ type Projectile struct {
 	TemplateComponents []string
 	LeadingULEB        uint64
 	WeaponRef          uint32
-	SpawnSample        Sample
-	EndTime            uint32
-	HasEnd             bool
+	// OwnerWeapons is the bounded ammunition snapshot decoded from the exact
+	// owner's aircraft construction before this release, never from proximity.
+	OwnerWeapons []groundmeta.StorageWeapon
+	SpawnSample  Sample
+	EndTime      uint32
+	HasEnd       bool
 	// Flight is nil unless this exact construction instance has a proven,
 	// correctly decoded proj__ Point3 value. The current packet has no bounded
 	// Rocket body, so missile constructions leave this nil.
@@ -62,20 +66,22 @@ type MetadataParser struct {
 	Tracks  map[uint64]*Projectile
 	History map[uint64][]*Projectile
 
-	maps      ecsp.ComponentHashMaps
-	ecs       *ecsp.PacketECSParser
-	reserved  bool
-	ownerUIDs map[uint64]uint64
+	maps         ecsp.ComponentHashMaps
+	ecs          *ecsp.PacketECSParser
+	reserved     bool
+	ownerUIDs    map[uint64]uint64
+	ownerWeapons map[uint64][]groundmeta.StorageWeapon
 }
 
 func NewMetadataParser(maps ecsp.ComponentHashMaps, reserved bool) *MetadataParser {
 	return &MetadataParser{
-		Tracks:    make(map[uint64]*Projectile),
-		History:   make(map[uint64][]*Projectile),
-		maps:      maps,
-		ecs:       ecsp.NewPacketECSParser(maps),
-		reserved:  reserved,
-		ownerUIDs: make(map[uint64]uint64),
+		Tracks:       make(map[uint64]*Projectile),
+		History:      make(map[uint64][]*Projectile),
+		maps:         maps,
+		ecs:          ecsp.NewPacketECSParser(maps),
+		reserved:     reserved,
+		ownerUIDs:    make(map[uint64]uint64),
+		ownerWeapons: make(map[uint64][]groundmeta.StorageWeapon),
 	}
 }
 
@@ -129,6 +135,9 @@ func (p *MetadataParser) ensureState() {
 	}
 	if p.ecs == nil {
 		p.ecs = ecsp.NewPacketECSParser(p.maps)
+	}
+	if p.ownerWeapons == nil {
+		p.ownerWeapons = make(map[uint64][]groundmeta.StorageWeapon)
 	}
 }
 
@@ -212,6 +221,9 @@ func decompressLZ4(src []byte) ([]byte, error) {
 }
 
 func (p *MetadataParser) parseConstruction(eid uint64, block []byte, time uint32) *Projectile {
+	// An exact EID reconstructed without a usable storage cannot inherit an
+	// earlier construction's ammunition.
+	delete(p.ownerWeapons, eid)
 	r := danet.NewBitReader(block)
 	template, err := p.ecs.ParseECSTemplate(r)
 	if err != nil {
@@ -275,6 +287,13 @@ func (p *MetadataParser) parseConstruction(eid uint64, block []byte, time uint32
 		if name, ok := p.maps.GetDataCompName(component.Name); ok && name == "uid" {
 			if uid, ok := uidFromValue(value); ok {
 				p.recordOwnerUID(eid, uid)
+			}
+		}
+		if name, ok := p.maps.GetDataCompName(component.Name); ok && name == "unit_storage__aircraft" {
+			if storage, ok := value.(ecsp.UnitStorage); ok {
+				if weapons, err := groundmeta.UnitStorageWeapons(storage.Raw); err == nil {
+					p.ownerWeapons[eid] = weapons
+				}
 			}
 		}
 	}
@@ -440,6 +459,9 @@ func (p *MetadataParser) readProjectileConstruction(eid uint64, r *danet.BitRead
 			Z:    coords[2],
 		},
 	}
+	if weaponRef>>16 == 14 {
+		projectile.OwnerWeapons = append([]groundmeta.StorageWeapon(nil), p.ownerWeapons[ownerEID]...)
+	}
 	if parentUID, ok := p.ownerUIDs[ownerEID]; ok {
 		projectile.ParentUID = parentUID
 		projectile.HasParent = true
@@ -506,6 +528,7 @@ func (p *MetadataParser) parseDestruction(payload []byte, time uint32) error {
 		if err != nil {
 			return fmt.Errorf("reading destruction %d EID: %w", i, err)
 		}
+		delete(p.ownerWeapons, eid)
 		instances := p.History[eid]
 		for i := len(instances) - 1; i >= 0; i-- {
 			if !instances[i].HasEnd {

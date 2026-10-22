@@ -159,8 +159,10 @@ function Get-TreeSnapshot {
     param([string]$Root)
     $items = @(Get-ChildItem -LiteralPath $Root -Recurse -Force | Sort-Object FullName)
     return (@($items | ForEach-Object {
-        if ($_.PSIsContainer) { '{0}|D|{1}' -f $_.FullName.Substring($Root.Length), $_.LastWriteTimeUtc.Ticks }
-        else { '{0}|F|{1}|{2}' -f $_.FullName.Substring($Root.Length), $_.Length, $_.LastWriteTimeUtc.Ticks }
+        # NTFS can publish delayed directory timestamps after fixture creation.
+        # Compare directory membership and file content/metadata instead.
+        if ($_.PSIsContainer) { '{0}|D' -f $_.FullName.Substring($Root.Length) }
+        else { '{0}|F|{1}|{2}|{3}' -f $_.FullName.Substring($Root.Length), $_.Length, $_.LastWriteTimeUtc.Ticks, (Get-Sha256Hex $_.FullName) }
     }) -join "`n")
 }
 

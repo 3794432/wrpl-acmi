@@ -378,16 +378,29 @@ try {
         [IO.Directory]::Move($cacheDir, $movedCache)
         New-Item -ItemType Junction -Path $cacheDir -Target $movedCache | Out-Null
         $junction = Get-Item -LiteralPath $cacheDir -Force
-        $reparseFailed = $false
-        try { Invoke-Set $terrainRoot '1.9.4' -ValidateOnly | Out-Null } catch { $reparseFailed = $true }
-        Assert-Condition $reparseFailed 'reparse-point cache directory was accepted'
-        Write-TestLog 'PASS cache-directory reparse point is rejected'
     }
     catch {
         Write-TestLog ('SKIP cache reparse-point check: ' + $_.Exception.Message)
     }
+    try {
+        if ($null -ne $junction) {
+            $reparseFailed = $false
+            try { Invoke-Set $terrainRoot '1.9.4' -ValidateOnly | Out-Null } catch { $reparseFailed = $true }
+            Assert-Condition $reparseFailed 'reparse-point cache directory was accepted'
+            Write-TestLog 'PASS cache-directory reparse point is rejected'
+        }
+    }
     finally {
-        if ($null -ne $junction -and (Test-Path -LiteralPath $cacheDir)) { Remove-Item -LiteralPath $cacheDir -Force }
+        if ($null -ne $junction -and (Test-Path -LiteralPath $cacheDir)) {
+            $cacheFull = [IO.Path]::GetFullPath($cacheDir)
+            $runtimePrefix = [IO.Path]::GetFullPath($runtimeRoot).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+            Assert-Condition ($cacheFull.StartsWith($runtimePrefix, [StringComparison]::OrdinalIgnoreCase)) 'junction escaped test runtime'
+            Assert-Condition (((Get-Item -LiteralPath $cacheFull -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) 'cleanup target is not a junction'
+            $targetBefore = Get-TreeSnapshot $movedCache
+            # Windows PowerShell 5.1 Remove-Item can throw NullReferenceException on junctions.
+            [IO.Directory]::Delete($cacheFull, $false)
+            Assert-TreeUnchanged $movedCache $targetBefore 'junction cleanup changed its target'
+        }
         if ((Test-Path -LiteralPath $movedCache) -and -not (Test-Path -LiteralPath $cacheDir)) { [IO.Directory]::Move($movedCache, $cacheDir) }
     }
 
@@ -403,8 +416,7 @@ finally {
         Get-ChildItem -LiteralPath $runtimeRoot -Recurse -File -Force | ForEach-Object { [IO.File]::Delete($_.FullName) }
         $directories = @(Get-ChildItem -LiteralPath $runtimeRoot -Recurse -Directory -Force | Sort-Object FullName -Descending)
         foreach ($directory in $directories) {
-            if (($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { Remove-Item -LiteralPath $directory.FullName -Force }
-            else { [IO.Directory]::Delete($directory.FullName, $false) }
+            [IO.Directory]::Delete($directory.FullName, $false)
         }
         [IO.Directory]::Delete($runtimeRoot, $false)
     }

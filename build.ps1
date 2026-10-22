@@ -38,9 +38,10 @@ if ($WithTerrain) {
     # Resolve inputs before entering the repository directory.
     $GameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
     $DatamineRoot = (Resolve-Path -LiteralPath $DatamineRoot).Path
-    $Python = (Get-Command $Python -CommandType Application -ErrorAction Stop).Source
+    $Python = (Get-Command $Python -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 }
-$go = (Get-Command go -CommandType Application -ErrorAction Stop).Source
+# Hosted runners can expose several Go installations. Respect PATH precedence.
+$go = (Get-Command go -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $incomplete = Join-Path $output 'BUILD-INCOMPLETE.txt'
 Set-Content -LiteralPath $incomplete -Encoding ASCII -Value 'Build in progress or failed. Run build.ps1 again to finish this package.'

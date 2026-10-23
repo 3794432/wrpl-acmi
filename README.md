@@ -8,6 +8,8 @@ The project builds on [wrpl-inspector v3](https://github.com/maxsupermanhd/wrpl-
 
 ## Quick start
 
+Download the [latest release](https://github.com/3794432/wrpl-acmi/releases/latest): [wrpl-acmi.exe](https://github.com/3794432/wrpl-acmi/releases/latest/download/wrpl-acmi.exe) for replay export, and optionally [wrpl-terrain-installer.exe](https://github.com/3794432/wrpl-acmi/releases/latest/download/wrpl-terrain-installer.exe) for the bundled 69-map terrain set. Export works without installing terrain.
+
 With a release package available, run the exporter from PowerShell. These examples assume the package is in `dist\wrpl-acmi`:
 
 ```powershell

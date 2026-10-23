@@ -94,11 +94,14 @@ dist/wrpl-acmi/
   docs/
   tools/terrain/
   terrain/
+    AtlasReferences.json
     GeoReferences.json
     maps/<id>/<id>.data
     maps/<id>/metadata.json
     maps/<id>/CustomHeightmapList.xml
 ```
+
+使用 `-TerrainSource` 打包或安装已有转换目录时，来源根目录必须同时包含 `AtlasReferences.json` 和 `GeoReferences.json`。
 
 `terrain/` 是 `-WithTerrain` 构建时的暂存目录。完整来源包含 69 个地图目录；`.data` 使用以米为单位的 16 位有符号小端高程，按从北到南、从西到东排列。`metadata.json` 记录尺寸、采样边界和 SHA-256，源 XML 使用安装器要求的零点模板。
 

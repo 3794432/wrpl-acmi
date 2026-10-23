@@ -81,11 +81,14 @@ dist/wrpl-acmi/
   docs/
   tools/terrain/                   # converter, installer, metadata and license notices
   terrain/                         # staging source present after a -WithTerrain build
+    AtlasReferences.json
     GeoReferences.json
     maps/<id>/<id>.data
     maps/<id>/metadata.json
     maps/<id>/CustomHeightmapList.xml
 ```
+
+Both `AtlasReferences.json` and `GeoReferences.json` are required at the terrain source root for `-TerrainSource` packaging and installation.
 
 The complete terrain source contains 69 map directories. The raster is signed little-endian 16-bit metres, ordered north-to-south and west-to-east; `metadata.json` records dimensions, sampling bounds, and SHA-256. The XML starts from the zero-origin template expected by the installer. Synthetic `smalltests` terrain is only for installer tests. The standalone EXE appends the payload; it does not depend on adjacent `data/`, `terrain/`, or `tools/` directories. See [Single-file release build](../../docs/standalone-build.md) for distribution details.
 

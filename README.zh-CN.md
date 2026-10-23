@@ -8,6 +8,8 @@ wrpl-acmi 将《战争雷霆》的回放转换为 Tacview 可读取的 ACMI 文�
 
 ## 快速开始
 
+从[最新发布页](https://github.com/3794432/wrpl-acmi/releases/latest)下载：[wrpl-acmi.exe](https://github.com/3794432/wrpl-acmi/releases/latest/download/wrpl-acmi.exe) 用于导出回放；[wrpl-terrain-installer.exe](https://github.com/3794432/wrpl-acmi/releases/latest/download/wrpl-terrain-installer.exe) 为可选的独立地形安装器，包含 69 张地图。未安装地形也能正常导出。
+
 如果已有发布包，可直接在 PowerShell 中运行导出器。以下示例假定程序位于 `dist\wrpl-acmi`：
 
 ```powershell

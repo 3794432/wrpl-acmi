@@ -1,10 +1,12 @@
 # Runway coverage by map
 
-[中文](ACMI_AIRFIELDS_COVERAGE.zh-CN.md)
+[中文](ACMI_AIRFIELDS_COVERAGE.zh-CN.md) · [Airfield selection](ACMI_AIRFIELDS.md)
 
-The catalogue contains 69 maps, 67 with usable source definitions, and 457 mission entries.
+The catalogue contains 69 maps and 457 mission entries. Usable runway definitions are available for 67 maps. This page describes source coverage; actual export also depends on the replay's map, mission, and evidence for conditional layouts.
 
-Definition counts include mission, rank and conditional alternatives, not simultaneously active airports. Conditional layouts require replay evidence. Missing source geometry is not fabricated.
+The mission count is the number of catalogue entries for that map. Definition counts include alternatives across missions, ranks, and conditions, so they are not counts of airports active in one match. Missing or ambiguous geometry is omitted.
+
+## Coverage table
 
 | Map | Missions | Usable source definitions | Status |
 |---|---:|---:|---|
@@ -78,9 +80,9 @@ Definition counts include mission, rank and conditional alternatives, not simult
 | `wake_island` | 3 | 1 | Source configured |
 | `zhengzhou` | 6 | 203 | Source configured |
 
-## Unconfigured sources
+## Maps without usable runway sources
 
-- `air_race_phiphi_islands`: 8 matching race root missions; source defines air starts with no land-runway geometry
-- `caribbean_islands`: Unknown: a bounded CTA ship/event-name check found no mission with root level caribbean_islands; the terrain level exists, but no mission source establishes a land runway or carrier-only operation
+- `air_race_phiphi_islands`: all eight checked race missions define air starts and no land-runway geometry.
+- `caribbean_islands`: the bounded CTA ship and event-name search found no mission whose root level is this map. The terrain level exists, but the checked mission sources establish neither a land runway nor carrier-only operation. This does not establish absence across all game versions.
 
 Actual selection and elevation provenance are recorded in the ACMI `WT_Airfield*` fields.

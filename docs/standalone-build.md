@@ -1,21 +1,21 @@
-# Single-file release build
+# Windows single-file build and release
 
 [简体中文](standalone-build.zh-CN.md) · [Project README](../README.md)
 
-`build.ps1` produces two Windows executables. They can be copied and used separately:
+The root `build.ps1` script produces an exporter and a terrain installer. Each executable can be copied and distributed independently; the build options determine whether the installer includes terrain data.
 
 | Executable | Purpose | Runtime requirements |
 | --- | --- | --- |
 | `wrpl-acmi.exe` | Converts one client replay or one server replay shard directory to ACMI. All normal replay lookup data, including `ecshashes`, is compiled into the executable. | Windows. No adjacent `data/` directory, converted or installed terrain, War Thunder client, Python, Go, Git, or Tacview is required to export. Tacview is needed only to view the ACMI. |
 | `wrpl-terrain-installer.exe` | Installs a converted War Thunder terrain set into Tacview. The terrain payload may be appended at build time. | Windows PowerShell (`powershell.exe`). A complete offline installer also needs several gigabytes of free disk space for temporary extraction and installation. The game, Python, Go, Git, and converter scripts are not required at install time. |
 
-The two files have separate jobs and can be distributed independently. A build without terrain input still produces the terrain installer, but that copy contains installer logic only. It is not a complete offline terrain package.
+Without terrain input, the installer contains only installation logic and requires an external converted directory at installation time. Tacview is needed to view the results, while terrain installation is optional for replay export.
 
-## Build
+## Choose a build method
 
 The source build requires Windows PowerShell and Go 1.25.6 or newer. Run it from the repository root. The default output directory is `dist\wrpl-acmi`.
 
-### Exporter and logic-only installer
+### Build the programs without terrain
 
 ```powershell
 .\build.ps1
@@ -44,7 +44,21 @@ This builds `wrpl-acmi.exe` and `wrpl-terrain-installer.exe`. The exporter is co
 
 This converts the 69 maps from the local game and pinned Datamine checkout, then embeds the result in the same installer executable. It requires the converter prerequisites described in the [terrain guide](../tools/terrain/README.md). Use `-ResumeTerrain` with the same arguments to resume an interrupted conversion. `-TerrainSource` and `-WithTerrain` are mutually exclusive.
 
-Builds write `build-manifest.json` with the output hashes and whether the terrain installer includes data. A `BUILD-INCOMPLETE.txt` marker is present while a build is running or after it fails and is removed only after the package is complete.
+### Build options and completion
+
+| Option | Purpose |
+| --- | --- |
+| `-OutputRoot` | Package directory; defaults to `dist\wrpl-acmi`. |
+| `-TerrainSource` | Package an existing converted directory. |
+| `-WithTerrain` | Convert and embed terrain during the build. |
+| `-ResumeTerrain` | Resume conversion; requires `-WithTerrain`. |
+| `-GameRoot` | Local War Thunder installation. |
+| `-DatamineRoot` | Pinned Datamine checkout. |
+| `-Python` | Conversion interpreter; defaults to `python`. |
+
+Without `-ResumeTerrain`, conversion refuses an existing nonempty terrain output directory. Building does not install terrain into Tacview.
+
+`build-manifest.json` records executable hashes and whether the installer contains data. `BUILD-INCOMPLETE.txt` remains during a build or after failure, and is removed only when the package is complete.
 
 ## Install terrain
 
@@ -80,13 +94,14 @@ An old 1.9.4 aggregate index can remain after its cache or format state has been
 
 ## Coordinate layout
 
-Geographic placement is the default. It combines the reviewed georeferences with the Atlas fallback. Choose installer `-atlas` for technical Atlas coordinates only when the matching ACMI export uses:
+Both programs default to geographic placement, combining reviewed georeferences with Atlas fallback. To use technical Atlas coordinates, select the layout in both programs:
 
 ```powershell
-.\wrpl-acmi.exe -terrain-layout atlas ...
+.\wrpl-terrain-installer.exe -atlas
+.\wrpl-acmi.exe -terrain-layout atlas -in "replay.wrpl" -out "replay-atlas.acmi"
 ```
 
-Keep the installer `-atlas` option and exporter `-terrain-layout` setting consistent. A terrain install and an ACMI export in different layouts will not align. Geographic remains the default on both sides.
+Different layouts or reference configurations will cause tracks and terrain to diverge. Restart Tacview after installation and re-export existing ACMI from the original WRPL. The exporter's `-alt` option changes height only and cannot correct horizontal alignment.
 
 ## Distribution limits
 

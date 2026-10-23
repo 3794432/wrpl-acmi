@@ -1,14 +1,18 @@
-# 导弹型号补全证据与数据表
+# 导弹型号数据表与研究依据
 
-以下 `work/`、`report/` 和 `deliverable/` 路径记录原始研究产物的位置，不是本仓库的构建依赖；运行所需 JSON 已内嵌在 `cmd/acmi/data/`。
+[型号识别说明](../ACMI_MODELS.md) · [制导证据](missile-guidance.md)
 
-## 交付
+本报告记录特定回放的型号推断、置信度及反例。结论限定在文中给出的样例哈希下，不能作为全局 `WT_WeaponID` 映射。
 
-- 数据表：cmd/acmi/data/missile_models.json
-- 本报告：work/missile-model-completion/evidence.md
-- 复现脚本：work/missile-model-completion/build_missile_models.mjs
+文中的 `work/`、`report/` 和 `deliverable/` 路径指向原始研究产物，未必包含在当前仓库中，也不是构建依赖。运行所需 JSON 已内嵌在 `cmd/acmi/data/`。
 
-本次只读取现有本地证据，没有重新下载大库，没有运行 diagnose，没有修改 Go。ID 表严格放在样例 SHA 下，不表示全局 `WT_WeaponID` 映射。
+## 数据与历史研究文件
+
+- 仓库数据表：[missile_models.json](../../cmd/acmi/data/missile_models.json)。
+- 原始报告路径：`work/missile-model-completion/evidence.md`。
+- 原始复现脚本：`work/missile-model-completion/build_missile_models.mjs`。
+
+该项研究使用已有本地证据建立数据表，未重新下载完整资料库，也未运行 diagnose 或修改 Go 实现。以下结果属于当时的数据分析记录。
 
 ## 样例与输入
 
@@ -16,7 +20,7 @@
 
 `c0fcd26febf9f0ec75765337a841c1d55d089cd13b45740f0cbd41c190f418b2`
 
-脚本运行时校验 `probe-output.json` 的 104 枚导弹覆盖 25 个 ID，并要求表中恰有 25 个 ID。输入 SHA256：
+原始脚本校验 `probe-output.json` 中的 104 枚导弹是否覆盖 25 个 ID，并要求数据表恰好包含这 25 个 ID。研究输入的 SHA-256 如下，供持有原始文件时复核：
 
 | 输入 | SHA256 |
 |---|---|
@@ -36,21 +40,23 @@ aliases{internal_name: {model, internal_name, confidence, source}}
 replays{SHA: {weapon_ids{ID: {model, internal_name, confidence, source, candidates}}}}
 ```
 
-weapon ID 行只用 `high|medium|low`。`high` 行有可写型号；`medium|low` 行故意留空 `model`，只给 `candidates`，避免下游把候选误当确定型号。aliases 只用 `confirmed|high`，本次实际都来自 guidance 的 confirmed 内部名，或其对应的精确击杀别名。
+weapon ID 条目的置信度只允许 `high`、`medium` 或 `low`。`high` 条目提供可写入的型号；`medium` 和 `low` 条目的 `model` 留空，仅提供 `candidates`，以免将候选当作确定结论。`aliases` 只允许 `confirmed` 或 `high`；本表使用制导数据中已确认的内部名及其精确击杀别名。
 
-## 结果
+## 样例结果
 
 25 个 ID 全部写入样例作用域。按导弹数量：
 
 | 置信度 | ID 数 | 导弹数 | 处理 |
 |---|---:|---:|---|
 | high | 15 | 81 | 11 个既有击杀确证 ID 不动；新增 35/60/69/157 共 7 枚 |
-| medium | 3 | 10 | 53/99/159，仅单候选，不硬写型号 |
-| low | 7 | 13 | 保留多型号候选，不硬写型号 |
+| medium | 3 | 10 | 53/99/159，仅保留单个候选，不写入确定型号 |
+| low | 7 | 13 | 保留多个候选，不写入确定型号 |
 
-本次可靠新增的是 4 个 ID、7 枚导弹。合计识别覆盖率从 74/104 提高到 81/104。guidance 原有统计不变：90 ARH、2 IR、12 Unknown。
+相对于研究前的基线，新增确定型号涉及 4 个 ID、7 枚导弹，覆盖数由 74/104 增至 81/104。制导分类仍为 90 枚 ARH、2 枚 IR 和 12 枚 Unknown。
 
-## 25 个 ID
+## 逐 ID 证据
+
+下表保留原始分析中的模板标签，其中 `IR` 是研究表中的旧标签，不能视为已确认的制导类型。普通 rocket 模板也可能对应 SARH；最终制导结论应以[制导证据报告](missile-guidance.md)为准。
 
 | ID | 枚 | 模板 | 载机 | 写入型号 | 置信 | 候选 | 关键依据 |
 |---:|---:|---|---|---|---|---|---|
@@ -114,13 +120,13 @@ weapon ID 行只用 `high|medium|low`。`high` 行有可写型号；`medium|low`
 - 159 不升级为 high：4 枚 AAM-4 与 2 枚 AIM-120A 的计数吻合只是数量证据，不能证明哪一组 ID 对应哪个槽。
 - F-2A 是明确反例：field67 同时含 `jp_aam3` 与 `aim_7m`，因此不能把 143/145/146 一概写成 IR，也不能按旧 CSV 的单一型号顺序赋值。
 - Su-33 同机混挂 R-73、R-27ER、R-27ET；94/95/96 保留候选集合，拒绝按发射顺序推断。
-- Su-30MKK 同机混挂 PL-12 与 R-77；137 不硬定型号。
+- Su-30MKK 同机混挂 PL-12 与 R-77；ID 137 的证据不足以确定型号。
 - 不把本表应用到其他 SHA，不把 `WeaponRef`、槽位序号或载机型号当作全局 weapon ID 映射。
 
-## 验证
+## 历史验证记录
 
-运行：
+原始研究环境使用以下命令生成并校验数据表。脚本及其输入未随本报告完整发布，因此这不是当前仓库可直接执行的构建步骤：
 
 `node work/missile-model-completion/build_missile_models.mjs`
 
-成功输出：25 个 ID、18 个别名、high/medium/low 为 81/10/13 枚。脚本同时检查 104 枚、25 ID 的覆盖一致性；JSON 只含指定 SHA 的一个 replay 作用域。
+当时的输出包含 25 个 ID、18 个别名；按导弹数量统计，high、medium、low 分别为 81、10、13 枚。脚本同时检查总计 104 枚导弹及 25 个 ID 的覆盖一致性，JSON 仅包含指定 SHA 的一个回放作用域。这些结果不表示当前环境重新执行过该研究。

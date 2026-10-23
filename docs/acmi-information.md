@@ -1,12 +1,22 @@
 # ACMI metadata, bookmarks, and estimated aircraft telemetry
 
-[中文](acmi-information.zh-CN.md)
+[中文](acmi-information.zh-CN.md) · [Export guide](acmi-export.md)
+
+This page explains file metadata, event bookmarks, and estimated aircraft fields, followed by the source rules for static objects and radar geometry. Recorded positions and attitude are distinct from the telemetry calculated from them.
+
+## File information
 
 Files include a map/mode/replay-time `Title`, `Author` (default `wrpl-acmi`, override with `-author`), UTC export `RecordingTime`, `Category=War Thunder`, `DataRecorder=wrpl-acmi`, and `Comments`. Comments record the exporter build, requested terrain layout, georeference commit, and estimation policy. `ReferenceTime` remains the replay time origin; it is independent of file creation time. Existing georeference properties describe the effective geographic/Atlas layout.
 
-`-bookmarks=true` is the default. Timeline bookmarks identify confirmed aircraft destruction, missile launch or first recorded observation, bomb release or first observation, countermeasure release, and changes in radar target designations. Original messages and destruction events remain. Identical bookmarks at the same timestamp are deduplicated. Radar designations do not establish STT lock or radar power state. Use `-bookmarks=false` to omit the additional timeline highlights.
+## Event bookmarks
 
-Objects gain a `Group` derived from their explicit coalition. The two known airport radar models gain display priority `Importance=0.75`; this is presentation priority, not measured operational state. `Name`, `CallSign`, and `Pilot` retain their existing meanings. Per the [official ACMI specification](https://www.tacview.net/documentation/acmi/en/), `ShortName`, `LongName`, and `FullName` belong in Tacview's object database, and `Registration` is a tail/registration number. The exporter does not fill them with player names or invented manufacturer names.
+Bookmarks are enabled by default. They identify confirmed aircraft destruction, missile launch or first observation, bomb release or first observation, countermeasure release, and radar designation changes. Duplicate bookmarks at the same timestamp are removed, while original messages and destruction events remain.
+
+Use `-bookmarks=false` to omit these additional highlights. A radar designation bookmark does not establish STT lock or radar power state.
+
+## Object groups and names
+
+An object's `Group` is derived from its explicit coalition. The two identified airport radar types use `Importance=0.75` as a display priority, not an operational measurement. `Name`, `CallSign`, and `Pilot` retain their respective roles. Under the [official ACMI specification](https://www.tacview.net/documentation/acmi/en/), `ShortName`, `LongName`, and `FullName` belong in Tacview's object database, and `Registration` is a tail or registration number. The exporter therefore leaves those fields free of player names or unverified manufacturer information.
 
 ## Aircraft telemetry estimates
 
@@ -36,4 +46,4 @@ Accepted objects use `Type=Ground+Static+Building`, keep model/team evidence, ad
 
 `LockedTargetAzimuth` (positive right) and `LockedTargetElevation` (positive up) are body-relative angles in degrees. They share the existing slant-range checks: positions at or before the event, no more than one second old, and valid object lifetimes. Invalid geometry, unlocks, and target destruction clear angles. A fresh target switch immediately publishes the new geometry. Coincident targets have valid zero range but no angles.
 
-The default header remains `FileVersion=2.1` to retain the existing compatibility baseline. `-acmi-version 2.2` is an explicit opt-in. These fields do not require a default format upgrade. Generated text and tests were checked; this change does not claim a completed Tacview 1.9.4/1.9.5 GUI loading or rendering test, nor does it complete the separate terrain-loader compatibility work.
+The default header is `FileVersion=2.1`; use `-acmi-version 2.2` to select 2.2 explicitly. These fields do not require a higher default version. Earlier checks covered generated text and tests, but did not establish Tacview 1.9.4 or 1.9.5 GUI loading, rendering, or terrain-loader compatibility.

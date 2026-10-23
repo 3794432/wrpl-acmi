@@ -2,18 +2,22 @@
 
 [简体中文](README.zh-CN.md) · [Project README](../../README.md)
 
-The source tree includes the converter and installer code. The converter reads compiled terrain from a local War Thunder installation and level configuration from a pinned Datamine checkout, then writes a 69-map package. `build.ps1` turns that package into a single installer executable with the terrain payload appended. No game terrain assets are stored in Git.
+The terrain tools convert local War Thunder level data into a 69-map Tacview height set. The build script can then package that set in a standalone installer. Game terrain assets are not stored in Git.
+
+If you already have an installer containing terrain data, go to [installation](#install-converted-terrain). The conversion environment is needed only when extracting or rebuilding terrain.
 
 ## Prerequisites
 
 - Windows PowerShell and Go 1.25.6 or newer to build the executables (`go.mod` currently declares Go 1.25.6).
 - To convert terrain from scratch: 64-bit Python 3.12, the converter's pip requirements, Git, a local War Thunder client with the compiled `levels/*.bin` files, and a Datamine checkout at `f7952e4291e9fd7b6fe38e84020dddef925c3457`.
 - To package an existing converted directory with `-TerrainSource`: no Python, Git, game installation, or Tacview is required on the build machine.
-- At install time: Tacview and system Windows PowerShell (`powershell.exe`). The standalone installer needs several gigabytes of free space for temporary extraction and installation. It does not need the game, converter scripts, Python, Go, or Git.
+- At install time: system Windows PowerShell (`powershell.exe`) and embedded or external converted terrain. Tacview is needed to view the result. Allow at least 8 GB of free space for the full map set at default resolution. The game, converter scripts, Python, Go, and Git are not required.
 
 ## Build from scratch
 
-The following PowerShell commands clone the current `dev` branch, create the Python environment, install the converter dependencies, pin Datamine, convert all 69 maps, and build both executables with the terrain payload embedded in the installer:
+The following steps fetch dev, prepare conversion inputs, and build both executables with terrain included in the installer. First confirm that `python` is 64-bit Python 3.12. Replace the example `-GameRoot` with your game directory.
+
+### Get the source and prepare Python
 
 ```powershell
 git clone --branch dev --single-branch https://github.com/3794432/wrpl-acmi.git
@@ -21,11 +25,21 @@ Set-Location .\wrpl-acmi
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r .\tools\terrain\converter\requirements.txt
+```
+
+### Get the pinned level configuration
+
+```powershell
 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/gszabi99/War-Thunder-Datamine.git .\War-Thunder-Datamine
 git -C .\War-Thunder-Datamine fetch --depth 1 origin f7952e4291e9fd7b6fe38e84020dddef925c3457
 git -C .\War-Thunder-Datamine sparse-checkout init --cone
 git -C .\War-Thunder-Datamine sparse-checkout set aces.vromfs.bin_u/levels
 git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
+```
+
+### Convert and build
+
+```powershell
 .\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
 ```
 
@@ -33,7 +47,9 @@ The sparse checkout selects only `aces.vromfs.bin_u/levels`; the converter needs
 
 `build.ps1` accepts `-OutputRoot` (default `dist\wrpl-acmi`), `-TerrainSource`, `-WithTerrain`, `-ResumeTerrain`, `-GameRoot`, `-DatamineRoot`, and `-Python` (default `python`). Every build produces `wrpl-acmi.exe` and `wrpl-terrain-installer.exe`. With `-WithTerrain`, the script calls `tools/terrain/build-terrain.ps1`, stages the converted maps in `dist/wrpl-acmi/terrain`, and appends them to the installer. Use the explicit venv interpreter for `-Python` when that is not the default `python` on `PATH`.
 
-To use an already converted 69-map directory instead:
+## Separate conversion and packaging
+
+To package an existing 69-map directory:
 
 ```powershell
 .\build.ps1 -TerrainSource ".\converted-terrain"
@@ -51,7 +67,9 @@ To build only the terrain package, invoke the converter wrapper directly after i
 
 `-ValidateOnly` checks all inputs without writing output. After an interrupted run, use `-Resume` with the same output directory. `-Resolution` defaults to 4096 pixels and `-TimeoutSeconds` defaults to 1200 per map.
 
-The artifact contains:
+## Package structure and format
+
+The main terrain-related files are shown below. The package also contains project documentation, license files, and other supporting tools.
 
 ```text
 dist/wrpl-acmi/
@@ -61,8 +79,8 @@ dist/wrpl-acmi/
   run.bat
   data/                            # auxiliary package copy; the exporter embeds its defaults
   docs/
-  tools/terrain/                 # converter, installer, metadata and license notices
-  terrain/                       # staging source present after a -WithTerrain build
+  tools/terrain/                   # converter, installer, metadata and license notices
+  terrain/                         # staging source present after a -WithTerrain build
     GeoReferences.json
     maps/<id>/<id>.data
     maps/<id>/metadata.json
@@ -102,7 +120,9 @@ When the installer was built without a payload, or when installing a different c
 
 `-profile` selects height encoding: `auto` is the default and detects the installed Tacview version; if Tacview cannot be found, it falls back to `1.9.4`. Explicit values are `1.9.4` and `1.9.5`. Running the installer again can reuse its cache, but temporary extraction plus the installed maps can require several gigabytes of free disk space.
 
-The authoritative catalog contains exactly 69 maps: 14 use reviewed geographic estimates and 55 use the Atlas fallback. The complete reference set is required for normal geographic export and installation, so keep it synchronized between the converted terrain, exporter configuration, and installer metadata.
+### Coordinate layout
+
+The reference catalogue contains 69 maps: 14 use reviewed geographic estimates and 55 use Atlas fallback. Converted terrain, exporter configuration, and installer metadata must use the same complete reference set.
 
 Use installer `-atlas` with exporter `-terrain-layout atlas` when deliberately choosing technical coordinates. These two settings must come from the same layout; the default on both sides is geographic. The exporter's `-alt` option remains a vertical offset in metres. Full details are in [TERRAIN_GEOGRAPHIC.md](../../docs/TERRAIN_GEOGRAPHIC.md), [terrain-atlas.md](../../docs/terrain-atlas.md), and [coverage](georeference/coverage.json).
 

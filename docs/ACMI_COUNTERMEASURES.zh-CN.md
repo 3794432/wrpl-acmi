@@ -27,7 +27,7 @@ WT_CountermeasureTypeSource=UnknownAsChaff:<原因>
 
 真实 WeaponSync 位置优先。缺少位置同步时，导出器可生成短时释放轨迹估算，并通过名称中的 `(estimated)`、`WT_Estimated=1` 和 `WT_TrajectorySource=EstimatedFromRelease` 标明。
 
-弹种分类不改变对象 ID、归属、生命周期或轨迹模型。ACMI 的 `WT_CountermeasureType*` 字段记录类型及其依据；消息和书签使用对应的 Flare/Chaff 名称。
+弹种分类不改变对象 ID、归属、生命周期或轨迹模型。ACMI 的 `WT_CountermeasureType*` 字段记录类型及其依据；普通消息使用对应的 Flare/Chaff 名称。高亮书签默认关闭（`-bookmarks=false`），避免每次投放额外出现一条重复高亮行；需要时可用 `-bookmarks=true` 开启。
 
 需要诊断报告时，可传入 `-countermeasure-log output.csv`。报告在原有 17 列之后提供 `kind`、`type_source`、`type_confidence`、`launcher` 和 `bullet`，便于核对分类依据。
 

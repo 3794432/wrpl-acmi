@@ -16,7 +16,7 @@ The catalogue covers four reviewed split-launcher configurations, including larg
 
 ## Trajectories and diagnostic fields
 
-The optional `-countermeasure-log output.csv` report includes `kind`, `type_source`, `type_confidence`, `launcher`, and `bullet` after the original 17 columns. ACMI records the type, source, and confidence in `WT_CountermeasureType*`; messages and bookmarks use the selected Flare/Chaff name.
+The optional `-countermeasure-log output.csv` report includes `kind`, `type_source`, `type_confidence`, `launcher`, and `bullet` after the original 17 columns. ACMI records the type, source, and confidence in `WT_CountermeasureType*`; ordinary messages use the selected Flare/Chaff name. Highlighted bookmarks default to off (`-bookmarks=false`), avoiding duplicate highlighted release rows; use `-bookmarks=true` to opt in.
 
 Type classification is independent of trajectory estimation. A name ending in `(estimated)` refers to the existing short release-trajectory estimate; `WT_Estimated=1` and `WT_TrajectorySource=EstimatedFromRelease` remain. Recorded WeaponSync positions always win. Object IDs, parent links, lifetimes and the trajectory model are unchanged.
 

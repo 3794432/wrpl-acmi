@@ -23,6 +23,7 @@ import (
 	packetecs2 "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/ecs2"
 	packetfm "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/fm"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/groundmeta"
+	packetkill "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/kill"
 	packetmovement "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/movement"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/projectiles"
 	packetslot "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/slot"
@@ -48,7 +49,8 @@ var (
 	groundUnits          = flag.Bool("ground-units", true, "export recorded GroundModelPositions surface-unit tracks")
 	groundModels         = flag.Bool("ground-models", true, "identify surface-unit models from explicit replay metadata")
 	estimateTelemetry    = flag.Bool("estimate-telemetry", true, "estimate aircraft telemetry from position and attitude (default on; set false to disable; zero wind, ISA; not recorded game telemetry)")
-	timelineBookmarks    = flag.Bool("bookmarks", true, "highlight recorded destruction, weapon releases, countermeasures and radar designation changes")
+	timelineBookmarks    = flag.Bool("bookmarks", false, "opt-in highlighted bookmarks for destruction, weapon releases, countermeasures and radar designation changes")
+	timelineEventsSpec   = flag.String("events", defaultTimelineEvents, "message categories: kill,chat,join,damage,radar by default; award is opt-in; all enables every category; none disables")
 	recordingAuthor      = flag.String("author", "wrpl-acmi", "recording author/operator for ACMI file properties")
 	acmiFormatVersion    = flag.String("acmi-version", "2.1", "ACMI file version: 2.1 (default for compatibility) or 2.2 (opt-in)")
 	airfields            = flag.Bool("airfields", true, "export source-configured map runways, validating conditional airport variants with replay radars")
@@ -161,6 +163,10 @@ func main() {
 
 func runACMIMain() (retErr error) {
 	flag.Parse()
+	enabledEvents, err := parseTimelineEvents(*timelineEventsSpec)
+	if err != nil {
+		return err
+	}
 	if err := validateACMIVersion(*acmiFormatVersion); err != nil {
 		return err
 	}
@@ -287,6 +293,8 @@ func runACMIMain() (retErr error) {
 	missilePositions := projectiles.NewPositionParser()
 	missileNames := newMissileNameKillParser()
 	aircraftDeaths := newAircraftDestructionParser()
+	kills := &packetkill.PacketKillParser{KeepKills: true, ECS: mgr, PathsGround: paths, PathsAir: fm}
+	optionalEvents := newOptionalEventParser(enabledEvents, slot)
 	parsers := []packet.PacketParser{}
 	if ecs != nil {
 		parsers = append(parsers, ecs)
@@ -296,6 +304,12 @@ func runACMIMain() (retErr error) {
 		parsers = append(parsers, missileMetadata)
 	}
 	parsers = append(parsers, missilePositions, missileNames, aircraftDeaths)
+	if enabledEvents["kill"] {
+		parsers = append(parsers, kills)
+	}
+	if enabledEvents["chat"] || enabledEvents["join"] || enabledEvents["damage"] || enabledEvents["award"] {
+		parsers = append(parsers, optionalEvents)
+	}
 	if groundMetadata != nil {
 		parsers = append(parsers, groundMetadata)
 	}
@@ -326,7 +340,7 @@ func runACMIMain() (retErr error) {
 	}
 	destroyedAircraft := applyAircraftDestructions(tracks, aircraftDeaths)
 	var radarExport *radarLockExport
-	if *radarLocks {
+	if *radarLocks || enabledEvents["radar"] {
 		radarExport = newRadarLockExport(fm)
 	}
 	if *missileFlightLogPath != "" {
@@ -359,7 +373,15 @@ func runACMIMain() (retErr error) {
 		fmt.Printf("wrote track list %s\n", *listPath)
 	}
 	source := acmiSourceContext{directory: input.directory}
-	if err := writeACMIWithContext(*outPath, replay.Header, tracks, slot, names, cmExport.Events, resolvedMapID, source, acmiWriterContext{radarLocks: radarExport, estimateTelemetry: *estimateTelemetry, airfields: airportMarkers}); err != nil {
+	messageEvents := optionalEvents.timeline(tracks)
+	attributedKills := 0
+	if enabledEvents["kill"] {
+		killEvents := buildKillTimeline(tracks, kills.Kills, slot, names)
+		attributedKills = len(killEvents)
+		messageEvents = append(messageEvents, killEvents...)
+	}
+	fmt.Printf("timeline: %d kill packets, %d attributed, %d omitted; %d messages before radar; skipped optional packets %d\n", len(kills.Kills), attributedKills, len(kills.Kills)-attributedKills, len(messageEvents), optionalEvents.Skipped)
+	if err := writeACMIWithContext(*outPath, replay.Header, tracks, slot, names, cmExport.Events, resolvedMapID, source, acmiWriterContext{radarLocks: radarExport, estimateTelemetry: *estimateTelemetry, airfields: airportMarkers, timeline: messageEvents, radarMessages: enabledEvents["radar"], suppressRadarProperties: !*radarLocks, eventCategories: *timelineEventsSpec}); err != nil {
 		return err
 	}
 	if radarExport != nil && *radarLockLog != "" {
@@ -689,10 +711,14 @@ func writeACMIWithEventsMapIDAndSource(path string, header wrpl.WRPLHeader, trac
 // acmiWriterContext carries optional exporters without mutating package globals.
 // A zero context writes the object stream without optional radar state.
 type acmiWriterContext struct {
-	radarLocks        *radarLockExport
-	estimateTelemetry bool
-	recordingTime     time.Time
-	airfields         []airfieldMarker
+	radarLocks              *radarLockExport
+	estimateTelemetry       bool
+	recordingTime           time.Time
+	airfields               []airfieldMarker
+	timeline                []timelineEvent
+	radarMessages           bool
+	suppressRadarProperties bool
+	eventCategories         string
 }
 
 func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, slot *packetslot.PacketSlotParser, names map[string]string, events []acmiEvent, mapID string, source acmiSourceContext, ctx acmiWriterContext) error {
@@ -776,6 +802,7 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 		}
 		id := ids[tr.key]
 		props := acmiTrackProperties(tr, slot, names, ids)
+		props = append(props, groundHeadingProperties(tr)...)
 		properties[tr.key] = props
 		if !tr.key.missile && !tr.key.bomb && !tr.key.decoy && !tr.key.groundEntity {
 			fmt.Fprintf(w, "%s,%s\n", id, strings.Join(props, ","))
@@ -886,10 +913,11 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 				if tr.hasEnd && s.t > tr.end {
 					break
 				}
-				line := id + ",T=" + acmiBombPositionValue(s)
+				position := groundPositionValue(tr, i)
+				line := id + ",T=" + position
 				if i == 0 {
 					props := append([]string(nil), properties[tr.key]...)
-					line = id + "," + strings.Join(append(props, "T="+acmiBombPositionValue(s)), ",")
+					line = id + "," + strings.Join(append(props, "T="+position), ",")
 				}
 				if !timesSeen[s.t] {
 					timesSeen[s.t] = true
@@ -897,12 +925,13 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 				}
 				updates[s.t] = append(updates[s.t], line)
 			}
-			if tr.hasEnd && len(tr.samples) > 0 {
+			if tr.hasEnd && len(tr.samples) > 0 && tr.end >= tr.samples[0].t {
 				if !timesSeen[tr.end] {
 					timesSeen[tr.end] = true
 					times = append(times, tr.end)
 				}
 				deletions[tr.end] = append(deletions[tr.end], "-"+id)
+				updates[tr.end] = append(updates[tr.end], "0,Event=Destroyed|"+id)
 			}
 			continue
 		}
@@ -915,7 +944,7 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 			telemetry = aircraftTelemetryProperties(samples)
 		}
 		for i, s := range tr.samples {
-			if tr.key.air && tr.hasEnd && s.t > tr.end {
+			if tr.hasEnd && s.t > tr.end {
 				break
 			}
 			if !timesSeen[s.t] {
@@ -923,17 +952,20 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 				times = append(times, s.t)
 			}
 			line := fmt.Sprintf("%s,T=%s", id, acmiPositionValue(s))
+			if isGroundTrack(tr) {
+				line = fmt.Sprintf("%s,T=%s", id, groundPositionValue(tr, i))
+			}
 			if i < len(telemetry) {
 				line += "," + strings.Join(telemetry[i], ",")
 			}
-			if ctx.radarLocks != nil && tr.key.air {
+			if ctx.radarLocks != nil && !ctx.suppressRadarProperties && tr.key.air {
 				if extra := ctx.radarLocks.lineProperties(tr.key.id, s.t, tr); len(extra) > 0 {
 					line += "," + strings.Join(extra, ",")
 				}
 			}
 			updates[s.t] = append(updates[s.t], line)
 		}
-		if tr.key.air && tr.hasEnd {
+		if (tr.key.air || isGroundTrack(tr)) && tr.hasEnd && len(tr.samples) > 0 && tr.end >= tr.samples[0].t {
 			if !timesSeen[tr.end] {
 				timesSeen[tr.end] = true
 				times = append(times, tr.end)
@@ -942,7 +974,7 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 			deletions[tr.end] = append(deletions[tr.end], "-"+id)
 		}
 	}
-	if ctx.radarLocks != nil {
+	if ctx.radarLocks != nil && !ctx.suppressRadarProperties {
 		for _, extra := range ctx.radarLocks.extraLines() {
 			if !timesSeen[extra.t] {
 				timesSeen[extra.t] = true
@@ -957,6 +989,17 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 			times = append(times, event.t)
 		}
 		updates[event.t] = append(updates[event.t], acmiEventLine(event, ids))
+	}
+	messageEvents := append([]timelineEvent(nil), ctx.timeline...)
+	if ctx.radarMessages {
+		messageEvents = append(messageEvents, radarTimeline(ctx.radarLocks, slot, names)...)
+	}
+	for t, lines := range timelineLines(messageEvents, tracks, ids) {
+		if !timesSeen[t] {
+			timesSeen[t] = true
+			times = append(times, t)
+		}
+		updates[t] = append(updates[t], lines...)
 	}
 	if *timelineBookmarks {
 		for t, lines := range acmiBookmarks(tracks, events, ctx.radarLocks, ids, slot, names) {

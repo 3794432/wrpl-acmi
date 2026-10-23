@@ -83,7 +83,7 @@
 
 ### 导出内容开关
 
-下列布尔选项均默认开启。关闭时使用 `-参数名=false`，例如 `-bookmarks=false`。
+下列布尔选项中，`-bookmarks` 默认关闭，其余默认开启。关闭选项时使用 `-参数名=false`；需要高亮书签时使用 `-bookmarks=true`。
 
 | 参数 | 说明 |
 | --- | --- |
@@ -93,7 +93,9 @@
 | `-ground-models` | 根据明确证据识别地面型号，并添加型号派生信息及参考范围。 |
 | `-airfields` | 导出源配置中的机场标记和跑道。 |
 | `-estimate-telemetry` | 根据飞机位置、姿态估算航向、速度、Mach、IAS、AOA 和三轴 G。 |
-| `-bookmarks` | 为支持的事件生成时间轴书签。 |
+| `-bookmarks` | 为支持的事件生成高亮时间轴书签，默认关闭。 |
+
+`-events` 默认选择 `kill,chat,join,damage,radar`，分别对应击杀、聊天、玩家名单变化、伤害及雷达指定消息。可用 `none` 关闭，或指定逗号分隔的子集。奖励类别 `award` 默认关闭；`all` 包含全部类别。此开关与高亮书签独立，详见[事件消息时间线](acmi-information.zh-CN.md#事件消息时间线)。
 
 ### CSV 诊断报告
 

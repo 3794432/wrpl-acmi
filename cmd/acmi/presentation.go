@@ -71,6 +71,10 @@ func acmiMetadata(header wrpl.WRPLHeader, mapID string, layout terrainLayout, ct
 	}
 	comments := fmt.Sprintf("Exporter wrpl-acmi %s; -terrain-layout=%s; georeference commit=%s; altitude=game height; countermeasures=recorded sync or labelled drag/gravity estimates; radar locks=replay designations with geometric range/angles", exporterVersion(), layout, terrainmap.GeographicSourceCommit())
 	comments += "; countermeasure identity=reviewed owner ammunition only; unresolved type defaults to Chaff (fallback), no type inference"
+	comments += "; moving ground heading=path derivative when available, not hull/turret attitude"
+	if ctx.eventCategories != "" {
+		comments += "; message timeline=" + ctx.eventCategories + "; kill attribution=explicit identity and weapon, confirmed death time only"
+	}
 	if ctx.estimateTelemetry {
 		comments += "; aircraft telemetry=position/attitude derived estimates, NOT game telemetry; zero wind; ISA atmosphere; IAS=EAS approximation; body G=specific force including gravity compensation"
 	} else {

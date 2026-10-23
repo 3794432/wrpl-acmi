@@ -35,13 +35,15 @@ The output combines recorded replay data, estimates derived from that data, and 
 
 | Content | Source and main limitation |
 | --- | --- |
-| Aircraft and ground units | Recorded positions; aircraft retain flight-model attitude. Models, coalitions, and destruction times require supporting evidence. Eligible static structures can use timestamped ECS construction positions. |
+| Aircraft and ground units | Recorded positions; aircraft retain flight-model attitude. Moving ground units gain path-derived heading; a confirmed ground destruction emits `Destroyed` before removal. Models, coalitions, and destruction times require supporting evidence. Eligible static structures can use timestamped ECS construction positions. |
 | Missiles and bombs | Synchronized positions where available. Missile motion values are estimates; bombs with construction data alone are labelled `Release position only`. |
 | Countermeasures | Flare or Chaff when ammunition evidence identifies the type. Unresolved types display as Chaff with a fallback marker. Short estimated paths are labelled separately. |
 | Radar designations | Native `LockedTarget` properties and supported distance and angle calculations. A designation does not establish STT lock or radar mode. |
 | Airfields | Source geometry selected by map, mission, and any required radar evidence. The catalogue covers 69 maps and 457 mission entries; 67 maps have usable runway definitions. |
 | Air-defence ranges | Static references for 255 models. These describe configuration or an explicitly recorded display setting, not a live engagement envelope. |
-| Metadata and events | Titles, authors, timestamps, source comments, coalition groups, and bookmarks. Aircraft telemetry estimates are enabled by default; use `-estimate-telemetry=false` to disable them. |
+| Metadata and events | Titles, authors, timestamps, source comments, coalition groups, and replay messages. Awards and highlighted bookmarks are opt-in. Aircraft telemetry estimates are enabled by default; use `-estimate-telemetry=false` to disable them. |
+
+Replay messages default to `-events=kill,chat,join,damage,radar`: explicit kill attribution and weapon, chat, roster changes, critical/severe damage reports, and radar designation changes. Missing or conflicting kill attribution is omitted; aircraft kill times must match confirmed destruction. Use `-events=none` to disable these messages or select a comma-separated subset. Awards are available by adding `award` or choosing `-events=all`. Highlighted bookmarks default to off (`-bookmarks=false`), retaining ordinary Chaff/Flare messages without duplicate highlighted rows; use `-bookmarks=true` to enable them. See [event details](docs/acmi-information.md#message-timeline).
 
 Track listings, missile flight data, countermeasure constructions, and radar designation changes can also be written to CSV. Each report requires an explicit output path.
 

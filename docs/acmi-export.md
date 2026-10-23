@@ -85,7 +85,7 @@ The default format is ACMI 2.1. Select `-acmi-version 2.2` explicitly when requi
 
 ### Content switches
 
-All these Boolean options default to true. Disable one with `-option=false`, such as `-bookmarks=false`.
+The Boolean options below default to true except `-bookmarks`, which defaults to false. Use `-option=false` to disable an option, or `-bookmarks=true` to enable highlighted bookmarks.
 
 | Option | Meaning |
 | --- | --- |
@@ -95,7 +95,9 @@ All these Boolean options default to true. Disable one with `-option=false`, suc
 | `-ground-models` | Identify models from explicit evidence and include derived presentation and ranges. |
 | `-airfields` | Export source-configured airport markers and runways. |
 | `-estimate-telemetry` | Estimate aircraft heading, speed, Mach, IAS, AOA, and body-axis G. |
-| `-bookmarks` | Add timeline bookmarks for supported events. |
+| `-bookmarks` | Opt-in highlighted timeline bookmarks; default `false`. |
+
+`-events` selects message categories and defaults to `kill,chat,join,damage,radar`. Use `none` to disable, a comma-separated subset to select categories, or `all` to include the opt-in `award` category. Message selection is independent of highlighted bookmarks. See [message timeline](acmi-information.md#message-timeline).
 
 ### CSV reports
 

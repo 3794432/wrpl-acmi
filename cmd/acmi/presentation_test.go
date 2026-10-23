@@ -42,6 +42,23 @@ func TestBookmarksUseEvidenceAndEscapeSeparators(t *testing.T) {
 	}
 }
 
+func TestCountermeasureMessagesRemainWithoutHighlightedBookmarks(t *testing.T) {
+	old := *timelineBookmarks
+	t.Cleanup(func() { *timelineBookmarks = old })
+	air := &track{key: trackKey{air: true, id: 1}, samples: []acmiSample{{t: 1000}}}
+	events := []acmiEvent{{t: 1000, parentID: 1, hasParent: true, text: "Chaff released; trajectory estimated"}}
+	*timelineBookmarks = false
+	plain := renderTestACMIWithEvents(t, wrpl.WRPLHeader{}, []*track{air}, nil, nil, events)
+	if strings.Contains(plain, "Event=Bookmark|") || strings.Count(plain, "Chaff released; trajectory estimated") != 1 || !strings.Contains(plain, "Event=Message|1|Chaff released") {
+		t.Fatalf("plain release log lost or highlighted: %s", plain)
+	}
+	*timelineBookmarks = true
+	highlighted := renderTestACMIWithEvents(t, wrpl.WRPLHeader{}, []*track{air}, nil, nil, events)
+	if !strings.Contains(highlighted, "Event=Bookmark|1|Chaff released") || !strings.Contains(highlighted, "Event=Message|1|Chaff released") {
+		t.Fatalf("explicit bookmark opt-in failed: %s", highlighted)
+	}
+}
+
 func TestAircraftTelemetryIsOptInAndDoesNotAlterPositions(t *testing.T) {
 	air := &track{key: trackKey{air: true, id: 1}, samples: []acmiSample{{t: 1000, y: 1000}, {t: 2000, y: 1000, z: 200}, {t: 3000, y: 1000, z: 400}}}
 	path := filepath.Join(t.TempDir(), "sample.acmi")

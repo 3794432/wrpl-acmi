@@ -47,14 +47,14 @@ func TestGroundTrackCreationAndObservedRemoval(t *testing.T) {
 	if !strings.Contains(creation, "Type=Ground+Static+Building,Coalition=Red,Color=Red") {
 		t.Fatalf("ground type/team or creation time lost: %q", creation)
 	}
-	if got := bombPositionComponentCount(creation); got != 3 {
-		t.Fatalf("ground position fabricated an orientation: %d components", got)
+	if got := bombPositionComponentCount(creation); got != 6 || !strings.Contains(creation, "WT_HeadingSource=PathDerivative") {
+		t.Fatalf("moving ground position missing its path-derived orientation: %d components, %s", got, creation)
 	}
 	if countObjectLines(frames, "2,") != 2 || frameFindingLine(frames, 0.500, "-2") != "-2" {
 		t.Fatal("ground lifecycle did not stop at its recorded end")
 	}
-	if strings.Contains(data, "Destroyed|2") || strings.Contains(creation, "LockedTarget") {
-		t.Fatal("ground removal invented a kill or aircraft radar state")
+	if frameFindingLine(frames, 0.500, "0,Event=Destroyed|2") != "0,Event=Destroyed|2" || strings.Contains(creation, "LockedTarget") {
+		t.Fatal("ground removal lost its confirmed destruction or invented aircraft radar state")
 	}
 }
 

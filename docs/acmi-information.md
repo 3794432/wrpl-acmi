@@ -10,9 +10,9 @@ Files include a map/mode/replay-time `Title`, `Author` (default `wrpl-acmi`, ove
 
 ## Event bookmarks
 
-Bookmarks are enabled by default. They identify confirmed aircraft destruction, missile launch or first observation, bomb release or first observation, countermeasure release, and radar designation changes. Duplicate bookmarks at the same timestamp are removed, while original messages and destruction events remain.
+Bookmarks are disabled by default (`-bookmarks=false`), retaining ordinary messages without duplicate highlighted rows. When enabled with `-bookmarks=true`, they identify confirmed aircraft destruction, missile launch or first observation, bomb release or first observation, countermeasure release, and radar designation changes. Duplicate bookmarks at the same timestamp are removed, while original messages and destruction events remain.
 
-Use `-bookmarks=false` to omit these additional highlights. A radar designation bookmark does not establish STT lock or radar power state.
+Standard ACMI does not provide a per-event background color; Tacview controls bookmark highlighting. No separate color is assigned to Critical damage. A radar designation bookmark does not establish STT lock or radar power state.
 
 ## Object groups and names
 
@@ -47,3 +47,16 @@ Accepted objects use `Type=Ground+Static+Building`, keep model/team evidence, ad
 `LockedTargetAzimuth` (positive right) and `LockedTargetElevation` (positive up) are body-relative angles in degrees. They share the existing slant-range checks: positions at or before the event, no more than one second old, and valid object lifetimes. Invalid geometry, unlocks, and target destruction clear angles. A fresh target switch immediately publishes the new geometry. Coincident targets have valid zero range but no angles.
 
 The default header is `FileVersion=2.1`; use `-acmi-version 2.2` to select 2.2 explicitly. These fields do not require a higher default version. Earlier checks covered generated text and tests, but did not establish Tacview 1.9.4 or 1.9.5 GUI loading, rendering, or terrain-loader compatibility.
+
+## Message timeline
+
+`-events=kill,chat,join,damage,radar` is the default. Use `-events=none` to disable these messages or a comma-separated subset, such as `-events=kill,radar`. Awards are disabled by default; explicitly add `award` to the selection or use `-events=all` to include them. This is independent of `-bookmarks` and the four opt-in CSV files. Event times use the original packet timestamp and the existing ACMI time origin.
+
+- Kill messages use explicit killer/victim identities and the killer's `PlayerWeapon`. Aircraft kills must match the confirmed F058 destruction time exactly. Missing, ambiguous, or conflicting attribution is omitted; `DestroyedWeapon` is not substituted as the killer's weapon. These messages do not move destruction times or assign kills by proximity.
+- Chat, player roster changes, critical/severe damage and awards use recorded packet fields. Messages without reliable object attribution remain objectless. Initial player rosters are not treated as join events.
+- Radar messages describe target designation and clearing, with target names and geometric primary range when available. They use the same prepared state changes as native radar properties, including clears between aircraft position syncs. They do not prove STT lock. `-radar-locks=false` disables native lock properties; omit `radar` from `-events` to disable radar messages too.
+- Malformed or oversized event payloads are skipped. Event collectors have bounded retention; repeated identical messages at the same timestamp are deduplicated. A message never recreates an unborn or already deleted object.
+
+## Moving ground direction and destruction
+
+Moving ground units use neighboring recorded positions to derive geographic course. Available headings use the six-component `T` transform and `WT_HeadingSource=PathDerivative`; they are not measured hull or turret attitude. Static units, single-point tracks and unreliable movement intervals retain position-only transforms. No direction is inferred across large recording gaps. An explicit matched ground destruction emits `Event=Destroyed` before object deletion; reaching the last position sample alone does not count as destruction.

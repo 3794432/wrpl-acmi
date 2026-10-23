@@ -26,6 +26,10 @@ ECS `transform` 的平移保存在 `TMatrix.V4`，截断或非有限坐标会被
 
 对象名称本身不足以新增静态对象，也不能因为车辆没有轨迹就将其固定在地图上。具体字段及排除规则见[静态地面对象](acmi-information.zh-CN.md#静态地面对象)。
 
+## 运动方向与销毁
+
+移动单位可根据相邻记录位置推导地理航向，写入六分量 `T`，并标注 `WT_HeadingSource=PathDerivative`。它表示轨迹方向，不是实测车体或炮塔姿态；静态对象、单点轨迹及不可靠运动区间仍只输出位置，不跨越超过两秒的缺口。明确匹配到销毁记录时，先输出 `Event=Destroyed`，再删除对象；最后一个位置点本身不视为销毁。
+
 ## 型号识别
 
 独立的 groundmeta ECS 解析器按实际 UID 关联 `unit__className`，再用 `unit_storage__*` 中 IdFieldSerializer 的字段 `0x6`（unit_name）交叉核对。出现型号冲突时，不应用该名称；缺少证据时继续保留通用身份。

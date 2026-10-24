@@ -4,8 +4,10 @@
 
 > A single-file `.exe` tool that converts War Thunder `.wrpl` replays into Tacview-compatible `.acmi` files
 
-Images Images
-
+<p align="center">
+  <img src="docs/01.png" width="48%" />
+  <img src="docs/02.png" width="48%" />
+</p>
 [Export guide](docs/acmi-export.md) | **[Download releases](https://github.com/3794432/wrpl-acmi/releases)** | [Documentation](docs/README.md) | [Build and release](docs/standalone-build.md)
 
 ## Features and purpose

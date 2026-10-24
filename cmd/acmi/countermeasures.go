@@ -19,7 +19,6 @@ const (
 	countermeasureDisplayName          = "Countermeasure"
 	countermeasureEstimatedDisplayName = "Countermeasure (estimated)"
 	countermeasureEventText            = "Countermeasure released"
-	countermeasureEstimatedEventText   = "Countermeasure released; trajectory estimated"
 	countermeasureEstimatedSource      = "EstimatedFromRelease"
 	countermeasureVelocityFromTrack    = "ParentTrackFiniteDifference"
 	countermeasureVelocityNone         = "None"
@@ -183,9 +182,6 @@ func decodedCountermeasures(metadata *projectiles.MetadataParser, positions *pro
 			text := countermeasureEventText
 			if identity.Kind == "Flare" || identity.Kind == "Chaff" {
 				text = identity.Kind + " released"
-			}
-			if syncCount == 0 {
-				text += "; trajectory estimated"
 			}
 			events = append(events, acmiEvent{
 				t:         source.SpawnSample.Time,

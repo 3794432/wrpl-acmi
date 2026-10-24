@@ -66,7 +66,6 @@ func TestCountermeasurePresentationExport(t *testing.T) {
 				}
 				if !realSync {
 					name += " (estimated)"
-					event += "; trajectory estimated"
 				}
 				data := renderTestACMIWithEvents(t, wrpl.WRPLHeader{}, export.Tracks, slot, nil, export.Events)
 				frames := parseTestACMI(data)

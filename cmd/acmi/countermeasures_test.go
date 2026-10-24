@@ -214,7 +214,7 @@ func TestCountermeasureSpawnOnlyGetsEstimatedTrajectory(t *testing.T) {
 	if decoy.estimatedVelocity {
 		t.Fatal("aircraft has one sample, so velocity must fall back to zero")
 	}
-	if len(export.Events) != 1 || export.Events[0].text != "Chaff released; trajectory estimated" {
+	if len(export.Events) != 1 || export.Events[0].text != "Chaff released" {
 		t.Fatalf("spawn-only events = %+v", export.Events)
 	}
 	if len(export.Records) != 1 || export.Records[0].SyncCount != 0 || export.Records[0].Display != "event" {
@@ -237,7 +237,7 @@ func TestCountermeasureSpawnOnlyGetsEstimatedTrajectory(t *testing.T) {
 	if frameFindingLine(frames, 0.900, "-2") != "-2" {
 		t.Fatal("estimated decoy was not deleted at its EndTime")
 	}
-	if got := frameFindingLine(frames, 0.300, "0,Event=Message|1|"); got != "0,Event=Message|1|Chaff released; trajectory estimated" {
+	if got := frameFindingLine(frames, 0.300, "0,Event=Message|1|"); got != "0,Event=Message|1|Chaff released" {
 		t.Fatalf("spawn-only event = %q", got)
 	}
 }

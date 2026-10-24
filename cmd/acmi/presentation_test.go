@@ -46,10 +46,10 @@ func TestCountermeasureMessagesRemainWithoutHighlightedBookmarks(t *testing.T) {
 	old := *timelineBookmarks
 	t.Cleanup(func() { *timelineBookmarks = old })
 	air := &track{key: trackKey{air: true, id: 1}, samples: []acmiSample{{t: 1000}}}
-	events := []acmiEvent{{t: 1000, parentID: 1, hasParent: true, text: "Chaff released; trajectory estimated"}}
+	events := []acmiEvent{{t: 1000, parentID: 1, hasParent: true, text: "Chaff released"}}
 	*timelineBookmarks = false
 	plain := renderTestACMIWithEvents(t, wrpl.WRPLHeader{}, []*track{air}, nil, nil, events)
-	if strings.Contains(plain, "Event=Bookmark|") || strings.Count(plain, "Chaff released; trajectory estimated") != 1 || !strings.Contains(plain, "Event=Message|1|Chaff released") {
+	if strings.Contains(plain, "Event=Bookmark|") || strings.Count(plain, "Chaff released") != 1 || !strings.Contains(plain, "Event=Message|1|Chaff released") {
 		t.Fatalf("plain release log lost or highlighted: %s", plain)
 	}
 	*timelineBookmarks = true

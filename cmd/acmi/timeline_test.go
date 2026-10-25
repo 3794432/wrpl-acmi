@@ -78,7 +78,7 @@ func TestRadarMessagesIncludeClearBetweenFMFrames(t *testing.T) {
 	fm := &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{radarTestFrameTargets(100, 1, []packetfm.FMTargetData{radarTestLock(2)})}}
 	x := radarTestPrepare(t, fm, []*track{source, target})
 	events := radarTimeline(x, nil, nil)
-	if len(events) != 2 || events[1].t != 500 || events[1].text != "Radar designation cleared" || !strings.Contains(events[0].text, "1000 m") {
+	if len(events) != 2 || events[1].t != 500 || events[1].text != "Radar designation cleared" || events[0].text != "Target air:2; Range 1000 m" {
 		t.Fatalf("radar events %+v", events)
 	}
 	path := filepath.Join(t.TempDir(), "radar-messages.acmi")

@@ -34,6 +34,7 @@ type optionalStoredEvent struct {
 	playerID    uint64
 	playerName  string
 	playerKnown bool
+	damage      *optionalDamageRecord
 }
 
 type optionalRosterEntry struct {
@@ -89,7 +90,7 @@ func (p *optionalEventParser) ParsesMatching() map[byte][][]packet.ParsingCondit
 	if p.enabled["chat"] {
 		out[3] = nil
 	}
-	if p.enabled["join"] {
+	if p.enabled["join"] || p.enabled["damage"] {
 		out[4] = append(out[4], [][]packet.ParsingCondition{{
 			packet.NewParsingCondition(0, 0x02), packet.NewParsingCondition(1, 0x58),
 			packet.NewParsingCondition(2, 0x2d), packet.NewParsingCondition(3, 0xf0),
@@ -136,7 +137,7 @@ func (p *optionalEventParser) Parse(pk *packet.Packet) (any, error) {
 		payload := pk.PacketPayload
 		switch {
 		case payload[0] == 0x02 && payload[1] == 0x58 && payload[2] == 0x2d && payload[3] == 0xf0:
-			if !p.enabled["join"] {
+			if !p.enabled["join"] && !p.enabled["damage"] {
 				return nil, nil
 			}
 			if err := p.parseSlot(pk); err != nil {
@@ -162,7 +163,7 @@ func (p *optionalEventParser) Parse(pk *packet.Packet) (any, error) {
 	return nil, nil
 }
 
-func (p *optionalEventParser) timeline(tracks []*track) []timelineEvent {
+func (p *optionalEventParser) timeline(tracks []*track, namesArg ...map[string]string) []timelineEvent {
 	type trackLink struct {
 		track *track
 		slot  int
@@ -179,8 +180,37 @@ func (p *optionalEventParser) timeline(tracks []*track) []timelineEvent {
 		links = append(links, trackLink{track: tr, slot: int(pid)})
 	}
 
+	var names map[string]string
+	if len(namesArg) > 0 {
+		names = namesArg[0]
+	}
+	damageIndex := newOptionalDamageTrackIndex(tracks)
+	type damageMessageKey struct {
+		t           uint32
+		text        string
+		victimRaw   uint16
+		attackerPID uint32
+		hasPID      bool
+	}
+	damageMessages := map[damageMessageKey]int{}
 	out := make([]timelineEvent, 0, len(p.events))
 	for _, stored := range p.events {
+		if stored.damage != nil {
+			if event, ok := p.optionalDamageTimeline(stored, damageIndex, names); ok {
+				key := damageMessageKey{event.t, event.text, stored.damage.victimRawUID, stored.damage.attackerPID, stored.damage.hasAttackerPID}
+				if i, exists := damageMessages[key]; exists {
+					// Fire-only updates have the same displayed text. Prefer the
+					// report with more exact references without merging identities.
+					if len(event.keys) > len(out[i].keys) {
+						out[i] = event
+					}
+				} else {
+					damageMessages[key] = len(out)
+					out = append(out, event)
+				}
+			}
+			continue
+		}
 		text := cleanOptionalText(stored.text, optionalMaxStringBytes)
 		if text == "" {
 			continue
@@ -383,65 +413,47 @@ func (p *optionalEventParser) parseDamage(pk *packet.Packet) error {
 	if err != nil {
 		return fmt.Errorf("damage fields: %w", err)
 	}
-	var offendedUID uint16
-	hasOffended := false
+	record := optionalDamageRecord{severe: payload[2] == 0x57}
 	if field, ok := fields[1]; ok {
 		if len(field) < 2 {
 			return errors.New("damage target UID is truncated")
 		}
-		offendedUID, hasOffended = binary.LittleEndian.Uint16(field), true
+		record.victimRawUID = binary.LittleEndian.Uint16(field)
+		record.victimUID = record.victimRawUID & optionalDamageUIDMask
+		record.hasVictimUID = record.victimUID != optionalDamageUnknownUID
 	}
-	var playerPID uint32
-	hasPID := false
 	if field, ok := fields[2]; ok {
 		if len(field) < 4 {
 			return errors.New("damage player PID is truncated")
 		}
-		playerPID, hasPID = binary.LittleEndian.Uint32(field), true
+		record.attackerPID = binary.LittleEndian.Uint32(field)
+		record.hasAttackerPID = true
 	}
-	vehicle := ""
 	if field, ok := fields[3]; ok {
 		read, err := readOptionalLenBytes(field)
 		if err != nil {
 			return fmt.Errorf("damage vehicle: %w", err)
 		}
-		vehicle = cleanOptionalText(string(read), optionalMaxStringBytes)
+		record.attackerVehicle = cleanOptionalText(string(read), optionalMaxStringBytes)
 	}
-	fire := false
+	if field, ok := fields[4]; ok {
+		if len(field) < 2 {
+			return errors.New("damage attacker UID is truncated")
+		}
+		record.attackerRawUID = binary.LittleEndian.Uint16(field)
+		record.attackerUID = record.attackerRawUID & optionalDamageUIDMask
+		record.hasAttackerUID = record.attackerUID != optionalDamageUnknownUID
+	}
 	if field, ok := fields[5]; ok {
 		if len(field) < 1 {
 			return errors.New("damage fire flag is truncated")
 		}
-		fire = field[0]&1 != 0
 	}
 
-	kind := "Critical"
-	if payload[2] == 0x57 {
-		kind = "Severe"
-	}
-	playerSlot := -1
-	var player *optionalPlayerSnapshot
-	if hasPID && playerPID < 256 {
-		playerSlot = int(playerPID)
-		player = p.playerSnapshot(playerSlot)
-	}
-	attacker := optionalPlayerDescription(playerSlot, player)
-	target := "unresolved target"
-	if hasOffended {
-		target = fmt.Sprintf("rawUID %d", offendedUID)
-	}
-	text := fmt.Sprintf("%s damage: attacker %s; target %s", kind, attacker, target)
-	if vehicle != "" {
-		text += "; vehicle " + vehicle
-	}
-	if kind == "Critical" {
-		text += fmt.Sprintf("; fire=%t", fire)
-	}
-	event := optionalStoredEvent{t: pk.CurrentTime, text: text, playerSlot: playerSlot}
-	if player != nil {
-		event.playerID, event.playerName, event.playerKnown = player.playerID, player.name, player.known
-	}
-	p.addEvent(event)
+	// The damage packet's fire flag is retained for validation only. The
+	// timeline renders identities and vehicles; it does not expose slot numbers,
+	// raw UIDs, or fire as operator-facing diagnostics.
+	p.addEvent(optionalStoredEvent{t: pk.CurrentTime, damage: &record})
 	return nil
 }
 
@@ -700,7 +712,7 @@ func (p *optionalEventParser) parseSlot(pk *packet.Packet) error {
 				name:     update.name,
 				team:     old.team,
 			}
-			if !initialRoster && !optionalSamePlayer(old, next) {
+			if p.enabled["join"] && !initialRoster && !optionalSamePlayer(old, next) {
 				if old.known {
 					p.addEvent(optionalStoredEvent{
 						t:          pk.CurrentTime,

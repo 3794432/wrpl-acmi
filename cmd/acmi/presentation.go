@@ -72,6 +72,12 @@ func acmiMetadata(header wrpl.WRPLHeader, mapID string, layout terrainLayout, ct
 	comments := fmt.Sprintf("Exporter wrpl-acmi %s; -terrain-layout=%s; georeference commit=%s; altitude=game height; countermeasures=recorded sync or labelled drag/gravity estimates; radar locks=replay designations with geometric range/angles", exporterVersion(), layout, terrainmap.GeographicSourceCommit())
 	comments += "; countermeasure identity=reviewed owner ammunition only; unresolved type defaults to Chaff (fallback), no type inference"
 	comments += "; moving ground heading=path derivative when available, not hull/turret attitude"
+	if !ctx.suppressSeekerProperties {
+		comments += "; post-launch seeker=validated WeaponSync layouts; unknown native states cleared, see WT_SeekerState"
+	}
+	if ctx.radarModes != nil && ctx.radarModes.table != nil {
+		comments += "; radar modes=FM sensor indices; sensor assets commit=" + ctx.radarModes.table.Source.Commit
+	}
 	if ctx.eventCategories != "" {
 		comments += "; message timeline=" + ctx.eventCategories + "; kill attribution=explicit identity and weapon, confirmed death time only"
 	}
@@ -173,7 +179,7 @@ func acmiBookmarks(tracks []*track, events []acmiEvent, radar *radarLockExport, 
 			objectIDs := []string{radar.ids[row.source]}
 			text := "Radar designation cleared"
 			if len(row.uids) > 0 {
-				text = "Radar target designation"
+				text = "Target"
 				for _, uid := range row.uids {
 					objectIDs = append(objectIDs, radar.ids[uid])
 				}

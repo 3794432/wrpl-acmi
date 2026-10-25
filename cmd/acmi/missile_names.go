@@ -541,7 +541,7 @@ func missileModelProperties(tr *track) []string {
 
 func missileNameSource(source string) string {
 	switch source {
-	case "KillReportMatched", "ReplayWeaponIDFromKillReport", "ReplayWeaponIDFromModelTable":
+	case "KillReportMatched", "ReplayWeaponIDFromKillReport", "ReplayWeaponIDFromModelTable", "ReplayOwnerLoadoutMatched", "ReplayOwnerLoadoutPropagated":
 		return source
 	default:
 		return "Unknown"

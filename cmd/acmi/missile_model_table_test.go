@@ -127,7 +127,7 @@ func TestMissileModelsOffRestoresACMIAndCSV(t *testing.T) {
 	tr := missileNameTestTrack(42, missileNameTestSource(77, 1000, 189, 8, "rocket"), true)
 	applyMissileModelNames([]*track{tr}, nil)
 	tracks := []*track{tr}
-	beforeACMI := stripReferenceTime(renderTestACMI(t, tracks, nil, nil))
+	beforeACMI := stripReferenceTime(radarTestStableRecording(renderTestACMI(t, tracks, nil, nil)))
 	dir := t.TempDir()
 	beforePath := filepath.Join(dir, "before.csv")
 	if err := writeTrackList(beforePath, tracks, nil, nil); err != nil {
@@ -140,7 +140,7 @@ func TestMissileModelsOffRestoresACMIAndCSV(t *testing.T) {
 	if got := applyMissileModelsForReplay(tracks, nil, ""); got != 0 {
 		t.Fatalf("off adopted %d models", got)
 	}
-	afterACMI := stripReferenceTime(renderTestACMI(t, tracks, nil, nil))
+	afterACMI := stripReferenceTime(radarTestStableRecording(renderTestACMI(t, tracks, nil, nil)))
 	if beforeACMI != afterACMI {
 		t.Fatal("off changed ACMI output")
 	}

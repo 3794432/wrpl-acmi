@@ -106,9 +106,9 @@ func radarTimeline(x *radarLockExport, slot *packetslot.PacketSlotParser, names 
 			if len(targets) == 0 {
 				continue
 			}
-			event.text = "Radar target designation: " + strings.Join(targets, "; ")
+			event.text = "Target " + strings.Join(targets, "; ")
 			if row.hasRng {
-				event.text += fmt.Sprintf("; primary range %.0f m (geometric)", row.rangeM)
+				event.text += fmt.Sprintf("; Range %.0f m", row.rangeM)
 			}
 		}
 		out = append(out, event)

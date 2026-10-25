@@ -21,6 +21,7 @@ Images Images
 * Enable or disable exports of countermeasures, radar targets, and other data
 * Export track lists, missile flight parameters, and other `.csv` data files
 * Estimate heading, speed, G-load, and other native `.acmi` data from aircraft positions and attitudes
+* Export recorded post-launch seeker states and aircraft radar modes using native ACMI properties and readable labels; see [sensor states and compatibility](docs/ACMI_SENSOR_STATES.md)
 
 The project is based on [wrpl-inspector v3](https://github.com/maxsupermanhd/wrpl-inspector), retaining its Go replay parser library and dear-imgui graphical inspector alongside a headless `cmd/acmi` exporter. Development takes place on the [dev branch](https://github.com/3794432/wrpl-acmi/tree/dev). The Go module path remains `github.com/maxsupermanhd/wrpl-inspector/v3`.
 

@@ -31,6 +31,8 @@ jobs:
         run: python -m unittest discover -s tests
       - name: Test runway terrain sampling
         run: python -m unittest discover -s tools/airfields -p 'test_*.py'
+      - name: Test radar catalogue generator
+        run: python -m unittest discover -s tools/radar-modes -p 'test_*.py'
       - name: Test all-map terrain installer
         shell: powershell
         run: ./tools/terrain/smalltests/test-install-all-terrains.ps1

@@ -91,6 +91,8 @@ The Boolean options below default to true except `-bookmarks`, which defaults to
 | --- | --- |
 | `-countermeasures` | Export aircraft countermeasures. |
 | `-radar-locks` | Export radar target designations. |
+| `-radar-modes` | Export supported recorded aircraft radar modes and native pointing/labels; independent of target designations. |
+| `-missile-seeker` | Export supported recorded post-launch seeker states and native lock properties/labels. |
 | `-ground-units` | Enable the bulk synchronized ground-track export path. |
 | `-ground-models` | Identify models from explicit evidence and include derived presentation and ranges. |
 | `-airfields` | Export source-configured airport markers and runways. |
@@ -109,6 +111,9 @@ The Boolean options below default to true except `-bookmarks`, which defaults to
 | `-radar-lock-log` | Radar designation state changes. |
 
 Each option takes an output path. A report is written only when its path is nonempty.
+
+See [sensor states and native compatibility](ACMI_SENSOR_STATES.md) for supported
+layouts, exact mode names, model association, and runtime validation limits.
 
 ## Interpret the output
 

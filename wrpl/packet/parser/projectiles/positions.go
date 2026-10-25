@@ -36,9 +36,9 @@ type Sample struct {
 
 // RawMotion retains the three float and six uint16 values read directly from
 // the optional WeaponSync tail. Complete is true only after the entire tail,
-// including any seeker branch, has been consumed successfully. The seeker
-// timer float is retained by its exact bits; the remaining seeker payload is
-// consumed but not retained.
+// including any seeker branch, has been consumed successfully. Seeker values
+// use their exact wire bits, and an opaque seeker block is retained so its
+// layout can be decoded safely by SeekerState.
 type RawMotion struct {
 	Complete    bool
 	HasGuidance bool
@@ -50,6 +50,10 @@ type RawMotion struct {
 	Quantized       [2][3]uint16
 	HasSeekerValue  bool
 	SeekerValueBits uint32
+	HasSeekerBlock  bool
+	SeekerFlag      bool
+	SeekerBitLength uint16
+	SeekerRawBits   []byte
 }
 
 func (m RawMotion) VectorValues() [3]float32 {
@@ -89,6 +93,11 @@ func (m RawMotion) MarshalJSON() ([]byte, error) {
 		Quantized       [2][3]uint16 `json:"quantized"`
 		SeekerValue     *any         `json:"seeker_value,omitempty"`
 		SeekerValueBits *string      `json:"seeker_value_bits,omitempty"`
+		SeekerFlag      *bool        `json:"seeker_flag,omitempty"`
+		SeekerBitLength *uint16      `json:"seeker_bit_length,omitempty"`
+		SeekerKind      string       `json:"seeker_kind,omitempty"`
+		SeekerState     string       `json:"seeker_state,omitempty"`
+		SeekerBits      string       `json:"seeker_bits,omitempty"`
 	}
 	out := wire{
 		Complete:       m.Complete,
@@ -114,6 +123,17 @@ func (m RawMotion) MarshalJSON() ([]byte, error) {
 		bits := fmt.Sprintf("0x%08x", m.SeekerValueBits)
 		out.SeekerValue = &value
 		out.SeekerValueBits = &bits
+	}
+	if m.HasSeekerBlock {
+		flag := m.SeekerFlag
+		length := m.SeekerBitLength
+		out.SeekerFlag = &flag
+		out.SeekerBitLength = &length
+		out.SeekerBits = fmt.Sprintf("%x", m.SeekerRawBits)
+		if state, ok := m.SeekerState(); ok {
+			out.SeekerKind = string(state.Kind)
+			out.SeekerState = string(state.Mode)
+		}
 	}
 	return json.Marshal(out)
 }
@@ -212,7 +232,7 @@ func (p *PositionParser) Parse(pk *packet.Packet) (any, error) {
 			return added, fmt.Errorf("projectile class %d count %d exceeds limit %d", class, count, maxWeaponRecordsPerClass)
 		}
 		for i := 0; i < int(count); i++ {
-			sample, ok, err := parseWeapon(r, pk.CurrentTime)
+			sample, ok, err := parseWeapon(r, pk.CurrentTime, int(bits))
 			if err != nil {
 				return added, fmt.Errorf("class %d record %d: %w", class, i, err)
 			}
@@ -258,7 +278,7 @@ func consumeObjectHeader(r *danet.BitReader) (bool, error) {
 	}
 }
 
-func parseWeapon(r *danet.BitReader, time uint32) (weaponSample, bool, error) {
+func parseWeapon(r *danet.BitReader, time uint32, streamBits int) (weaponSample, bool, error) {
 	hasGuidance, err := readBool(r)
 	if err != nil {
 		return weaponSample{}, false, fmt.Errorf("reading guidance flag: %w", err)
@@ -304,7 +324,7 @@ func parseWeapon(r *danet.BitReader, time uint32) (weaponSample, bool, error) {
 
 	var rawMotion *RawMotion
 	if !noExtraTail {
-		rawMotion, err = consumeWeaponTail(r, hasGuidance)
+		rawMotion, err = consumeWeaponTailWithin(r, hasGuidance, streamBits)
 		if err != nil {
 			return weaponSample{}, false, err
 		}
@@ -326,6 +346,10 @@ func parseWeapon(r *danet.BitReader, time uint32) (weaponSample, bool, error) {
 }
 
 func consumeWeaponTail(r *danet.BitReader, hasGuidance bool) (*RawMotion, error) {
+	return consumeWeaponTailWithin(r, hasGuidance, len(r.Data)*8)
+}
+
+func consumeWeaponTailWithin(r *danet.BitReader, hasGuidance bool, streamBits int) (*RawMotion, error) {
 	if _, err := readULEB(r, "tail zig-zag value"); err != nil {
 		return nil, fmt.Errorf("reading tail value: %w", err)
 	}
@@ -372,14 +396,23 @@ func consumeWeaponTail(r *danet.BitReader, hasGuidance bool) (*RawMotion, error)
 		}
 		raw.HasSeekerValue = true
 		raw.SeekerValueBits = valueBits
-		if _, err := readBool(r); err != nil {
+		seekerFlag, err := readBool(r)
+		if err != nil {
 			return nil, fmt.Errorf("reading seeker flag: %w", err)
 		}
 		size, err := r.ReadU16LE()
 		if err != nil {
 			return nil, fmt.Errorf("reading seeker size: %w", err)
 		}
-		if _, err := r.ReadBits(int(size)); err != nil {
+		raw.HasSeekerBlock = true
+		raw.SeekerFlag = seekerFlag
+		raw.SeekerBitLength = size
+		remaining := streamBits - r.BitOffset
+		if r.BitOffset < 0 || streamBits < 0 || streamBits > len(r.Data)*8 || int(size) > remaining {
+			return nil, fmt.Errorf("seeker payload length %d exceeds %d remaining bits", size, remaining)
+		}
+		raw.SeekerRawBits, err = r.ReadBits(int(size))
+		if err != nil {
 			return nil, fmt.Errorf("reading seeker payload: %w", err)
 		}
 	} else {

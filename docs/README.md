@@ -26,6 +26,7 @@ Start with the export guide to convert a replay, or the build guide to produce a
 | Countermeasures / 干扰物 | [Countermeasures](ACMI_COUNTERMEASURES.md) | [干扰物类型](ACMI_COUNTERMEASURES.zh-CN.md) |
 | Bombs / 炸弹 | — | [炸弹导出](ACMI_BOMBS.md) |
 | Radar designations / 雷达目标指定 | — | [雷达目标指定](ACMI_RADAR_LOCKS.md) |
+| Sensor states / 雷达与导引头状态 | [Sensor states](ACMI_SENSOR_STATES.md) | [雷达与导引头状态](ACMI_SENSOR_STATES.zh-CN.md) |
 | Air-defence ranges / 防空范围 | [Static ranges](ACMI_AIR_DEFENCE_RANGES.md) | [防空静态范围](ACMI_AIR_DEFENCE_RANGES.zh-CN.md) |
 | Missile models / 导弹型号 | — | [型号识别](ACMI_MODELS.md) |
 | Missile guidance / 导弹制导 | — | [制导信息](ACMI_GUIDANCE.md) |

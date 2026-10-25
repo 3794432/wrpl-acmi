@@ -459,7 +459,11 @@ func (p *MetadataParser) readProjectileConstruction(eid uint64, r *danet.BitRead
 			Z:    coords[2],
 		},
 	}
-	if weaponRef>>16 == 14 {
+	// Countermeasures, AAMs and AGMs all need the owner's exact storage
+	// snapshot. The map is cleared for a replacement construction of the same
+	// EID and on destruction, so a later generation can never supply or inherit
+	// ammunition for an earlier release.
+	if projectileUsesOwnerWeapons(weaponRef, projectileKind) {
 		projectile.OwnerWeapons = append([]groundmeta.StorageWeapon(nil), p.ownerWeapons[ownerEID]...)
 	}
 	if parentUID, ok := p.ownerUIDs[ownerEID]; ok {
@@ -475,6 +479,17 @@ func finiteCoordinates(x, y, z float64) bool {
 	return !math.IsNaN(x) && !math.IsInf(x, 0) &&
 		!math.IsNaN(y) && !math.IsInf(y, 0) &&
 		!math.IsNaN(z) && !math.IsInf(z, 0)
+}
+
+func projectileUsesOwnerWeapons(weaponRef uint32, kind string) bool {
+	switch weaponRef >> 16 {
+	case 14: // countermeasures
+		return true
+	case 7, 8: // AGM and AAM; a proven Bomb component stays a bomb
+		return kind != projectileKindBomb
+	default:
+		return false
+	}
 }
 
 func uidFromValue(value any) (uint64, bool) {

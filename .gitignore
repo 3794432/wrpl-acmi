@@ -10,5 +10,6 @@
 /War-Thunder-Datamine/
 **/__pycache__/
 *.pyc
+/tools/radar-modes/.cache/
 /tools/terrain/converter/catalog.json
 /tools/terrain/converter/map-configs/

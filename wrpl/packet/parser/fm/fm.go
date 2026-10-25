@@ -224,6 +224,9 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 		if ed.Unk10 < 0 {
 			return ret, fmt.Errorf("reading unk10: negative value %d", ed.Unk10)
 		}
+		if err := checkFMCount(r, ed.Unk10, 16, "unk11 entries"); err != nil {
+			return ret, err
+		}
 		ed.Unk11 = make([]FMDataUnk11Entry, 0, ed.Unk10)
 		for i := range ed.Unk10 {
 			var entry FMDataUnk11Entry
@@ -236,6 +239,9 @@ func (p *PacketFlightModelParser) Parse2(pk *packet.Packet) (*FMUpdatePacket, er
 				return ret, fmt.Errorf("reading unk11[%d] temp1: %w", i, err)
 			}
 			if entry.Temp1 > 0 {
+				if err := checkFMCount(r, entry.Temp1, 8, "unk11 nested values"); err != nil {
+					return ret, err
+				}
 				for ii := 0; ii < int(entry.Temp1); ii++ {
 					_, err := readZigZagI32(r)
 					if err != nil {
@@ -559,6 +565,13 @@ type FMSensorData struct {
 	Unk3       [1]byte
 }
 
+// SensorKind and SensorSlot are the two nibbles of SensorType. The kind
+// selects the record layout; the slot indexes the vehicle's original static
+// sensor list, including sensors such as RWR that send no record.
+func (s FMSensorData) SensorKind() byte { return s.SensorType >> 4 }
+
+func (s FMSensorData) SensorSlot() int { return int(s.SensorType & 0x0f) }
+
 type FMSensorType1Data struct {
 	Unk0 bool
 	Unk1 uint16
@@ -569,6 +582,50 @@ type FMSensorType1Data struct {
 	Unk6 [4]byte
 	Unk7 bool
 	Unk8 uint8
+}
+
+// HasState reports whether a kind-1 record contains the packed mode indices
+// and angles. The Unk names remain for wire-format compatibility; these
+// accessors document the fields consumed by the radar-mode exporter.
+func (d *FMSensorType1Data) HasState() bool {
+	return d != nil && d.Unk0
+}
+
+func (d *FMSensorType1Data) PackedIndices() uint16 {
+	if d == nil {
+		return 0
+	}
+	return d.Unk1
+}
+
+func (d *FMSensorType1Data) ModeChangeTime() float64 {
+	if d == nil {
+		return 0
+	}
+	return float64(d.Unk2)
+}
+
+func (d *FMSensorType1Data) AzimuthRaw() uint16 {
+	if d == nil {
+		return 0
+	}
+	// In the validated 0x00018C1C runtime layout Unk3 precedes the
+	// antenna angles. Tracking samples establish Unk4 as right-positive azimuth.
+	return d.Unk4
+}
+
+func (d *FMSensorType1Data) ElevationRaw() uint16 {
+	if d == nil {
+		return 0
+	}
+	return d.Unk5
+}
+
+// RadarModeIndices splits bits 0-3 (transceiver), 4-9 (scan pattern) and
+// 10-13 (signal) from a kind-1 packed index. An out-of-range value is returned
+// unchanged so callers can reject it instead of silently wrapping.
+func RadarModeIndices(packed uint16) (transceiver, scanPattern, signal int) {
+	return int(packed & 0x0f), int((packed >> 4) & 0x3f), int((packed >> 10) & 0x0f)
 }
 
 type FMSensorType2Data struct {

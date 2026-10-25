@@ -21,6 +21,7 @@
 * 支持开关干扰物, 雷达目标等多种数据的导出
 * 支持导出轨迹清单, 导弹飞行参数等`.csv`数据文件
 * 可根据飞行器位置与姿态估算航向, 速度, G值等`.acmi`原生数据
+* 使用原生 ACMI 字段和标签显示回放记录的发射后导引头状态及载机雷达模式，见[传感器状态与兼容性](docs/ACMI_SENSOR_STATES.zh-CN.md)
 
 
 项目基于 [wrpl-inspector v3](https://github.com/maxsupermanhd/wrpl-inspector)，保留了 Go 回放解析库和 dear-imgui 图形检查器，并提供无图形界面的导出器`cmd/acmi`。开发分支为 [dev](https://github.com/3794432/wrpl-acmi/tree/dev)；Go 模块路径仍为`github.com/maxsupermanhd/wrpl-inspector/v3`。

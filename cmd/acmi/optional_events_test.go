@@ -106,9 +106,13 @@ func TestOptionalEventsDamageBoundedAdapterMatchesLibrary(t *testing.T) {
 		t.Fatalf("damage parse: %v", err)
 	}
 	events := parser.timeline(nil)
-	if len(events) != 1 || !strings.Contains(events[0].text, "Critical damage: attacker Bob (slot 2, uid 42)") ||
-		!strings.Contains(events[0].text, "target rawUID 8721") || !strings.Contains(events[0].text, "vehicle F-16C-1; fire=true") {
+	if len(events) != 1 || events[0].text != "Unknown vehicle (Unknown player) critical damaged by F-16C-1 (Bob)" {
 		t.Fatalf("damage text = %+v", events)
+	}
+	for _, diagnostic := range []string{"slot", "uid", "raw", "fire"} {
+		if strings.Contains(strings.ToLower(events[0].text), diagnostic) {
+			t.Fatalf("damage text retained %q diagnostic: %q", diagnostic, events[0].text)
+		}
 	}
 
 	malformed := &packet.Packet{CurrentTime: 301, PacketType: 4, PacketPayload: append([]byte{0x02, 0x58, 0x57, 0xf1}, 0, 0, 0x7e)}

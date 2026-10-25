@@ -4,7 +4,10 @@
 
 > 一个将 战争雷霆`.wrpl`回放转换为 Tacview 兼容`.acmi`的单文件`.exe`工具
 
-图片 图片
+<p align="center">
+  <img src="docs/01.png" width="48%" />
+  <img src="docs/02.png" width="48%" />
+</p>
 
 [使用指南](docs/acmi-export.zh-CN.md) | **[下载发布版本](https://github.com/3794432/wrpl-acmi/releases)** | [文档目录](docs/README.md) | [构建方式](docs/standalone-build.zh-CN.md)
 

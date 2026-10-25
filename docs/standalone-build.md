@@ -105,6 +105,14 @@ Different layouts or reference configurations will cause tracks and terrain to d
 
 ## Distribution limits
 
+When the terrain installer is unchanged, maintainers can run the manual
+`Copy terrain installer to draft release` Actions workflow to copy the verified
+69-map installer from an existing release. Supply the source tag, target draft
+tag and its exact source commit. The draft must already contain only the
+converter. The workflow checks the terrain SHA-256, adds the installer without
+overwriting assets, and leaves publication to the maintainer. It does not build
+new terrain or replace a changed installer.
+
 Game height data is not committed to Git. A payload-bearing installer contains the converted data in its appended package. The source tree stores the converter, installer and configuration; build the data-bearing executable locally from converted game terrain.
 
 The embedded replay defaults make the exporter independent of package folders. `wrpl-acmi.exe -ecshashes` defaults to `embedded`; an explicit JSON path overrides the table, and an empty value disables it. If no War Thunder terrain is installed, Tacview can show its default ocean or background terrain, while the exported aircraft, ground objects, missiles, bombs, and countermeasures remain in the ACMI. Terrain installation changes the displayed landscape, not the replay object export.

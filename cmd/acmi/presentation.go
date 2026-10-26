@@ -138,7 +138,7 @@ func acmiBookmarks(tracks []*track, events []acmiEvent, radar *radarLockExport, 
 		}
 		id := ids[tr.key]
 		name := trackName(tr, slot, names)
-		if tr.key.air && tr.hasEnd {
+		if tr.key.air && tr.hasEnd && !tr.retired {
 			add(tr.end, bookmarkLine([]string{id}, "Destroyed: "+name))
 		}
 		if !tr.key.missile && !tr.key.bomb {
@@ -170,7 +170,9 @@ func acmiBookmarks(tracks []*track, events []acmiEvent, radar *radarLockExport, 
 	for _, event := range events {
 		var objectIDs []string
 		if event.hasParent {
-			objectIDs = append(objectIDs, ids[trackKey{air: true, id: event.parentID}])
+			if parent := aircraftTrackAt(tracks, event.parentID, event.t); parent != nil {
+				objectIDs = append(objectIDs, ids[parent.key])
+			}
 		}
 		add(event.t, bookmarkLine(objectIDs, event.text))
 	}

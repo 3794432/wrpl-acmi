@@ -8,6 +8,7 @@ import (
 
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/game"
 	packetecs2 "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/ecs2"
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/groundmeta"
 )
 
 // ECS identities occupy 32 bits. A separate namespace retains a real replay
@@ -17,7 +18,17 @@ const groundUnitUIDNamespace = uint64(1) << 63
 // appendGroundTracks keeps complete ECS identities separate from legacy packed
 // handles and appends new surface objects after existing aircraft and weapons.
 // This preserves the existing ACMI ids used by parent and radar references.
-func appendGroundTracks(tracks []*track, paths map[uint64][]game.SpaceTime, entities map[uint64]*packetecs2.Entity, ends map[uint64]uint32) []*track {
+func appendGroundTracks(tracks []*track, paths map[uint64][]game.SpaceTime, entities map[uint64]*packetecs2.Entity, ends map[uint64]uint32, metadata ...*groundmeta.Parser) []*track {
+	// UID-level ends may belong to an older ECS generation. Preserve the full
+	// recorded path whenever the later identity pass can resolve its lifetimes.
+	hasHistory := map[uint64]bool{}
+	if len(metadata) > 0 && metadata[0] != nil {
+		for _, info := range metadata[0].All {
+			if info.HasConstructionTime {
+				hasHistory[groundUnitUIDNamespace|uint64(info.UID)] = true
+			}
+		}
+	}
 	out := append([]*track(nil), tracks...)
 	ids := make([]uint64, 0, len(paths))
 	for id := range paths {
@@ -39,7 +50,9 @@ func appendGroundTracks(tracks []*track, paths map[uint64][]game.SpaceTime, enti
 		if id&groundUnitUIDNamespace != 0 {
 			tr.name = fmt.Sprintf("Ground unit %d", id&^groundUnitUIDNamespace)
 		}
-		tr.end, tr.hasEnd = ends[id]
+		if !hasHistory[id] {
+			tr.end, tr.hasEnd = ends[id]
+		}
 		for _, sample := range paths[id] {
 			if tr.hasEnd && sample.Time > tr.end {
 				continue

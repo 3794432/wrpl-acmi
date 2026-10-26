@@ -44,6 +44,10 @@ func radarTestEmptyFrame(t uint32, uid uint64) packetfm.FMUpdatePacket {
 	return radarTestFrameTargets(t, uid, []packetfm.FMTargetData{})
 }
 
+func radarTestShortFrame(t uint32, uid uint64) packetfm.FMUpdatePacket {
+	return radarTestFrame(t, uid, &packetfm.FMData{Unk0: true, Unk1: true})
+}
+
 func radarTestSample(t uint32, x float64) acmiSample {
 	return acmiSample{t: t, x: x, y: 1000, z: 0}
 }
@@ -51,6 +55,11 @@ func radarTestSample(t uint32, x float64) acmiSample {
 func radarTestTrack(uid uint64, samples ...acmiSample) *track {
 	sort.Slice(samples, func(i, j int) bool { return samples[i].t < samples[j].t })
 	return &track{key: trackKey{air: true, id: uid}, samples: samples}
+}
+
+func radarTestSortieTrack(uid uint64, sortie uint32, samples ...acmiSample) *track {
+	sort.Slice(samples, func(i, j int) bool { return samples[i].t < samples[j].t })
+	return &track{key: trackKey{air: true, id: uid, sortie: sortie}, samples: samples}
 }
 
 func radarTestPoseSample(t uint32, east, up, north, yaw, pitch, roll float64) acmiSample {
@@ -99,6 +108,15 @@ func radarTestPrepare(t *testing.T, fm *packetfm.PacketFlightModelParser, tracks
 	}
 	x.prepare(tracks, acmiObjectIDs(tracks))
 	return x
+}
+
+func radarTestID(ids map[trackKey]string, uid uint64) string {
+	for key, id := range ids {
+		if key.air && key.id == uid {
+			return id
+		}
+	}
+	return ""
 }
 
 func radarTestProps(x *radarLockExport, uid uint64, t uint32, tr *track) string {
@@ -164,7 +182,7 @@ func TestRadarLockUIDZeroResolvesAndSelfDesignationIsDropped(t *testing.T) {
 		radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(0)}),
 	}}
 	x := radarTestPrepare(t, fm, []*track{source, target})
-	if got := radarTestProps(x, 5, 1000, source); !strings.Contains(got, "LockedTarget="+x.ids[0]) {
+	if got := radarTestProps(x, 5, 1000, source); !strings.Contains(got, "LockedTarget="+radarTestID(x.ids, 0)) {
 		t.Fatalf("UID 0 was not resolved as a target: %q", got)
 	}
 
@@ -180,6 +198,7 @@ func TestCollectRadarLockStatesNilRetainsAndExplicitEmptyClears(t *testing.T) {
 	fm := &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
 		radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
 		radarTestFrame(2000, 5, &packetfm.FMData{TargetsData: nil}),
+		radarTestShortFrame(2500, 5),
 		radarTestEmptyFrame(3000, 5),
 		radarTestFrame(4000, 5, nil),
 	}}
@@ -204,6 +223,9 @@ func TestCollectRadarLockStatesNilRetainsAndExplicitEmptyClears(t *testing.T) {
 	}
 	if got := radarTestProps(x, 5, 2000, tracks[0]); got != "" {
 		t.Fatalf("nil TargetsData changed state at 2.000: %q", got)
+	}
+	if got := radarTestProps(x, 5, 2500, tracks[0]); got != "" {
+		t.Fatalf("short record changed state at 2.500: %q", got)
 	}
 	if got := radarTestProps(x, 5, 3000, tracks[0]); !strings.Contains(got, "LockedTargetMode=0") || !strings.Contains(got, "LockedTarget=0") {
 		t.Fatalf("explicit empty TargetsData did not clear: %q", got)
@@ -239,11 +261,12 @@ func TestRadarLockSlotsDeduplicateReorderAndClear(t *testing.T) {
 		radarTestEmptyFrame(3000, 5),
 	}}
 	x := radarTestPrepare(t, fm, tracks)
-	ids := x.ids
+	ids7 := radarTestID(x.ids, 7)
+	ids8 := radarTestID(x.ids, 8)
 	self := tracks[0]
 
 	first := radarTestProps(x, 5, 1000, self)
-	if !strings.Contains(first, "LockedTarget="+ids[7]) || !strings.Contains(first, "LockedTarget2="+ids[8]) {
+	if !strings.Contains(first, "LockedTarget="+ids7) || !strings.Contains(first, "LockedTarget2="+ids8) {
 		t.Fatalf("first lock slots = %q", first)
 	}
 	if !strings.Contains(first, "LockedTargetMode=1") {
@@ -251,7 +274,7 @@ func TestRadarLockSlotsDeduplicateReorderAndClear(t *testing.T) {
 	}
 
 	second := radarTestProps(x, 5, 2000, self)
-	if !strings.Contains(second, "LockedTarget="+ids[8]) || !strings.Contains(second, "LockedTarget2="+ids[7]) {
+	if !strings.Contains(second, "LockedTarget="+ids8) || !strings.Contains(second, "LockedTarget2="+ids7) {
 		t.Fatalf("reordered slots = %q", second)
 	}
 	if strings.Count(second, "LockedTarget=") != 1 || strings.Count(second, "LockedTarget2=") != 1 {
@@ -319,7 +342,7 @@ func TestRadarLockTargetLifecycleDoesNotLeaveStaleSlots(t *testing.T) {
 		if len(x.extra) != 1 || x.extra[0].t != 2000 {
 			t.Fatalf("extra clears = %+v, want one at 2000", x.extra)
 		}
-		if !strings.Contains(x.extra[0].line, x.ids[5]+",LockedTarget=0") ||
+		if !strings.Contains(x.extra[0].line, radarTestID(x.ids, 5)+",LockedTarget=0") ||
 			!strings.Contains(x.extra[0].line, "LockedTargetMode=0") ||
 			!strings.Contains(x.extra[0].line, "LockedTargetRange=0") {
 			t.Fatalf("target-deletion clear line = %q", x.extra[0].line)
@@ -386,6 +409,105 @@ func TestRadarLockTargetLifecycleDoesNotLeaveStaleSlots(t *testing.T) {
 			t.Fatalf("stats = (%d,%d), want (1,1)", locked, changes)
 		}
 	})
+}
+
+func TestRadarLockSameUIDSortiesUseTimeMatchedTargetObjects(t *testing.T) {
+	source0 := radarTestSortieTrack(5, 0,
+		radarTestSample(1000, 0), radarTestSample(2000, 0))
+	source0.hasEnd, source0.end = true, 2800
+	source1 := radarTestSortieTrack(5, 1,
+		radarTestSample(3000, 0), radarTestSample(4000, 0))
+	target0 := radarTestSortieTrack(7, 0,
+		radarTestSample(1000, 1000), radarTestSample(2000, 1000))
+	target0.hasEnd, target0.end = true, 2500
+	target1 := radarTestSortieTrack(7, 1,
+		radarTestSample(3000, 3000), radarTestSample(4000, 3000))
+	tracks := []*track{source0, target0, source1, target1}
+	ids := acmiObjectIDs(tracks)
+	fm := &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+		radarTestFrameTargets(1000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+		radarTestFrameTargets(3000, 5, []packetfm.FMTargetData{radarTestLock(7)}),
+	}}
+	x := radarTestPrepare(t, fm, tracks)
+
+	first := radarTestProps(x, 5, 1000, source0)
+	if !strings.Contains(first, "LockedTarget="+ids[target0.key]) || strings.Contains(first, "LockedTarget="+ids[target1.key]) {
+		t.Fatalf("first sortie locked the wrong target object: %q", first)
+	}
+	second := radarTestProps(x, 5, 3000, source1)
+	if !strings.Contains(second, "LockedTarget="+ids[target1.key]) || strings.Contains(second, "LockedTarget="+ids[target0.key]) {
+		t.Fatalf("second sortie inherited the first target object: %q", second)
+	}
+	if !strings.Contains(second, "LockedTargetMode=1") {
+		t.Fatalf("second sortie did not establish its own lock: %q", second)
+	}
+
+	clearAt2500 := false
+	for _, extra := range x.extra {
+		if extra.t != 2500 {
+			continue
+		}
+		if strings.HasPrefix(extra.line, ids[source0.key]+",LockedTarget=0") {
+			clearAt2500 = true
+		}
+		if strings.HasPrefix(extra.line, ids[source1.key]+",") {
+			t.Fatalf("second source sortie received the first target's death: %q", extra.line)
+		}
+	}
+	if !clearAt2500 {
+		t.Fatalf("first target sortie did not clear its source at destruction: %+v", x.extra)
+	}
+
+	for _, row := range x.logRows {
+		switch row.t {
+		case 1000:
+			if row.source != source0.key || len(row.uids) != 1 || row.uids[0] != target0.key {
+				t.Fatalf("first lock row = %+v", row)
+			}
+		case 3000:
+			if row.source != source1.key || len(row.uids) != 1 || row.uids[0] != target1.key {
+				t.Fatalf("second lock row = %+v", row)
+			}
+		}
+	}
+
+	bookmarks := acmiBookmarks(tracks, nil, x, ids, &packetslot.PacketSlotParser{}, nil)
+	if firstMark := strings.Join(bookmarks[1000], "\n"); !strings.Contains(firstMark, ids[source0.key]) || !strings.Contains(firstMark, ids[target0.key]) {
+		t.Fatalf("first-sortie bookmark lost its object ids: %q", firstMark)
+	}
+	if secondMark := strings.Join(bookmarks[3000], "\n"); !strings.Contains(secondMark, ids[source1.key]) || !strings.Contains(secondMark, ids[target1.key]) {
+		t.Fatalf("second-sortie bookmark lost its object ids: %q", secondMark)
+	}
+}
+
+func TestRadarTrackAtExactLifetimeAndAmbiguity(t *testing.T) {
+	first := radarTestSortieTrack(7, 0, radarTestSample(1000, 0), radarTestSample(2000, 0))
+	first.hasEnd, first.end = true, 2500
+	second := radarTestSortieTrack(7, 1, radarTestSample(3000, 0), radarTestSample(4000, 0))
+	tracks := []*track{first, second}
+	for _, test := range []struct {
+		t    uint32
+		want *track
+	}{
+		{1000, first},
+		{2499, first},
+		{2500, nil},
+		{3000, second},
+		{4000, second},
+		{5000, second}, // a sample gap is not evidence of a new sortie
+	} {
+		if got := radarTrackAt(tracks, 7, test.t); got != test.want {
+			t.Errorf("radarTrackAt(t=%d) = %p, want %p", test.t, got, test.want)
+		}
+	}
+	overlap := radarTestSortieTrack(7, 2, radarTestSample(3500, 0), radarTestSample(4500, 0))
+	if got := radarTrackAt(append(tracks, overlap), 7, 3500); got != nil {
+		t.Fatalf("ambiguous overlapping sorties selected %+v", got.key)
+	}
+	second.hasEnd, second.end = true, 4000
+	if got := radarTrackAt(tracks, 7, 4000); got != nil {
+		t.Fatalf("deleted sortie remained selectable at its end: %+v", got.key)
+	}
 }
 
 func TestRadarLockRangeNeverUsesFuturePositions(t *testing.T) {

@@ -7,7 +7,41 @@ import (
 
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/game"
 	packetecs2 "github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/ecs2"
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/groundmeta"
 )
+
+func TestGroundIdentityHistoryKeepsSamplesAfterEarlierUIDEnd(t *testing.T) {
+	const uid = uint64(42)
+	uidKey := groundUnitUIDNamespace | uid
+	first := groundIdentityTestInfo(uid, 1000, 100, "ussr_t_80bvm", 2)
+	second := groundIdentityTestInfo(uid, 2000, 400, "ussr_zprk_2s6", 1)
+	metadata := &groundmeta.Parser{
+		All:    []groundmeta.Info{first, second},
+		Ends:   map[uint64]uint32{first.EID: 350},
+		Models: map[uint64]groundmeta.Info{uid: second},
+	}
+	paths := map[uint64][]game.SpaceTime{
+		uidKey: {
+			{Time: 100}, {Time: 150}, {Time: 300},
+			{Time: 400}, {Time: 450}, {Time: 600},
+		},
+	}
+	tracks := appendGroundTracks(nil, paths, nil, map[uint64]uint32{uidKey: 350}, metadata)
+	tracks = applyGroundIdentityHistory(tracks, metadata, true)
+	if len(tracks) != 2 {
+		t.Fatalf("history generations = %d, want 2: %+v", len(tracks), tracks)
+	}
+	if got := groundIdentityTestTimes(tracks[0]); !equalTimes(got, []uint32{100, 150, 300}) || !tracks[0].hasEnd || tracks[0].end != 350 {
+		t.Fatalf("earlier generation = samples %v end %d/%v", got, tracks[0].end, tracks[0].hasEnd)
+	}
+	if got := groundIdentityTestTimes(tracks[1]); !equalTimes(got, []uint32{400, 450, 600}) || tracks[1].hasEnd {
+		t.Fatalf("later generation = samples %v end %d/%v", got, tracks[1].end, tracks[1].hasEnd)
+	}
+	if tracks[0].groundModel == nil || tracks[0].groundModel.RawModel != first.RawModel ||
+		tracks[1].groundModel == nil || tracks[1].groundModel.RawModel != second.RawModel {
+		t.Fatal("generation models crossed after UID-level end was ignored")
+	}
+}
 
 func TestAppendGroundTracksPreservesExistingIDsAndEntityGenerations(t *testing.T) {
 	air, _ := newTestTrack(true, 77, "F-16C", "Alpha", 1)

@@ -44,9 +44,9 @@ type radarLockExtraLine struct {
 
 type radarLockLogRow struct {
 	t      uint32
-	source uint64
+	source trackKey // concrete source sortie, not the raw replay uid
 	slots  [maxTacviewLockedTargets]string
-	uids   []uint64
+	uids   []trackKey // target sorties resolved at t; same order as slots
 	rangeM float64
 	hasRng bool
 }
@@ -72,12 +72,15 @@ type radarLockGeometry struct {
 // properties. All writer-visible state is rebuilt by prepare, so exporting the
 // same replay twice cannot leak slot state from the first write.
 type radarLockExport struct {
-	states map[uint64][]radarLockTargetState // aircraft uid -> sorted complete syncs
+	// Raw FM syncs are grouped by the masked replay uid. prepare assigns each
+	// state to exactly one sortie by its time and that sortie's explicit end.
+	states map[uint64][]radarLockTargetState
 
-	ids    map[uint64]string
-	tracks map[uint64]*track
+	ids    map[trackKey]string
+	tracks map[trackKey]*track
+	byUID  map[uint64][]*track
 
-	events  map[uint64]map[uint32]radarLockEvent
+	events  map[trackKey]map[uint32]radarLockEvent
 	extra   []radarLockExtraLine
 	logRows []radarLockLogRow
 
@@ -118,7 +121,9 @@ func collectRadarLockStates(fm *packetfm.PacketFlightModelParser) map[uint64][]r
 	byTime := map[uint64]map[uint32]radarLockTargetState{}
 	for _, frame := range fm.Results {
 		for _, entry := range frame.Entries {
-			if entry == nil || entry.Data == nil || entry.Data.TargetsData == nil {
+			// Unk0&&Unk1 is a flags-only record with zero-filled telemetry, not an
+			// explicit empty target list.
+			if entry == nil || entry.Data == nil || (entry.Data.Unk0 && entry.Data.Unk1) || entry.Data.TargetsData == nil {
 				continue
 			}
 			uids := make([]uint64, 0, len(entry.Data.TargetsData))
@@ -169,21 +174,24 @@ func (x *radarLockExport) prepare(tracks []*track, ids map[trackKey]string) {
 	if x == nil {
 		return
 	}
-	x.ids = map[uint64]string{}
-	x.tracks = map[uint64]*track{}
+	x.ids = map[trackKey]string{}
+	x.tracks = map[trackKey]*track{}
+	x.byUID = map[uint64][]*track{}
 	for _, tr := range tracks {
-		if tr == nil || !tr.key.air {
+		if !radarLockAirframe(tr) {
 			continue
 		}
-		id := ids[tr.key]
-		if id == "" {
-			continue
+		x.tracks[tr.key] = tr
+		x.byUID[tr.key.id] = append(x.byUID[tr.key.id], tr)
+		if id := ids[tr.key]; id != "" {
+			x.ids[tr.key] = id
 		}
-		x.ids[tr.key.id] = id
-		x.tracks[tr.key.id] = tr
+	}
+	for uid := range x.byUID {
+		radarSortTracks(x.byUID[uid])
 	}
 
-	x.events = map[uint64]map[uint32]radarLockEvent{}
+	x.events = map[trackKey]map[uint32]radarLockEvent{}
 	x.extra = nil
 	x.logRows = nil
 	x.aircraft = 0
@@ -191,21 +199,27 @@ func (x *radarLockExport) prepare(tracks []*track, ids map[trackKey]string) {
 	x.changes = 0
 	x.prepared = true
 
-	endTimes := map[uint64][]uint32{}
-	for uid, tr := range x.tracks {
-		if tr.hasEnd {
-			endTimes[uid] = append(endTimes[uid], tr.end)
-		}
-	}
 	sources := make([]uint64, 0, len(x.states))
 	for uid := range x.states {
-		if _, ok := x.ids[uid]; ok {
+		if len(x.byUID[uid]) > 0 {
 			sources = append(sources, uid)
 		}
 	}
 	sort.Slice(sources, func(i, j int) bool { return sources[i] < sources[j] })
 	for _, uid := range sources {
-		x.prepareSource(uid, endTimes)
+		assigned := map[trackKey][]radarLockTargetState{}
+		for _, state := range x.states[uid] {
+			tr := radarTrackAt(x.byUID[uid], uid, state.t)
+			if tr == nil || x.ids[tr.key] == "" {
+				continue
+			}
+			assigned[tr.key] = append(assigned[tr.key], state)
+		}
+		for _, tr := range x.byUID[uid] {
+			if states := assigned[tr.key]; len(states) > 0 {
+				x.prepareSource(tr, states)
+			}
+		}
 	}
 	sort.Slice(x.extra, func(i, j int) bool {
 		if x.extra[i].t != x.extra[j].t {
@@ -217,33 +231,73 @@ func (x *radarLockExport) prepare(tracks []*track, ids map[trackKey]string) {
 		if x.logRows[i].t != x.logRows[j].t {
 			return x.logRows[i].t < x.logRows[j].t
 		}
-		return x.logRows[i].source < x.logRows[j].source
+		if x.logRows[i].source.id != x.logRows[j].source.id {
+			return x.logRows[i].source.id < x.logRows[j].source.id
+		}
+		return x.ids[x.logRows[i].source] < x.ids[x.logRows[j].source]
 	})
 }
 
-func (x *radarLockExport) prepareSource(source uint64, endTimes map[uint64][]uint32) {
-	tr := x.tracks[source]
-	if tr == nil {
-		return
+func radarLockAirframe(tr *track) bool {
+	return isKillAircraft(tr)
+}
+
+// radarTrackAt selects one aircraft track by its raw FM uid and its explicit
+// lifetime. Sample gaps are not respawns, so absence of hasEnd does not end a
+// track at its last position sample. A destroyed sortie is absent at its
+// deletion timestamp. Ambiguous overlaps return nil rather than borrowing a
+// different sortie's object id.
+func radarTrackAt(tracks []*track, uid uint64, t uint32) *track {
+	tr := aircraftTrackAt(tracks, uid, t)
+	if tr == nil || !radarTrackLiveAt(tr, t) {
+		return nil
 	}
-	states := x.states[source]
-	if len(states) == 0 {
+	return tr
+}
+
+func radarTrackLiveAt(tr *track, t uint32) bool {
+	if tr == nil || len(tr.samples) == 0 || t < tr.samples[0].t {
+		return false
+	}
+	return !tr.hasEnd || t < tr.end
+}
+
+func radarSortTracks(tracks []*track) {
+	sort.SliceStable(tracks, func(i, j int) bool {
+		if len(tracks[i].samples) == 0 || len(tracks[j].samples) == 0 {
+			return len(tracks[i].samples) > 0
+		}
+		if tracks[i].samples[0].t != tracks[j].samples[0].t {
+			return tracks[i].samples[0].t < tracks[j].samples[0].t
+		}
+		if tracks[i].hasEnd != tracks[j].hasEnd {
+			return tracks[i].hasEnd
+		}
+		return tracks[i].end < tracks[j].end
+	})
+}
+
+func (x *radarLockExport) prepareSource(tr *track, states []radarLockTargetState) {
+	if tr == nil || len(states) == 0 || x.ids[tr.key] == "" {
 		return
 	}
 
 	syncAt := make(map[uint32]radarLockTargetState, len(states))
-	designated := map[uint64]bool{}
+	designated := map[trackKey]bool{}
 	eventTimes := map[uint32]bool{}
 	for _, state := range states {
 		syncAt[state.t] = state
 		eventTimes[state.t] = true
-		for _, target := range state.uids {
-			designated[target] = true
+		for _, uid := range state.uids {
+			target := radarTrackAt(x.byUID[uid], uid, state.t)
+			if target != nil && target.key != tr.key {
+				designated[target.key] = true
+			}
 		}
 	}
-	for target := range designated {
-		for _, t := range endTimes[target] {
-			eventTimes[t] = true
+	for key := range designated {
+		if target := x.tracks[key]; target != nil && target.hasEnd {
+			eventTimes[target.end] = true
 		}
 	}
 
@@ -261,6 +315,9 @@ func (x *radarLockExport) prepareSource(source uint64, endTimes map[uint64][]uin
 		everLock   bool
 	)
 	for _, t := range times {
+		if t < tr.samples[0].t {
+			continue
+		}
 		if tr.hasEnd && t >= tr.end {
 			break
 		}
@@ -269,24 +326,24 @@ func (x *radarLockExport) prepareSource(source uint64, endTimes map[uint64][]uin
 			current = state.uids
 			isSync = true
 		}
-		slots, targets := x.resolveSlotsAt(source, current, t)
+		slots, targets := x.resolveTargetsAt(tr.key, current, t)
 		on := len(targets) > 0
-		geometry := x.primaryGeometryAt(source, tr, targets, t)
+		geometry := x.primaryGeometryAtTracks(tr, targets, t)
 		changed := slots != prev || on != prevOn
 		props := radarLockPropertiesWithAngles(prev, slots, prevOn, on,
 			geometry, prevHasRng)
 		if len(props) > 0 {
 			if isSync {
-				events := x.events[source]
+				events := x.events[tr.key]
 				if events == nil {
 					events = map[uint32]radarLockEvent{}
-					x.events[source] = events
+					x.events[tr.key] = events
 				}
 				events[t] = radarLockEvent{t: t, sync: true, props: props}
 			} else if changed {
 				x.extra = append(x.extra, radarLockExtraLine{
 					t:    t,
-					line: x.ids[source] + "," + strings.Join(props, ","),
+					line: x.ids[tr.key] + "," + strings.Join(props, ","),
 				})
 			}
 		}
@@ -300,9 +357,9 @@ func (x *radarLockExport) prepareSource(source uint64, endTimes map[uint64][]uin
 			x.changes++
 			x.logRows = append(x.logRows, radarLockLogRow{
 				t:      t,
-				source: source,
+				source: tr.key,
 				slots:  slots,
-				uids:   append([]uint64(nil), targets...),
+				uids:   append([]trackKey(nil), targets...),
 				rangeM: geometry.rangeM,
 				hasRng: geometry.hasRange,
 			})
@@ -316,29 +373,40 @@ func (x *radarLockExport) prepareSource(source uint64, endTimes map[uint64][]uin
 	}
 }
 
-// resolveSlotsAt applies designation order, deduplicates both unit ids and ACMI
-// object ids, drops unknown/dead/not-yet-born/stale targets, and caps the list at
-// Tacview's nine slots. The returned uids use the same order as slots.
 func (x *radarLockExport) resolveSlotsAt(source uint64, uids []uint64, t uint32) ([maxTacviewLockedTargets]string, []uint64) {
+	slots, targets := x.resolveTargetsAt(trackKey{air: true, id: source}, uids, t)
+	uidsOut := make([]uint64, 0, len(targets))
+	for _, target := range targets {
+		uidsOut = append(uidsOut, target.id)
+	}
+	return slots, uidsOut
+}
+
+// resolveTargetsAt applies designation order, deduplicates target instances and
+// ACMI object ids, drops unknown/dead/not-yet-born/stale targets, and caps the
+// list at Tacview's nine slots. The concrete track key selected at t is kept so
+// one UID's later sortie can never inherit the earlier sortie's object id.
+func (x *radarLockExport) resolveTargetsAt(source trackKey, uids []uint64, t uint32) ([maxTacviewLockedTargets]string, []trackKey) {
 	var slots [maxTacviewLockedTargets]string
-	resolved := make([]uint64, 0, min(len(uids), maxTacviewLockedTargets))
-	seenUID := map[uint64]bool{}
+	resolved := make([]trackKey, 0, min(len(uids), maxTacviewLockedTargets))
+	seenKey := map[trackKey]bool{}
 	seenID := map[string]bool{}
 	for _, uid := range uids {
 		if len(resolved) >= maxTacviewLockedTargets {
 			break
 		}
-		if uid == source || seenUID[uid] || !x.targetAvailableAt(uid, t) {
+		target := radarTrackAt(x.byUID[uid], uid, t)
+		if target == nil || target.key == source || seenKey[target.key] || !x.targetTrackAvailableAt(target, t) {
 			continue
 		}
-		id := x.ids[uid]
+		id := x.ids[target.key]
 		if id == "" || seenID[id] {
 			continue
 		}
-		seenUID[uid] = true
+		seenKey[target.key] = true
 		seenID[id] = true
 		slots[len(resolved)] = id
-		resolved = append(resolved, uid)
+		resolved = append(resolved, target.key)
 	}
 	return slots, resolved
 }
@@ -346,14 +414,12 @@ func (x *radarLockExport) resolveSlotsAt(source uint64, uids []uint64, t uint32)
 // targetAvailableAt requires a track that exists at t and a real position sample
 // at or before t. A destroyed aircraft is unavailable at its deletion timestamp.
 func (x *radarLockExport) targetAvailableAt(uid uint64, t uint32) bool {
-	tr := x.tracks[uid]
-	if tr == nil || len(tr.samples) == 0 {
-		return false
-	}
-	if tr.hasEnd && t >= tr.end {
-		return false
-	}
-	if t < tr.samples[0].t {
+	tr := radarTrackAt(x.byUID[uid], uid, t)
+	return x.targetTrackAvailableAt(tr, t)
+}
+
+func (x *radarLockExport) targetTrackAvailableAt(tr *track, t uint32) bool {
+	if tr == nil || len(tr.samples) == 0 || !radarTrackLiveAt(tr, t) {
 		return false
 	}
 	_, ok := sampleAtOrBefore(tr, t, radarLockPositionMaxAgeMs)
@@ -385,15 +451,19 @@ func (x *radarLockExport) primaryGeometryAt(source uint64, tr *track, targets []
 	if len(targets) == 0 || tr == nil {
 		return radarLockGeometry{}
 	}
-	if tr.hasEnd && t >= tr.end {
+	target := radarTrackAt(x.byUID[targets[0]], targets[0], t)
+	if target == nil {
 		return radarLockGeometry{}
 	}
-	target := targets[0]
-	if !x.targetAvailableAt(target, t) {
+	return x.primaryGeometryAtTracks(tr, []trackKey{target.key}, t)
+}
+
+func (x *radarLockExport) primaryGeometryAtTracks(tr *track, targets []trackKey, t uint32) radarLockGeometry {
+	if len(targets) == 0 || tr == nil || !radarTrackLiveAt(tr, t) {
 		return radarLockGeometry{}
 	}
-	dst := x.tracks[target]
-	if dst == nil {
+	dst := x.tracks[targets[0]]
+	if !x.targetTrackAvailableAt(dst, t) {
 		return radarLockGeometry{}
 	}
 	a, ok := sampleAtOrBefore(tr, t, radarLockPositionMaxAgeMs)
@@ -565,10 +635,10 @@ func radarLockSlotName(index int) string {
 // lineProperties returns the properties for an exact source FM sync. Missing
 // target-list records do not create an event and leave the previous lock alone.
 func (x *radarLockExport) lineProperties(uid uint64, t uint32, tr *track) []string {
-	if x == nil || !x.prepared || tr == nil || !tr.key.air {
+	if x == nil || !x.prepared || tr == nil || tr.key.id != uid || !tr.key.air {
 		return nil
 	}
-	events := x.events[uid]
+	events := x.events[tr.key]
 	if events == nil {
 		return nil
 	}
@@ -622,25 +692,19 @@ func writeRadarLockLog(path string, x *radarLockExport, tracks []*track, slot *p
 		return err
 	}
 
-	byUID := map[uint64]*track{}
-	for _, tr := range tracks {
-		if tr != nil && tr.key.air {
-			byUID[tr.key.id] = tr
-		}
-	}
 	for _, row := range x.logRows {
-		src := byUID[row.source]
+		src := x.tracks[row.source]
 		airName, pilot := "", ""
 		if src != nil {
 			airName = trackName(src, slot, names)
 			pilot = trackPilot(src, slot)
 		}
 		targetNames := make([]string, 0, len(row.uids))
-		for _, uid := range row.uids {
-			if tr := byUID[uid]; tr != nil {
+		for _, key := range row.uids {
+			if tr := x.tracks[key]; tr != nil {
 				targetNames = append(targetNames, trackName(tr, slot, names))
 			} else {
-				targetNames = append(targetNames, "air:"+strconv.FormatUint(uid, 10))
+				targetNames = append(targetNames, "air:"+strconv.FormatUint(key.id, 10))
 			}
 		}
 		targetIDs := make([]string, 0, len(row.uids))
@@ -654,11 +718,11 @@ func writeRadarLockLog(path string, x *radarLockExport, tracks []*track, slot *p
 		out := []string{
 			strconv.FormatFloat(float64(row.t)/1000, 'f', 3, 64),
 			x.ids[row.source],
-			strconv.FormatUint(row.source, 10),
+			strconv.FormatUint(row.source.id, 10),
 			airName,
 			pilot,
 			strconv.Itoa(len(row.uids)),
-			joinRadarUIDs(row.uids),
+			joinRadarTargetUIDs(row.uids),
 			strings.Join(targetIDs, ","),
 			strings.Join(targetNames, ","),
 			rng,
@@ -675,6 +739,14 @@ func joinRadarUIDs(uids []uint64) string {
 	parts := make([]string, 0, len(uids))
 	for _, uid := range uids {
 		parts = append(parts, strconv.FormatUint(uid, 10))
+	}
+	return strings.Join(parts, ",")
+}
+
+func joinRadarTargetUIDs(targets []trackKey) string {
+	parts := make([]string, 0, len(targets))
+	for _, target := range targets {
+		parts = append(parts, strconv.FormatUint(target.id, 10))
 	}
 	return strings.Join(parts, ",")
 }

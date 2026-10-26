@@ -42,6 +42,30 @@ func TestBookmarksUseEvidenceAndEscapeSeparators(t *testing.T) {
 	}
 }
 
+func TestRetiredAircraftHasNoDestroyedBookmark(t *testing.T) {
+	retired := &track{
+		key: trackKey{air: true, id: 5}, samples: []acmiSample{{t: 1000}},
+		hasEnd: true, end: 2000, retired: true,
+	}
+	replacement := &track{
+		key: trackKey{air: true, id: 5, sortie: 1}, samples: []acmiSample{{t: 2500}},
+	}
+	dead := &track{
+		key: trackKey{air: true, id: 6}, samples: []acmiSample{{t: 1000}},
+		hasEnd: true, end: 3000,
+	}
+	tracks := []*track{retired, replacement, dead}
+	ids := acmiObjectIDs(tracks)
+	bookmarks := acmiBookmarks(tracks, nil, nil, ids, nil, nil)
+	if len(bookmarks[2000]) != 0 {
+		t.Fatalf("retired sortie fabricated a destruction bookmark: %v", bookmarks[2000])
+	}
+	line := strings.Join(bookmarks[3000], "\n")
+	if !strings.Contains(line, ids[dead.key]) || !strings.Contains(line, "Destroyed") {
+		t.Fatalf("confirmed death lost its destruction bookmark: %v", bookmarks[3000])
+	}
+}
+
 func TestCountermeasureMessagesRemainWithoutHighlightedBookmarks(t *testing.T) {
 	old := *timelineBookmarks
 	t.Cleanup(func() { *timelineBookmarks = old })

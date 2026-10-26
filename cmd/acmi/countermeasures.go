@@ -305,16 +305,9 @@ func countermeasureTrackSamples(source *projectiles.Projectile, syncs []projecti
 func appendCountermeasureTracks(tracks []*track, inputs []countermeasureTrackInput) ([]*track, int) {
 	out := append([]*track(nil), tracks...)
 	existing := make(map[trackKey]bool, len(tracks))
-	aircraft := make(map[uint64]*track)
 	for _, tr := range tracks {
-		if tr == nil {
-			continue
-		}
-		existing[tr.key] = true
-		if tr.key.air && !tr.key.missile && !tr.key.decoy {
-			if _, ok := aircraft[tr.key.id]; !ok {
-				aircraft[tr.key.id] = tr
-			}
+		if tr != nil {
+			existing[tr.key] = true
 		}
 	}
 	// The replay cutoff is fixed before any estimates are appended so every
@@ -330,7 +323,11 @@ func appendCountermeasureTracks(tracks []*track, inputs []countermeasureTrackInp
 
 		var parent *track
 		if input.HasParent {
-			parent = aircraft[input.ParentUID]
+			parentTime := projectileParentTime(0, input.Samples)
+			if input.Source != nil {
+				parentTime = input.Source.SpawnSample.Time
+			}
+			parent = aircraftParentAt(tracks, input.ParentUID, parentTime)
 		}
 
 		samples := input.Samples
@@ -698,10 +695,18 @@ func writeCountermeasureLog(path string, records []countermeasureRecord) error {
 	return w.Error()
 }
 
-func acmiEventLine(event acmiEvent, ids map[trackKey]string) string {
+func acmiEventLine(event acmiEvent, ids map[trackKey]string, trackSets ...[]*track) string {
 	text := strings.NewReplacer("\r", " ", "\n", " ").Replace(event.text)
 	if event.hasParent {
-		if parentID := ids[trackKey{air: true, id: event.parentID}]; parentID != "" {
+		key := trackKey{air: true, id: event.parentID}
+		if len(trackSets) > 0 {
+			parent := aircraftTrackAt(trackSets[0], event.parentID, event.t)
+			if parent == nil {
+				return "0,Event=Message|" + text
+			}
+			key = parent.key
+		}
+		if parentID := ids[key]; parentID != "" {
 			return fmt.Sprintf("0,Event=Message|%s|%s", parentID, text)
 		}
 	}

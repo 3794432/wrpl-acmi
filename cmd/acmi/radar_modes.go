@@ -122,11 +122,14 @@ type radarModeSnapshot struct {
 type radarModeExport struct {
 	table *radarModeCatalog
 
+	// Frames remain grouped by masked replay uid. prepare assigns them to the
+	// unique sortie alive at each timestamp.
 	frames map[uint64][]radarModeSensorFrame
-	ids    map[uint64]string
-	tracks map[uint64]*track
+	ids    map[trackKey]string
+	tracks map[trackKey]*track
+	byUID  map[uint64][]*track
 
-	events map[uint64]map[uint32][]string
+	events map[trackKey]map[uint32][]string
 	extra  []radarLockExtraLine
 
 	prepared bool
@@ -192,7 +195,9 @@ func collectRadarModeFrames(fm *packetfm.PacketFlightModelParser) map[uint64][]r
 	byTime := map[uint64]map[uint32][]packetfm.FMSensorData{}
 	for _, frame := range fm.Results {
 		for _, entry := range frame.Entries {
-			if entry == nil || entry.Data == nil {
+			// Unk0&&Unk1 is a flags-only record with zero-filled telemetry, not an
+			// explicit empty sensor list.
+			if entry == nil || entry.Data == nil || (entry.Data.Unk0 && entry.Data.Unk1) {
 				continue
 			}
 			states := byTime[entry.UID]
@@ -224,33 +229,48 @@ func (x *radarModeExport) prepare(tracks []*track, ids map[trackKey]string) {
 	if x == nil {
 		return
 	}
-	x.ids = map[uint64]string{}
-	x.tracks = map[uint64]*track{}
+	x.ids = map[trackKey]string{}
+	x.tracks = map[trackKey]*track{}
+	x.byUID = map[uint64][]*track{}
 	for _, tr := range tracks {
-		if tr == nil || !tr.key.air || tr.key.missile || tr.key.bomb || tr.key.decoy {
+		if !radarLockAirframe(tr) {
 			continue
 		}
-		id := ids[tr.key]
-		if id == "" {
-			continue
+		x.tracks[tr.key] = tr
+		x.byUID[tr.key.id] = append(x.byUID[tr.key.id], tr)
+		if id := ids[tr.key]; id != "" {
+			x.ids[tr.key] = id
 		}
-		x.ids[tr.key.id] = id
-		x.tracks[tr.key.id] = tr
+	}
+	for uid := range x.byUID {
+		radarSortTracks(x.byUID[uid])
 	}
 
-	x.events = map[uint64]map[uint32][]string{}
+	x.events = map[trackKey]map[uint32][]string{}
 	x.extra = nil
 	x.prepared = true
 
-	uids := make([]uint64, 0, len(x.tracks))
-	for uid := range x.tracks {
-		if len(x.frames[uid]) > 0 {
+	uids := make([]uint64, 0, len(x.frames))
+	for uid := range x.frames {
+		if len(x.byUID[uid]) > 0 {
 			uids = append(uids, uid)
 		}
 	}
 	sort.Slice(uids, func(i, j int) bool { return uids[i] < uids[j] })
 	for _, uid := range uids {
-		x.prepareSource(uid)
+		assigned := map[trackKey][]radarModeSensorFrame{}
+		for _, frame := range x.frames[uid] {
+			tr := radarTrackAt(x.byUID[uid], uid, frame.t)
+			if tr == nil || x.ids[tr.key] == "" {
+				continue
+			}
+			assigned[tr.key] = append(assigned[tr.key], frame)
+		}
+		for _, tr := range x.byUID[uid] {
+			if frames := assigned[tr.key]; len(frames) > 0 {
+				x.prepareSource(tr, frames)
+			}
+		}
 	}
 	sort.Slice(x.extra, func(i, j int) bool {
 		if x.extra[i].t != x.extra[j].t {
@@ -260,8 +280,10 @@ func (x *radarModeExport) prepare(tracks []*track, ids map[trackKey]string) {
 	})
 }
 
-func (x *radarModeExport) prepareSource(uid uint64) {
-	tr := x.tracks[uid]
+func (x *radarModeExport) prepareSource(tr *track, frames []radarModeSensorFrame) {
+	if tr == nil || len(frames) == 0 || x.ids[tr.key] == "" {
+		return
+	}
 	model, ok := radarModeTrackModel(tr)
 	if !ok {
 		return
@@ -272,7 +294,7 @@ func (x *radarModeExport) prepareSource(uid uint64) {
 	}
 
 	previous := radarModeSnapshot{}
-	for _, frame := range x.frames[uid] {
+	for _, frame := range frames {
 		if !radarModeTrackLiveAt(tr, frame.t) {
 			if tr.hasEnd && frame.t >= tr.end {
 				break
@@ -297,16 +319,16 @@ func (x *radarModeExport) prepareSource(uid uint64) {
 			continue
 		}
 		if radarModeTrackHasSample(tr, frame.t) {
-			events := x.events[uid]
+			events := x.events[tr.key]
 			if events == nil {
 				events = map[uint32][]string{}
-				x.events[uid] = events
+				x.events[tr.key] = events
 			}
 			events[frame.t] = props
 		} else {
 			x.extra = append(x.extra, radarLockExtraLine{
 				t:    frame.t,
-				line: x.ids[uid] + "," + strings.Join(props, ","),
+				line: x.ids[tr.key] + "," + strings.Join(props, ","),
 			})
 		}
 		previous = current
@@ -600,10 +622,10 @@ func radarModeFormat(value float64, decimals int) string {
 // exact track-sample timestamp. A later state is never borrowed by an earlier
 // sample.
 func (x *radarModeExport) lineProperties(uid uint64, t uint32, tr *track) []string {
-	if x == nil || !x.prepared || tr == nil || !tr.key.air || !radarModeTrackLiveAt(tr, t) {
+	if x == nil || !x.prepared || tr == nil || tr.key.id != uid || !tr.key.air || !radarModeTrackLiveAt(tr, t) {
 		return nil
 	}
-	events := x.events[uid]
+	events := x.events[tr.key]
 	if events == nil {
 		return nil
 	}

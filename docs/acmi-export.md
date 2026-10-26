@@ -17,6 +17,10 @@ Server shards are ordered by their headers. Filenames do not need renumbering, b
 
 Default lookup data is embedded in the executable. Export does not require adjacent data files, installed terrain, the game, Python, Go, Git, or Tacview. Tacview is used to view the result.
 
+Repeated aircraft sorties are exported automatically as separate Tacview objects. Recorded spawn counters (`F061`, `F030`, and the `F093` state report) distinguish reused unit UIDs; complete ECS handles preserve entity generations. When spawn counters are unavailable, a recorded ECS aircraft replacement provides a fallback. Deaths, radar states, target references, and weapon ownership are resolved within each sortie. Replacing an aircraft without a confirmed kill removes the old object without inventing a destruction event. Position jumps and sampling gaps are not used to guess respawns; missing spawn or identity evidence can limit coverage.
+
+Ground and surface models are cross-checked against their storage names, allowing known unit-directory prefixes such as `tankModels/` and `structures/`. When a ground UID is reused, construction times and full ECS entity IDs separate its vehicle model and coalition into distinct objects. Confirmed kill reports determine death times when the later ECS destruction only removes the wreck. Missing or genuinely contradictory identity evidence remains unknown.
+
 You can also pass one positional input. Put all options before the path because Go's flag parser stops at the first positional argument:
 
 ```powershell

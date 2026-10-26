@@ -239,6 +239,7 @@ func applyAircraftDestructions(tracks []*track, parser *aircraftDestructionParse
 		}
 		tr.end = killTime
 		tr.hasEnd = true
+		tr.retired = false
 		applied++
 	}
 	return applied

@@ -458,6 +458,64 @@ func TestRadarModeSourcesDoNotShareState(t *testing.T) {
 	}
 }
 
+func TestRadarModeSameUIDSortiesStartWithFreshState(t *testing.T) {
+	first := radarTestSortieTrack(5, 0, radarTestSample(1000, 0), radarTestSample(2000, 0))
+	first.hasEnd, first.end = true, 2500
+	second := radarTestSortieTrack(5, 1, radarTestSample(3000, 0), radarTestSample(4000, 0))
+	for _, tr := range []*track{first, second} {
+		tr.entity = radarModeTestTrack(5, "test_radar_aircraft").entity
+	}
+	x := radarModeTestPrepare(t, []packetfm.FMUpdatePacket{
+		radarModeTestFrame(1000, 5, radarModeTestOn(1, 0, 0, 0, 0, 0, 1)),
+		radarModeTestFrame(2000, 5, radarModeTestOff(1)),
+		radarModeTestFrame(3000, 5, radarModeTestOn(1, 0, 0, 0, 0, 0, 3)),
+		radarModeTestFrame(4000, 5, radarModeTestOff(1)),
+	}, first, second)
+
+	firstOn := radarModeTestProperties(x, 5, 1000, first)
+	if firstOn["WT_RadarMode"] != "scan" || firstOn["RadarMode"] != "1" {
+		t.Fatalf("first sortie mode = %v", firstOn)
+	}
+	if off := radarModeTestProperties(x, 5, 2000, first); off["WT_RadarMode"] != "off" {
+		t.Fatalf("first sortie off = %v", off)
+	}
+	secondOn := radarModeTestProperties(x, 5, 3000, second)
+	if secondOn["WT_RadarMode"] != "scan" || secondOn["RadarMode"] != "1" || secondOn["WT_RadarModeChangeTime"] != "3.000" {
+		t.Fatalf("second sortie did not restart from an empty mode state: %v", secondOn)
+	}
+	if off := radarModeTestProperties(x, 5, 4000, second); off["WT_RadarMode"] != "off" {
+		t.Fatalf("second sortie off = %v", off)
+	}
+	if got := x.lineProperties(5, 3000, first); len(got) != 0 {
+		t.Fatalf("second sortie's mode leaked onto the first object: %v", got)
+	}
+	if len(x.extraLines()) != 0 {
+		t.Fatalf("exactly sampled sortie modes produced independent extra lines: %+v", x.extraLines())
+	}
+}
+
+func TestRadarModeShortRecordDoesNotClearOrInventMode(t *testing.T) {
+	const uid = 5
+	tr := radarModeTestTrack(uid, "test_radar_aircraft", 1000, 2000)
+	fm := &packetfm.PacketFlightModelParser{Results: []packetfm.FMUpdatePacket{
+		radarModeTestFrame(1000, uid, radarModeTestOn(1, 0, 0, 0, 0, 0, 1)),
+		radarTestShortFrame(2000, uid),
+	}}
+	if frames := collectRadarModeFrames(fm); len(frames[uid]) != 1 || frames[uid][0].t != 1000 {
+		t.Fatalf("short FM record entered sensor frames: %+v", frames[uid])
+	}
+	x := radarModeTestPrepare(t, fm.Results, tr)
+	if got := x.lineProperties(uid, 2000, tr); len(got) != 0 {
+		t.Fatalf("short FM record emitted a mode change: %v", got)
+	}
+	if got := x.lineProperties(uid, 1000, tr); !strings.Contains(strings.Join(got, ","), "WT_RadarMode=scan") {
+		t.Fatalf("short record disturbed the previous mode: %v", got)
+	}
+	if len(x.extraLines()) != 0 {
+		t.Fatalf("short record created an extra line: %+v", x.extraLines())
+	}
+}
+
 func TestRadarModeRepeatedPrepareDoesNotLeakState(t *testing.T) {
 	const uid = 5
 	tr := radarModeTestTrack(uid, "test_radar_aircraft", 1000, 2000)

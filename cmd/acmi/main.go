@@ -102,6 +102,7 @@ type trackKey struct {
 	groundEntity bool
 	decoy        bool
 	id           uint64
+	sortie       uint32 // distinguishes successive source units using the same replay UID
 }
 
 // missileTrack is the parser-to-writer adapter. ID is the full generation EID,
@@ -129,22 +130,24 @@ type acmiSample struct {
 }
 
 type track struct {
-	key              trackKey
-	entity           *packetecs2.Entity
-	samples          []acmiSample
-	name             string
-	parent           *track
-	end              uint32
-	hasEnd           bool
-	projectileSource *projectiles.Projectile
-	countermeasure   countermeasureIdentity
-	missileModel     *missileModelInfo
-	missileGuidance  *missileGuidanceInfo
-	bombPositionOnly bool
-	groundModel      *groundModelInfo
-	groundTeam       int32
-	groundTeamSource string
-	groundStatic     bool
+	key                  trackKey
+	entity               *packetecs2.Entity
+	samples              []acmiSample
+	name                 string
+	parent               *track
+	end                  uint32
+	hasEnd               bool
+	retired              bool // replacement without a confirmed destruction report
+	projectileSource     *projectiles.Projectile
+	countermeasure       countermeasureIdentity
+	missileModel         *missileModelInfo
+	missileGuidance      *missileGuidanceInfo
+	bombPositionOnly     bool
+	groundModel          *groundModelInfo
+	groundTeam           int32
+	groundTeamSource     string
+	groundStatic         bool
+	groundModelsDisabled bool
 	// estimated marks a countermeasure track reconstructed from a release
 	// point and the parent aircraft velocity, not from WeaponSync telemetry.
 	estimated         bool
@@ -295,6 +298,7 @@ func runACMIMain() (retErr error) {
 	missilePositions := projectiles.NewPositionParser()
 	missileNames := newMissileNameKillParser()
 	aircraftDeaths := newAircraftDestructionParser()
+	aircraftSpawns := newAircraftSpawnParser(ecs)
 	kills := &packetkill.PacketKillParser{KeepKills: true, ECS: mgr, PathsGround: paths, PathsAir: fm}
 	optionalEvents := newOptionalEventParser(enabledEvents, slot)
 	parsers := []packet.PacketParser{}
@@ -305,7 +309,7 @@ func runACMIMain() (retErr error) {
 	if missileMetadata != nil {
 		parsers = append(parsers, missileMetadata)
 	}
-	parsers = append(parsers, missilePositions, missileNames, aircraftDeaths)
+	parsers = append(parsers, missilePositions, missileNames, aircraftDeaths, aircraftSpawns)
 	if enabledEvents["kill"] {
 		parsers = append(parsers, kills)
 	}
@@ -319,7 +323,8 @@ func runACMIMain() (retErr error) {
 		return err
 	}
 
-	tracks := collectTracks(fm, paths, mgr, slot)
+	tracks := collectTracks(fm, paths, mgr, slot, aircraftSpawns)
+	destroyedAircraft := applyAircraftDestructions(tracks, aircraftDeaths)
 	tracks = appendMissileTracks(tracks, decodedMissileTracks(missileMetadata, missilePositions))
 	bombs := decodedBombTracks(missileMetadata, missilePositions)
 	applyMissileModelNamesWithAliases(tracks, missileNames, missileModelTable.killAliases())
@@ -332,7 +337,7 @@ func runACMIMain() (retErr error) {
 	// countermeasure tracks so this addition cannot renumber existing objects.
 	tracks = appendBombTracks(tracks, bombs)
 	if *groundUnits {
-		tracks = appendGroundTracks(tracks, paths.GroundPaths, paths.GroundEntities, paths.GroundEnds)
+		tracks = appendGroundTracks(tracks, paths.GroundPaths, paths.GroundEntities, paths.GroundEnds, groundMetadata)
 	}
 	if groundMetadata != nil && *groundUnits {
 		tracks = appendStaticGroundTracks(tracks, groundMetadata)
@@ -340,8 +345,9 @@ func runACMIMain() (retErr error) {
 		if *groundModels {
 			applyGroundModelEvidence(tracks, replayGroundModelEvidence(groundMetadata.Models))
 		}
+		tracks = applyGroundIdentityHistory(tracks, groundMetadata, *groundModels)
+		applyGroundKillLifetimes(tracks, kills.Kills)
 	}
-	destroyedAircraft := applyAircraftDestructions(tracks, aircraftDeaths)
 	var radarExport *radarLockExport
 	if *radarLocks || enabledEvents["radar"] {
 		radarExport = newRadarLockExport(fm)
@@ -461,6 +467,7 @@ func runACMIMain() (retErr error) {
 		fmt.Printf("airfield runways: %d source-configured, %d facility-only anchors\n", runways, countAirportMarkers(airportMarkers)-runways)
 	}
 	fmt.Printf("aircraft names identified: %d/%d\n", identified, aircraft)
+	fmt.Printf("aircraft spawn reports: %d (%d UIDs)\n", aircraftSpawns.count, len(aircraftSpawns.normalized()))
 	fmt.Printf("aircraft removed after destruction: %d\n", destroyedAircraft)
 	fmt.Printf("ground/surface units exported: %d (%d recorded positions)\n", groundUnitsExported, groundSamples)
 	fmt.Printf("ground models identified: %d/%d\n", groundModelsIdentified, groundUnitsExported)
@@ -536,7 +543,11 @@ func resolveReplayMapID(header wrpl.WRPLHeader, override string) (string, error)
 	return mapID, err
 }
 
-func collectTracks(fm *packetfm.PacketFlightModelParser, paths *packetmovement.PositionRetainerParser, mgr *packetecs2.EntityManager, slot *packetslot.PacketSlotParser) []*track {
+func collectTracks(fm *packetfm.PacketFlightModelParser, paths *packetmovement.PositionRetainerParser, mgr *packetecs2.EntityManager, slot *packetslot.PacketSlotParser, spawnParsers ...*aircraftSpawnParser) []*track {
+	spawnRecords := map[uint64][]aircraftSpawn{}
+	if len(spawnParsers) > 0 {
+		spawnRecords = spawnParsers[0].normalized()
+	}
 	byKey := map[trackKey]*track{}
 	get := func(k trackKey) *track {
 		tr := byKey[k]
@@ -546,18 +557,43 @@ func collectTracks(fm *packetfm.PacketFlightModelParser, paths *packetmovement.P
 		}
 		return tr
 	}
+	activeAircraft := map[uint64]*track{}
 	if fm != nil {
 		for _, frame := range fm.Results {
 			for _, entry := range frame.Entries {
-				if entry == nil || entry.Data == nil {
+				if entry == nil || entry.Data == nil || (entry.Data.Unk0 && entry.Data.Unk1) {
 					continue
 				}
-				tr := get(trackKey{air: true, id: entry.UID})
+				tr := activeAircraft[entry.UID]
+				records := spawnRecords[entry.UID]
+				if len(records) > 0 {
+					index := aircraftSpawnIndex(records, frame.CurrentTime)
+					key := trackKey{air: true, id: entry.UID, sortie: uint32(index)}
+					tr = get(key)
+					if index+1 < len(records) && records[index+1].Time > 0 {
+						tr.end, tr.hasEnd, tr.retired = records[index+1].Time-1, true, true
+					}
+					// A creation may arrive after the first sync. Within an explicit
+					// spawn interval, retain the recorded metadata that supersedes it.
+					if records[index].Entity != nil {
+						tr.entity = records[index].Entity
+					} else if entry.ResolvedEntity != nil {
+						tr.entity = entry.ResolvedEntity
+					}
+				} else if tr == nil {
+					tr = get(trackKey{air: true, id: entry.UID})
+					activeAircraft[entry.UID] = tr
+				} else if entry.ResolvedEntity != nil && tr.entity != nil && entry.ResolvedEntity != tr.entity {
+					key := tr.key
+					key.sortie++
+					if frame.CurrentTime > 0 {
+						tr.end, tr.hasEnd, tr.retired = frame.CurrentTime-1, true, true
+					}
+					tr = get(key)
+					activeAircraft[entry.UID] = tr
+				}
 				if tr.entity == nil {
 					tr.entity = entry.ResolvedEntity
-					if tr.entity == nil && mgr != nil {
-						tr.entity = mgr.Uid_lookup[int32(entry.UID)]
-					}
 				}
 				heading, attitude, bank := packetfm.UnpackEuler(entry.Data.EulerBytes)
 				tr.samples = append(tr.samples, acmiSample{
@@ -605,7 +641,10 @@ func collectTracks(fm *packetfm.PacketFlightModelParser, paths *packetmovement.P
 		if ki != kj {
 			return ki < kj
 		}
-		return tracks[i].key.id < tracks[j].key.id
+		if tracks[i].key.id != tracks[j].key.id {
+			return tracks[i].key.id < tracks[j].key.id
+		}
+		return tracks[i].key.sortie < tracks[j].key.sortie
 	})
 	_ = slot
 	return tracks
@@ -619,16 +658,9 @@ func collectTracks(fm *packetfm.PacketFlightModelParser, paths *packetmovement.P
 func appendMissileTracks(tracks []*track, inputs []missileTrack) []*track {
 	out := append([]*track(nil), tracks...)
 	existing := make(map[trackKey]bool, len(tracks))
-	aircraft := make(map[uint64]*track)
 	for _, tr := range tracks {
-		if tr == nil {
-			continue
-		}
-		existing[tr.key] = true
-		if tr.key.air && !tr.key.missile {
-			if _, ok := aircraft[tr.key.id]; !ok {
-				aircraft[tr.key.id] = tr
-			}
+		if tr != nil {
+			existing[tr.key] = true
 		}
 	}
 
@@ -656,7 +688,11 @@ func appendMissileTracks(tracks []*track, inputs []missileTrack) []*track {
 			projectileSource: in.Source,
 		}
 		if in.HasParent {
-			tr.parent = aircraft[in.ParentUID]
+			parentTime := samples[0].t
+			if in.Source != nil {
+				parentTime = in.Source.SpawnSample.Time
+			}
+			tr.parent = aircraftParentAt(tracks, in.ParentUID, parentTime)
 		}
 		added = append(added, tr)
 		existing[key] = true
@@ -951,7 +987,9 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 					times = append(times, tr.end)
 				}
 				deletions[tr.end] = append(deletions[tr.end], "-"+id)
-				updates[tr.end] = append(updates[tr.end], "0,Event=Destroyed|"+id)
+				if !tr.retired {
+					updates[tr.end] = append(updates[tr.end], "0,Event=Destroyed|"+id)
+				}
 			}
 			continue
 		}
@@ -995,7 +1033,9 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 				timesSeen[tr.end] = true
 				times = append(times, tr.end)
 			}
-			updates[tr.end] = append(updates[tr.end], "0,Event=Destroyed|"+id)
+			if !tr.retired {
+				updates[tr.end] = append(updates[tr.end], "0,Event=Destroyed|"+id)
+			}
 			deletions[tr.end] = append(deletions[tr.end], "-"+id)
 		}
 	}
@@ -1022,7 +1062,7 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 			timesSeen[event.t] = true
 			times = append(times, event.t)
 		}
-		updates[event.t] = append(updates[event.t], acmiEventLine(event, ids))
+		updates[event.t] = append(updates[event.t], acmiEventLine(event, ids, tracks))
 	}
 	messageEvents := append([]timelineEvent(nil), ctx.timeline...)
 	if ctx.radarMessages {
@@ -1328,7 +1368,7 @@ func writeTrackList(path string, tracks []*track, slot *packetslot.PacketSlotPar
 		start := tr.samples[0].t
 		end := tr.samples[len(tr.samples)-1].t
 		sampleCount := len(tr.samples)
-		if tr.key.air && tr.hasEnd {
+		if (tr.key.air || isGroundTrack(tr)) && tr.hasEnd {
 			end = tr.end
 			sampleCount = sort.Search(len(tr.samples), func(i int) bool { return tr.samples[i].t > end })
 		}
@@ -1423,7 +1463,7 @@ func trackName(tr *track, slot *packetslot.PacketSlotParser, names map[string]st
 		}
 		return tr.name
 	}
-	if tr.entity != nil {
+	if tr.entity != nil && !(isGroundTrack(tr) && tr.groundModelsDisabled) {
 		if model, ok := packetecs2.GetObjectData[string](&tr.entity.Data, "unit__className"); ok {
 			if model = strings.TrimSpace(model); model != "" {
 				return displayModelName(model)

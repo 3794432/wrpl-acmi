@@ -117,10 +117,17 @@ func (index killTimelineIndex) exactKiller(kill packetkill.KillEntry) *track {
 		candidates = append(candidates, index.airByUID[kill.KillerUid]...)
 		candidates = append(candidates, index.groundByUID[kill.KillerUid]...)
 	}
-	if len(candidates) != 1 {
-		return nil
+	var found *track
+	for _, tr := range candidates {
+		if !killTrackContains(tr, kill.CurrentTime) {
+			continue
+		}
+		if found != nil {
+			return nil
+		}
+		found = tr
 	}
-	return candidates[0]
+	return found
 }
 
 func (index killTimelineIndex) exactVictim(kill packetkill.KillEntry) *track {
@@ -140,10 +147,17 @@ func (index killTimelineIndex) exactVictim(kill packetkill.KillEntry) *track {
 		candidates = append(candidates, index.airByUID[kill.VictimUid]...)
 		candidates = append(candidates, index.groundByUID[kill.VictimUid]...)
 	}
-	if len(candidates) != 1 {
-		return nil
+	var found *track
+	for _, tr := range candidates {
+		if !killTrackContains(tr, kill.CurrentTime) {
+			continue
+		}
+		if found != nil {
+			return nil
+		}
+		found = tr
 	}
-	return candidates[0]
+	return found
 }
 
 // Aircraft ends are populated from the F058 destruction timestamp, so only
@@ -155,7 +169,7 @@ func killVictimLifetimeContains(victim *track, t uint32) bool {
 		return false
 	}
 	if victim.key.air || victim.hasEnd {
-		return victim.hasEnd && victim.end == t
+		return victim.hasEnd && !victim.retired && victim.end == t
 	}
 	return true
 }

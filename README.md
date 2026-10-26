@@ -17,6 +17,7 @@
 
 * Convert [War Thunder](https://warthunder.com/) air battle replays into a format that can be played in [Tacview](https://www.tacview.net/)
 * Convert a single local `.wrpl` replay or a directory of server replay `.wrpl` shards into an `.acmi` file
+* Keep repeated aircraft sorties as separate objects, including respawns that reuse a unit UID or the same vehicle model
 * Convert replays by dragging a file or directory onto the `.exe`, or pass an input path using options such as `-in`
 
 ### Advanced features

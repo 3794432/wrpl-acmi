@@ -34,6 +34,8 @@ ECS `transform` 的平移保存在 `TMatrix.V4`，截断或非有限坐标会被
 
 独立的 groundmeta ECS 解析器按实际 UID 关联 `unit__className`，再用 `unit_storage__*` 中 IdFieldSerializer 的字段 `0x6`（unit_name）交叉核对。出现型号冲突时，不应用该名称；缺少证据时继续保留通用身份。
 
+裸型号与带已知单位目录前缀的同一型号视为一致，例如 `ussr_pantsyr_s1` 与 `tankModels/ussr_pantsyr_s1`。不同的明确目录或不同型号仍视为冲突。UID 被复用时，按完整 ECS EID 及构造时间拆分身份区间，各代型号、红蓝方及生命周期分别关联，不将最终型号回填到之前的单位。
+
 部分模板含 ECS 哈希表未收录的浮点数据组件。独立解析器只对宽度确定、哈希未知的 POD 字段执行有界跳读，并保留原始数据。存储解析限制为 1 MiB，同时校验索引、尺寸及剩余数据；原有飞机和武器 ECS 路径继续采用严格行为。
 
 `Name` 和 `CallSign` 使用源于游戏 `lang/units.csv` 的具体型号名。查找时移除 `tankModels/`、`structures/` 等路径前缀，完整内部名仍写入 `WT_GroundModel`，依据写入 `WT_GroundModelSource`。找不到具体显示名时保留内部型号，不以 AAA 或 Static 等通用标签替代。

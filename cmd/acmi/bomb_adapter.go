@@ -181,16 +181,9 @@ func bombACMiSamples(samples []projectiles.Sample) []acmiSample {
 func appendBombTracks(tracks []*track, inputs []bombTrack) []*track {
 	out := append([]*track(nil), tracks...)
 	existing := make(map[trackKey]bool, len(tracks))
-	aircraft := make(map[uint64]*track)
 	for _, tr := range tracks {
-		if tr == nil {
-			continue
-		}
-		existing[tr.key] = true
-		if tr.key.air && !tr.key.missile && !tr.key.bomb && !tr.key.decoy {
-			if _, ok := aircraft[tr.key.id]; !ok {
-				aircraft[tr.key.id] = tr
-			}
+		if tr != nil {
+			existing[tr.key] = true
 		}
 	}
 
@@ -223,7 +216,11 @@ func appendBombTracks(tracks []*track, inputs []bombTrack) []*track {
 			bombPositionOnly: input.PositionOnly,
 		}
 		if input.HasParent {
-			tr.parent = aircraft[input.ParentUID]
+			parentTime := samples[0].t
+			if input.Source != nil {
+				parentTime = input.Source.SpawnSample.Time
+			}
+			tr.parent = aircraftParentAt(tracks, input.ParentUID, parentTime)
 		}
 		added = append(added, tr)
 		existing[key] = true

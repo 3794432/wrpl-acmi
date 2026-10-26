@@ -119,6 +119,7 @@ func (p *Parser) Parse(pk *packet.Packet) (any, error) {
 	if !ok || dat == nil {
 		return len(p.Models), nil
 	}
+
 	for _, msg := range dat.Messages {
 		if msg == nil {
 			continue
@@ -193,7 +194,7 @@ func (p *Parser) observeEntity(eid uint64, entity *ecs.Entity, stamp *uint32) (I
 	if info.StorageModel != "" {
 		sources = append(sources, "ecs:"+storageName+"#0x6")
 	}
-	if info.ClassModel != "" && info.StorageModel != "" && info.ClassModel != info.StorageModel {
+	if info.ClassModel != "" && info.StorageModel != "" && !sameGroundModel(info.ClassModel, info.StorageModel) {
 		info.ClassConflict = true
 	}
 	info.Source = "unknown"
@@ -230,7 +231,7 @@ func (p *Parser) observeEntity(eid uint64, entity *ecs.Entity, stamp *uint32) (I
 			p.All = append(p.All, info)
 			return prev, true
 		}
-		if prev.RawModel != "" && info.RawModel != "" && prev.RawModel != info.RawModel {
+		if prev.RawModel != "" && info.RawModel != "" && !sameGroundModel(prev.RawModel, info.RawModel) {
 			if !p.conflicts[key] {
 				p.Conflicts++
 			}

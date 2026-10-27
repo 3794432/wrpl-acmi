@@ -9,6 +9,33 @@ from catalog import build_catalog, _read_config
 
 
 class CatalogTargetTests(unittest.TestCase):
+    def test_published_tournament_targets_override_ground_and_naval_filter(self):
+        from targets import load_reference_ids
+        references = Path(__file__).resolve().parents[2] / "AtlasReferences.json"
+        targets = load_reference_ids(references)
+        tournament_ids = ["avn_japan", "avg_red_desert"]
+        self.assertTrue(set(tournament_ids).issubset(targets))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            levels = root / "game/levels"
+            configs = root / "datamine/levels"
+            levels.mkdir(parents=True)
+            configs.mkdir(parents=True)
+            for map_id in tournament_ids:
+                (levels / f"{map_id}.bin").write_bytes(b"")
+                (configs / f"{map_id}.blkx").write_text(json.dumps({
+                    "mapCoord0": [-32768, -32768],
+                    "mapCoord1": [32768, 32768],
+                    "water_level": 0,
+                }), encoding="utf-8")
+            entries = build_catalog(root / "datamine", root / "game", tournament_ids)
+            self.assertEqual({entry["id"] for entry in entries}, set(tournament_ids))
+            for entry in entries:
+                self.assertTrue(entry["is_air"])
+                self.assertTrue(entry["explicit_target"])
+                self.assertEqual(entry["map_coord0"], [-32768, -32768])
+                self.assertEqual(entry["map_coord1"], [32768, 32768])
+
     def test_explicit_sinai_target_beats_avg_prefix_and_uses_flat_datamine(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

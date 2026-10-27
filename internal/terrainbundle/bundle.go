@@ -41,7 +41,7 @@ const (
 	maxEntries        = 512
 	maxFileBytes      = 256 << 20
 	maxTotalBytes     = 16 << 30
-	maxMapCount       = 69
+	maxMapCount       = 128 // Safety bound, independent of the current catalogue size.
 	copyBufferBytes   = 128 << 10
 )
 

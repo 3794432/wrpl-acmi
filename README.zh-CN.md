@@ -72,9 +72,11 @@
 .\wrpl-acmi\wrpl-terrain-installer.exe
 ```
 
-地形默认安装位置为`%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`, 安装器依赖 Windows PowerShell; 完整 69 张地图在默认分辨率下安装时, 建议预留至少 8 GB 空间, 安装后占用约 4 GB 空间. 安装后应完全退出并重启 Tacview, 再从原始`.wrpl`重新导出先前导出的回放, 以确保轨迹与地形使用相同坐标配置.
+地形默认安装位置为`%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`, 安装器依赖 Windows PowerShell; 完整 71 张地图在默认分辨率下安装时, 建议预留至少 8 GB 空间, 安装后占用约 4 GB 空间. 安装后应完全退出并重启 Tacview, 再从原始`.wrpl`重新导出先前导出的回放, 以确保轨迹与地形使用相同坐标配置.
 
-导出和安装默认使用 geographic 布局, 69 张地图中. 14 张采用经审核的 WGS84 估算位置, 55 张使用 Atlas 回退坐标. Atlas 坐标用于技术展示, 不代表真实地理位置, 显式选择 Atlas 时,安装器的`-atlas`必须与导出器的 `-terrain-layout atlas` 配套使用,`-alt`仅调整垂直偏移.
+导出和安装默认使用 geographic 布局, 71 张地图中. 14 张采用经审核的 WGS84 估算位置, 57 张使用 Atlas 回退坐标. Atlas 坐标用于技术展示, 不代表真实地理位置, 显式选择 Atlas 时,安装器的`-atlas`必须与导出器的 `-terrain-layout atlas` 配套使用,`-alt`仅调整垂直偏移.
+
+地形集已包含比赛地图日本港口（`avn_japan`）和红色沙漠（`avg_red_desert`），两张均使用 Atlas 回退。使用这两张地图时，请同时更新两个 EXE，运行新版安装器，再从原始回放重新导出。已有地图坐标保持不变；安装器支持从旧版 69 张地图升级，包括 Tacview 1.9.4 格式。
 
 地形高度来自游戏内的 `levels/*.bin`, 边界, 水位等来自 [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine), 在地球上的经纬度定位来自 [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE) 的经纬度参考.
 
@@ -87,7 +89,7 @@
 | 空中与地面单位 | 使用回放中的位置, 飞行器保留姿态; 对移动地面单位的朝向进行推测, 销毁时先写入`Destroyed` 再移除; 符合条件的静态建筑可使用带时间戳的 ECS 构造位置
 | 导弹与炸弹 | 优先使用实际位置, 导弹运动参数通过位置进行计算; 只有构造记录的炸弹仅显示投放位置, 并标记`Release position only`
 | 干扰物 | 有可靠弹药证据时区分 Flare 和 Chaff, 无法确认时显示为 Chaff, 干扰物轨迹通过推测得出
-| 机场与跑道 | 按地图, 任务和可核对的雷达记录进行配置, 目录覆盖 69 张地图, 457 个任务, 其中 67 张有可用跑道信息
+| 机场与跑道 | 按地图, 任务和可核对的雷达记录进行配置, 目录覆盖 71 张地图, 457 个任务, 其中 67 张有可用跑道信息
 | 雷达目标指定 | 写入 Tacview 的`LockedTarget` 属性及可计算的距离, 角度信息, 目标指定可能包含跟踪信息不代表雷达处于跟踪模式
 | 防空参考范围 | 硬编码 255 个型号
 | 元数据与事件 | 包括标题, 作者, 时间, 来源备注, 阵营分组, 及回放事件消息. Award 和高亮书签默认关闭, 飞机遥测估算默认开启 |

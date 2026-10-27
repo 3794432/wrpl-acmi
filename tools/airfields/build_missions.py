@@ -166,8 +166,9 @@ def parse_catalog_ids(repo_root: Path) -> list[str]:
     if not match:
         raise ValueError("terrainmap knownIDs catalogue not found")
     ids = match.group(1).split()
-    if len(ids) != 69 or len(set(ids)) != 69:
-        raise ValueError(f"expected 69 unique terrain catalogue ids, got {len(ids)}")
+    references = json.loads((repo_root / "tools/terrain/AtlasReferences.json").read_text(encoding="utf-8"))
+    if not 1 <= len(ids) <= 128 or len(set(ids)) != len(ids) or ids != list(references):
+        raise ValueError("terrain catalogue ids must be unique and match AtlasReferences.json in order (1-128 maps)")
     return ids
 
 
@@ -799,7 +800,7 @@ def validate_result(result: dict[str, Any], ids: list[str]) -> None:
         raise ValueError("invalid schema/commit")
     maps = result.get("maps")
     if not isinstance(maps, list) or [x.get("map_id") for x in maps] != ids:
-        raise ValueError("maps must contain the 69 catalogue ids in catalogue order")
+        raise ValueError("maps must contain the terrain catalogue ids in catalogue order")
     for item in maps:
         map_id = item["map_id"]
         for mission in item["missions"]:

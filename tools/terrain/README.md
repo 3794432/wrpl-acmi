@@ -2,7 +2,7 @@
 
 [简体中文](README.zh-CN.md) · [Project README](../../README.md)
 
-The terrain tools convert local War Thunder level data into a 69-map Tacview height set. The build script can then package that set in a standalone installer. Game terrain assets are not stored in Git.
+The terrain tools convert local War Thunder level data into a 71-map Tacview height set. The build script can then package that set in a standalone installer. Game terrain assets are not stored in Git.
 
 If you already have an installer containing terrain data, go to [installation](#install-converted-terrain). The conversion environment is needed only when extracting or rebuilding terrain.
 
@@ -43,13 +43,13 @@ git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
 .\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
 ```
 
-The sparse checkout selects only `aces.vromfs.bin_u/levels`; the converter needs the 69 target `.blkx` files listed in `AtlasReferences.json` from the pinned revision, not a full Datamine checkout. `requirements.txt` pins NumPy 2.3.5, Pillow 12.3.0, pyooz 0.0.8, and zstandard 0.25.0.
+The sparse checkout selects only `aces.vromfs.bin_u/levels`; the converter needs the 71 target `.blkx` files listed in `AtlasReferences.json` from the pinned revision, not a full Datamine checkout. `requirements.txt` pins NumPy 2.3.5, Pillow 12.3.0, pyooz 0.0.8, and zstandard 0.25.0.
 
 `build.ps1` accepts `-OutputRoot` (default `dist\wrpl-acmi`), `-TerrainSource`, `-WithTerrain`, `-ResumeTerrain`, `-GameRoot`, `-DatamineRoot`, and `-Python` (default `python`). Every build produces `wrpl-acmi.exe` and `wrpl-terrain-installer.exe`. With `-WithTerrain`, the script calls `tools/terrain/build-terrain.ps1`, stages the converted maps in `dist/wrpl-acmi/terrain`, and appends them to the installer. Use the explicit venv interpreter for `-Python` when that is not the default `python` on `PATH`.
 
 ## Separate conversion and packaging
 
-To package an existing 69-map directory:
+To package an existing 71-map directory:
 
 ```powershell
 .\build.ps1 -TerrainSource ".\converted-terrain"
@@ -90,7 +90,7 @@ dist/wrpl-acmi/
 
 Both `AtlasReferences.json` and `GeoReferences.json` are required at the terrain source root for `-TerrainSource` packaging and installation.
 
-The complete terrain source contains 69 map directories. The raster is signed little-endian 16-bit metres, ordered north-to-south and west-to-east; `metadata.json` records dimensions, sampling bounds, and SHA-256. The XML starts from the zero-origin template expected by the installer. Synthetic `smalltests` terrain is only for installer tests. The standalone EXE appends the payload; it does not depend on adjacent `data/`, `terrain/`, or `tools/` directories. See [Single-file release build](../../docs/standalone-build.md) for distribution details.
+The complete terrain source contains 71 map directories. The raster is signed little-endian 16-bit metres, ordered north-to-south and west-to-east; `metadata.json` records dimensions, sampling bounds, and SHA-256. The XML starts from the zero-origin template expected by the installer. Synthetic `smalltests` terrain is only for installer tests. The standalone EXE appends the payload; it does not depend on adjacent `data/`, `terrain/`, or `tools/` directories. See [Single-file release build](../../docs/standalone-build.md) for distribution details.
 
 ## Input sources and licensing
 
@@ -125,7 +125,7 @@ When the installer was built without a payload, or when installing a different c
 
 ### Coordinate layout
 
-The reference catalogue contains 69 maps: 14 use reviewed geographic estimates and 55 use Atlas fallback. Converted terrain, exporter configuration, and installer metadata must use the same complete reference set.
+The reference catalogue contains 71 maps: 14 use reviewed geographic estimates and 57 use Atlas fallback. Converted terrain, exporter configuration, and installer metadata must use the same complete reference set.
 
 Use installer `-atlas` with exporter `-terrain-layout atlas` when deliberately choosing technical coordinates. These two settings must come from the same layout; the default on both sides is geographic. The exporter's `-alt` option remains a vertical offset in metres. Full details are in [TERRAIN_GEOGRAPHIC.md](../../docs/TERRAIN_GEOGRAPHIC.md), [terrain-atlas.md](../../docs/terrain-atlas.md), and [coverage](georeference/coverage.json).
 
@@ -154,7 +154,7 @@ The exporter is a self-contained executable. Run it directly from the package or
 .\dist\wrpl-acmi\wrpl-acmi.exe -in "C:\Replays\server-session" -out "C:\Replays\server-session.acmi"
 ```
 
-The exporter reads a client `.wrpl` or one match's server shard directory. Its normal lookup data, including `ecshashes`, is compiled in, so neither `run.bat`, a `data/` directory, nor an installed terrain set is required to export. Tacview is needed only to view the ACMI. Use `-terrain-layout geographic` (the default) for the 14-estimate and 55-Atlas-fallback catalog, or `-terrain-layout atlas` with the installer's `-atlas` for the technical layout. A vertical altitude offset can be applied with `-alt`.
+The exporter reads a client `.wrpl` or one match's server shard directory. Its normal lookup data, including `ecshashes`, is compiled in, so neither `run.bat`, a `data/` directory, nor an installed terrain set is required to export. Tacview is needed only to view the ACMI. Use `-terrain-layout geographic` (the default) for the 14-estimate and 57-Atlas-fallback catalog, or `-terrain-layout atlas` with the installer's `-atlas` for the technical layout. A vertical altitude offset can be applied with `-alt`.
 
 ## Installer checks
 
@@ -169,3 +169,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltes
 ```
 
 The presence of these checks does not assert that every test or build has passed in the current working tree.
+
+## Tournament air maps
+
+The 71-map catalogue includes Japanese Port (`avn_japan`) and Red Desert (`avg_red_desert`). Their ground/naval filename prefixes do not exclude them from the explicit build targets. Both use Atlas fallback, including in the default geographic layout; existing map anchors are unchanged. Red Desert requires the full-map terrain decoder plus its partial HM2 overlay, not a stretched local height patch. These entries add terrain support; source-backed runway geometry for these two maps has not yet been reviewed. Rebuild both executables and reinstall the complete terrain set before re-exporting these replays.

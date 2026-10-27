@@ -17,7 +17,8 @@ $script:GeoLayoutName = 'GeographicV1'
 $script:MapIdPrefix = 'WarThunder.Geo1.'
 $script:AtlasMapIdPrefix = 'WarThunder.Atlas1.'
 $script:MainManifestName = 'WarThunderMaps.install.json'
-$script:ExpectedMapCount = 69
+$script:ExpectedMapCount = @((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AtlasReferences.json') -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties).Count
+if ($script:ExpectedMapCount -lt 1 -or $script:ExpectedMapCount -gt 128) { throw 'Terrain catalogue must contain between 1 and 128 map IDs.' }
 $script:EarthMetersPerDegree = 111320.0
 $script:ExitOnCompletion = -not [bool]$FromInstaller
 

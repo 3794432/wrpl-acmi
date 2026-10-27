@@ -23,7 +23,7 @@ var allAirfieldsJSON []byte
 
 const (
 	allAirfieldCatalogSchema          = 2
-	allAirfieldMaxMaps                = 69
+	allAirfieldMaxMaps                = 128
 	allAirfieldMaxPrefabs             = 4096
 	allAirfieldMaxMissions            = 10_000
 	allAirfieldMaxPlacementsPerSource = 1024

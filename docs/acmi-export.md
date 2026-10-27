@@ -133,7 +133,7 @@ Ground units use synchronized tracks where available. Models, coalitions, and de
 
 A structure without synchronized tracks may use a timestamped ECS construction position when its static category is established. Conflicts, recycled identities, changing or nonfinite positions, and mission placeholders are excluded. See [ground units](ACMI_GROUND_UNITS.md) (Chinese) and [static objects](acmi-information.md#static-ground-objects).
 
-The airfield catalogue covers 69 maps and 457 mission entries, with usable definitions for 67 maps. Unconditional geometry can be selected directly; conditional layouts require matching replay radar identities and positions. Counts include mission, rank, and condition alternatives, not simultaneously active airports. Heading describes the runway axis, not the active landing direction.
+The airfield catalogue covers 71 maps and 457 mission entries, with usable definitions for 67 maps. Unconditional geometry can be selected directly; conditional layouts require matching replay radar identities and positions. Counts include mission, rank, and condition alternatives, not simultaneously active airports. Heading describes the runway axis, not the active landing direction.
 
 PhiPhi's eight checked race missions have air starts and no land-runway source. Caribbean has no reliable runway definition in the checked sources. See [airfields](ACMI_AIRFIELDS.md) and [coverage](ACMI_AIRFIELDS_COVERAGE.md).
 
@@ -153,7 +153,7 @@ The static air-defence table contains 255 models. Of these, 142 gun-only profile
 
 ## Terrain and coordinate settings
 
-The default geographic layout uses 14 reviewed WGS84 estimates and 55 Atlas fallbacks across 69 maps. Terrain XML and replay objects must use the same reference configuration. Re-export original WRPL files when matching existing ACMI to updated terrain.
+The default geographic layout uses 14 reviewed WGS84 estimates and 57 Atlas fallbacks across 71 maps. Terrain XML and replay objects must use the same reference configuration. Re-export original WRPL files when matching existing ACMI to updated terrain.
 
 Explicit `-terrain-layout atlas` pairs with `-atlas` in the standalone installer. Terrain installation affects the displayed background and is not required to export objects. Game height assets are not included in the source repository. See [terrain tools](../tools/terrain/README.md), [geographic placement](TERRAIN_GEOGRAPHIC.md), and [Atlas layout](terrain-atlas.md).
 

@@ -11,7 +11,8 @@ import (
 
 var ErrUnknown = errors.New("unknown War Thunder map")
 
-// These are the 69 air maps that exist in the task's terrain catalog.
+// Air maps and tournament levels supported by the terrain catalog. Append new
+// IDs so existing Atlas V1 anchors remain stable.
 var knownIDs = strings.Fields(`
 air_afghan air_africa_desert air_archipelago air_denmark
 air_equatorial_island air_falklands air_grand_canyon air_israel air_kamchatka
@@ -27,7 +28,7 @@ bulge caribbean_islands dover_strait guadalcanal guam honolulu hurtgen iwo_jima
 khalkhin_gol korea korsun krymsk kursk malta midway moscow mozdok mozdok_winter
 norway peleliu port_moresby ruhr saipan sector_montmedy sicily spain
 stalingrad stalingrad_w tunisia wake_island zhengzhou
-avg_egypt_sinai`)
+avg_egypt_sinai avn_japan avg_red_desert`)
 
 var (
 	known            = make(map[string]struct{}, len(knownIDs))

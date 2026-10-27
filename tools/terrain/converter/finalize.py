@@ -172,7 +172,7 @@ def finalize(
     root: Path,
     references: Path,
     catalog_path: Path,
-    expected_count: int,
+    expected_count: int | None,
     specials: list[str],
 ) -> dict[str, object]:
     root = root.resolve()
@@ -248,7 +248,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--references", type=Path, required=True)
     parser.add_argument("--catalog", type=Path, required=True)
-    parser.add_argument("--expected-count", type=int, default=69)
+    parser.add_argument("--expected-count", type=int, help="optional count assertion; membership comes from --references")
     parser.add_argument("--special", action="append", default=[])
     args = parser.parse_args(argv)
     try:

@@ -27,7 +27,11 @@ try {
         $restoreArguments = @{
             TerrainRoot = $Destination
             Profile = '1.9.5'
-            AllowPartial = $AllowPartial.IsPresent
+            # Restore the verified, already-owned map set. An earlier release
+            # can contain fewer maps than the incoming catalogue (69 -> 71).
+            # Source validation and the subsequent install still require the
+            # complete incoming catalogue unless explicitly testing fixtures.
+            AllowPartial = $true
         }
         & $FormatScript @restoreArguments
         if ($LASTEXITCODE -ne 0) {

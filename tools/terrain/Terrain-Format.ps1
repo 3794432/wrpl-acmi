@@ -884,8 +884,9 @@ function Set-WTTerrainFormat {
     $rootFull = [IO.Path]::GetFullPath($TerrainRoot)
     $allIds = @(Get-TerrainManifestMapIds $rootFull)
     $context = Get-TerrainContext $rootFull $allIds -AllowPartial:$AllowPartial
-    if (-not $AllowPartial -and ($context.AllMapIds.Count -ne 69 -or [int](Get-TerrainProperty $context.Manifest 'map_count') -ne 69)) {
-        throw 'A complete 69-map terrain install is required; use -AllowPartial only for fixtures.'
+    $expectedCount = @((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AtlasReferences.json') -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties).Count
+    if (-not $AllowPartial -and ($context.AllMapIds.Count -ne $expectedCount -or [int](Get-TerrainProperty $context.Manifest 'map_count') -ne $expectedCount)) {
+        throw "A complete $expectedCount-map terrain install is required; use -AllowPartial only for fixtures."
     }
     if ($Profile -ceq '1.9.4') { $result = Invoke-TerrainProfile194 $context -ValidateOnly:$ValidateOnly }
     else { $result = Invoke-TerrainProfile195 $context -ValidateOnly:$ValidateOnly }

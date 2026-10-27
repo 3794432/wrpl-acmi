@@ -12,7 +12,6 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$referenceCount = 69
 $terrainRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $converter = Join-Path $terrainRoot 'converter'
@@ -72,9 +71,8 @@ try {
     throw "Cannot parse AtlasReferences.json: $($_.Exception.Message)"
 }
 $targetProperties = @($targetDocument.PSObject.Properties)
-if ($targetProperties.Count -ne $referenceCount) {
-    throw "AtlasReferences.json has $($targetProperties.Count) IDs; expected exactly $referenceCount."
-}
+$referenceCount = $targetProperties.Count
+if ($referenceCount -lt 1 -or $referenceCount -gt 128) { throw 'AtlasReferences.json must contain between 1 and 128 map IDs.' }
 $targetIds = @($targetProperties | ForEach-Object { [string]$_.Name })
 foreach ($id in $targetIds) {
     if ($id -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') { throw "Invalid target map ID: $id" }
@@ -116,7 +114,7 @@ if ((Test-Path -LiteralPath $output -PathType Container) -and -not $Resume -and 
 Write-Host "Authoritative targets: $($targetIds.Count) (AtlasReferences.json)"
 Write-Host "Resolution: $Resolution; per-map timeout: $TimeoutSeconds seconds; memory Job guard: 2 GiB"
 if ($ValidateOnly) {
-    Write-Host "PASS: inputs, 69 target sources/configs, and pinned Python dependencies validated; no files were written."
+    Write-Host "PASS: inputs, $referenceCount target sources/configs, and pinned Python dependencies validated; no files were written."
     return
 }
 

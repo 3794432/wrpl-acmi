@@ -71,9 +71,11 @@ An installer containing terrain data can be run directly:
 .\wrpl-acmi\wrpl-terrain-installer.exe
 ```
 
-The default installation location is `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`. The installer depends on Windows PowerShell. At the default resolution, reserve at least 8 GB of free space for the complete 69-map set; the installed data occupies about 4 GB. After installation, fully quit and restart Tacview, then re-export previously exported replays from their original `.wrpl` files to ensure that tracks and terrain use the same coordinate configuration.
+The default installation location is `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`. The installer depends on Windows PowerShell. At the default resolution, reserve at least 8 GB of free space for the complete 71-map set; the installed data occupies about 4 GB. After installation, fully quit and restart Tacview, then re-export previously exported replays from their original `.wrpl` files to ensure that tracks and terrain use the same coordinate configuration.
 
-Exports and installations use the geographic layout by default. Of the 69 maps, 14 use reviewed WGS84 estimates and 55 use Atlas fallback coordinates. Atlas coordinates are for technical display, not real-world placement. To select Atlas explicitly, pair the installer's `-atlas` option with the exporter's `-terrain-layout atlas`; `-alt` changes only the vertical offset.
+Exports and installations use the geographic layout by default. Of the 71 maps, 14 use reviewed WGS84 estimates and 57 use Atlas fallback coordinates. Atlas coordinates are for technical display, not real-world placement. To select Atlas explicitly, pair the installer's `-atlas` option with the exporter's `-terrain-layout atlas`; `-alt` changes only the vertical offset.
+
+The terrain set includes the tournament maps Japanese Port (`avn_japan`) and Red Desert (`avg_red_desert`), both using Atlas fallback. Update both executables, run the new installer, and re-export the original replay to use these maps. Existing map coordinates are unchanged. The installer supports upgrading an older 69-map installation, including the Tacview 1.9.4 format.
 
 Terrain heights come from the game's `levels/*.bin` files. Boundaries, water levels, and other configuration come from [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine), and geographic latitude and longitude placement comes from the reference data in [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE).
 
@@ -86,7 +88,7 @@ An `.acmi` file converted from `.wrpl` replay data contains original replay reco
 | Aircraft and ground units | Positions come from the replay, and aircraft retain their attitude. Headings for moving ground units are inferred, and destroyed units are marked `Destroyed` before removal. Eligible static structures can use timestamped ECS construction positions. |
 | Missiles and bombs | Actual positions are preferred where available, and missile motion parameters are calculated from positions. Bombs with only construction records show their release position and are marked `Release position only`. |
 | Countermeasures | When reliable ammunition evidence distinguishes Flare and Chaff, the identified type is used; unresolved types are shown as Chaff. Countermeasure tracks are estimated. |
-| Airfields and runways | Configured from the map, mission, and verifiable radar records. The catalogue covers 69 maps and 457 missions, with usable runway information for 67 maps. |
+| Airfields and runways | Configured from the map, mission, and verifiable radar records. The catalogue covers 71 maps and 457 missions, with usable runway information for 67 maps. |
 | Radar target designations | Writes Tacview's `LockedTarget` property and calculable distance and angle information. A designation may include tracking information but does not mean the radar is in tracking mode. |
 | Air-defence reference ranges | Hard-coded references for 255 models. |
 | Metadata and events | Includes titles, authors, timestamps, source notes, coalition groups, and replay event messages. Award and highlighted bookmarks are disabled by default; aircraft telemetry estimates are enabled by default. |

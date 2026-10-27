@@ -8,7 +8,7 @@
 
 ## 数据来源与覆盖
 
-机场配置来自 [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) 固定提交 `f7952e4291e9fd7b6fe38e84020dddef925c3457`。目录为 69 张地形地图逐一记录覆盖状态；目录中存在地图条目，并不表示该地图一定有可导出的跑道。
+机场配置来自 [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) 固定提交 `f7952e4291e9fd7b6fe38e84020dddef925c3457`。目录为 71 张地形地图逐一记录覆盖状态；目录中存在地图条目，并不表示该地图一定有可导出的跑道。
 
 地图身份由根任务确定，导入模板中的占位 level 不作为依据。跑道几何通过任务 object-group 的放置矩阵，变换预制资产中明确的 `airfield.start`、`end` 和 `width` 得到，同时收集任务内的 `addAirfield` 定义。
 

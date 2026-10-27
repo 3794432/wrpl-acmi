@@ -439,7 +439,7 @@ try {
     if (-not (Test-Path -LiteralPath (Join-Path $packageDestination ($secondId + '\CustomHeightmapList.xml')))) { throw 'Package-root default install did not create the second map.' }
 
     $terrainRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-    $defaultFixture = Join-Path $testRootFull 'default-69-fixture'
+    $defaultFixture = Join-Path $testRootFull 'default-71-fixture'
     New-Item -ItemType Directory -Path $defaultFixture -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $terrainRoot 'AtlasReferences.json') -Destination (Join-Path $defaultFixture 'AtlasReferences.json')
     Copy-Item -LiteralPath (Join-Path $terrainRoot 'GeoReferences.json') -Destination (Join-Path $defaultFixture 'GeoReferences.json')
@@ -458,22 +458,22 @@ try {
         $defaultSamples[$id] = $sample
         Write-FixtureMap $defaultFixture $id $sample 2 2 | Out-Null
     }
-    if ($defaultSamples.Count -ne 69) { throw "Default reference fixture created $($defaultSamples.Count) maps." }
+    if ($defaultSamples.Count -ne 71) { throw "Default reference fixture created $($defaultSamples.Count) maps." }
 
-    $defaultDestination = Join-Path $testRootFull 'Default69\WarThunderMaps'
+    $defaultDestination = Join-Path $testRootFull 'Default71\WarThunderMaps'
     $result = Run-InstallerProcess @('-SourceRoot', $defaultFixture, '-Destination', $defaultDestination)
-    if ($result.ExitCode -ne 0) { throw "Default 69-map geographic install failed:`n$($result.Output)" }
+    if ($result.ExitCode -ne 0) { throw "Default 71-map geographic install failed:`n$($result.Output)" }
     if ($result.Output -notmatch 'Applied 14 geographic maps') { throw 'Default install did not apply 14 geographic maps.' }
     $defaultManifest = Get-Content -LiteralPath (Join-Path $defaultDestination 'WarThunderMaps.install.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ([int]$defaultManifest.map_count -ne 69) { throw 'Default 69-map manifest map_count mismatch.' }
-    if ([string]$defaultManifest.layout -ne 'GeographicV1') { throw 'Default 69-map manifest layout is not GeographicV1.' }
+    if ([int]$defaultManifest.map_count -ne 71) { throw 'Default 71-map manifest map_count mismatch.' }
+    if ([string]$defaultManifest.layout -ne 'GeographicV1') { throw 'Default 71-map manifest layout is not GeographicV1.' }
     if ([int]$defaultManifest.reference.geo_enabled_map_count -ne 14) { throw 'Default manifest geo_enabled_map_count is not 14.' }
-    if ([int]$defaultManifest.reference.geo_disabled_map_count -ne 55) { throw 'Default manifest geo_disabled_map_count is not 55.' }
+    if ([int]$defaultManifest.reference.geo_disabled_map_count -ne 57) { throw 'Default manifest geo_disabled_map_count is not 55.' }
     $geoCount = @($defaultManifest.maps | Where-Object { $_.installed_map_id -like 'WarThunder.Geo1.*' }).Count
     $atlasCount = @($defaultManifest.maps | Where-Object { $_.installed_map_id -like 'WarThunder.Atlas1.*' }).Count
     if ($geoCount -ne 14) { throw "Default manifest geographic count is $geoCount." }
-    if ($atlasCount -ne 55) { throw "Default manifest Atlas fallback count is $atlasCount." }
-    Assert-NoOldCoordinateManifestFields $defaultManifest 'Default69'
+    if ($atlasCount -ne 57) { throw "Default manifest Atlas fallback count is $atlasCount." }
+    Assert-NoOldCoordinateManifestFields $defaultManifest 'Default71'
     Assert-GeoXmlReference (Join-Path $defaultDestination 'air_afghan\CustomHeightmapList.xml') 'air_afghan' $defaultGeo.maps.air_afghan $defaultSamples['air_afghan']
     $grandAnchor = $defaultAtlas.air_grand_canyon
     $grandMetadata = Get-Content -LiteralPath (Join-Path $defaultFixture 'maps\air_grand_canyon\metadata.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -492,8 +492,8 @@ try {
     Copy-Item -LiteralPath (Join-Path $defaultFixture 'maps\air_afghan\CustomHeightmapList.xml') -Destination $geoStalePath -Force
     Copy-Item -LiteralPath (Join-Path $defaultFixture 'maps\air_grand_canyon\CustomHeightmapList.xml') -Destination $grandStalePath -Force
     $result = Run-InstallerProcess @('-SourceRoot', $defaultFixture, '-Destination', $defaultDestination)
-    if ($result.ExitCode -ne 0) { throw "Default 69-map regeneration failed:`n$($result.Output)" }
-    if ($result.Output -notmatch 'reused by matching size/SHA256: 69') { throw 'Default regeneration did not reuse all 69 data files.' }
+    if ($result.ExitCode -ne 0) { throw "Default 71-map regeneration failed:`n$($result.Output)" }
+    if ($result.Output -notmatch 'reused by matching size/SHA256: 71') { throw 'Default regeneration did not reuse all 71 data files.' }
     Assert-GeoXmlReference $geoStalePath 'air_afghan' $defaultGeo.maps.air_afghan $defaultSamples['air_afghan']
     Assert-XmlReference $grandStalePath $grandMetadata 'WarThunder.Atlas1.air_grand_canyon' 'true' ([double]$grandAnchor.latitude) ([double]$grandAnchor.longitude)
     if (-not (Test-Path -LiteralPath ($geoStalePath + '.before-atlas.bak'))) { throw 'Default geographic regeneration is missing its Atlas XML backup.' }
@@ -506,19 +506,19 @@ try {
     $defaultBackupPath = Join-Path $defaultDestination 'WarThunderMaps.install.json.bak'
     if (-not (Test-Path -LiteralPath $defaultBackupPath)) { throw 'Default regeneration is missing its manifest backup.' }
     $result = Run-InstallerProcess @('-SourceRoot', $defaultFixture, '-Destination', $defaultDestination)
-    if ($result.ExitCode -ne 0) { throw "Default 69-map no-op rerun failed:`n$($result.Output)" }
-    if ($result.Output -notmatch 'reused by matching size/SHA256: 69') { throw 'Default no-op rerun did not reuse all 69 data files.' }
+    if ($result.ExitCode -ne 0) { throw "Default 71-map no-op rerun failed:`n$($result.Output)" }
+    if ($result.Output -notmatch 'reused by matching size/SHA256: 71') { throw 'Default no-op rerun did not reuse all 71 data files.' }
 
-    $atlasOnlyDestination = Join-Path $testRootFull 'Default69-AtlasOnly\WarThunderMaps'
+    $atlasOnlyDestination = Join-Path $testRootFull 'Default71-AtlasOnly\WarThunderMaps'
     $result = Run-InstallerProcess @('-SourceRoot', $defaultFixture, '-Destination', $atlasOnlyDestination, '-AtlasOnly')
-    if ($result.ExitCode -ne 0) { throw "Default 69-map AtlasOnly install failed:`n$($result.Output)" }
+    if ($result.ExitCode -ne 0) { throw "Default 71-map AtlasOnly install failed:`n$($result.Output)" }
     $atlasOnlyManifest = Get-Content -LiteralPath (Join-Path $atlasOnlyDestination 'WarThunderMaps.install.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     if ([string]$atlasOnlyManifest.layout -ne 'AtlasV1') { throw 'AtlasOnly did not keep the AtlasV1 layout.' }
-    if ([int]$atlasOnlyManifest.map_count -ne 69) { throw 'AtlasOnly manifest map_count mismatch.' }
+    if ([int]$atlasOnlyManifest.map_count -ne 71) { throw 'AtlasOnly manifest map_count mismatch.' }
     if (@($atlasOnlyManifest.maps | Where-Object { $_.installed_map_id -like 'WarThunder.Geo1.*' }).Count -ne 0) { throw 'AtlasOnly installed a geographic map.' }
-    if (@($atlasOnlyManifest.maps | Where-Object { $_.installed_map_id -like 'WarThunder.Atlas1.*' }).Count -ne 69) { throw 'AtlasOnly did not install all 69 Atlas maps.' }
+    if (@($atlasOnlyManifest.maps | Where-Object { $_.installed_map_id -like 'WarThunder.Atlas1.*' }).Count -ne 71) { throw 'AtlasOnly did not install all 71 Atlas maps.' }
 
-    Write-Host 'PASS: removed-coordinate switches reject, default 69-map 14-geo/55-Atlas geometry, Atlas fallback, XML/manifest regeneration, data reuse, WarThunderActive overlay disable, validation-only, safety backups, .cmd exit codes, package-root defaults, and explicit AtlasOnly.'
+    Write-Host 'PASS: removed-coordinate switches reject, default 71-map 14-geo/57-Atlas geometry, Atlas fallback, XML/manifest regeneration, data reuse, WarThunderActive overlay disable, validation-only, safety backups, .cmd exit codes, package-root defaults, and explicit AtlasOnly.'
 }
 finally {
     if ($testRootFull.StartsWith($testPrefix, [StringComparison]::OrdinalIgnoreCase)) {

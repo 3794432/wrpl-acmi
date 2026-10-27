@@ -10,7 +10,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $script:InstallerName = 'war-thunder-air-terrain'
-$script:ExpectedMapCount = 69
+$script:ExpectedMapCount = @((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AtlasReferences.json') -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties).Count
+if ($script:ExpectedMapCount -lt 1 -or $script:ExpectedMapCount -gt 128) { throw 'Terrain catalogue must contain between 1 and 128 map IDs.' }
 $script:MapIdPrefix = 'WarThunder.'
 $script:AtlasMapIdPrefix = 'WarThunder.Atlas1.'
 $script:AtlasLayout = 'AtlasV1'
@@ -880,7 +881,7 @@ function Invoke-Installer {
     }
     else {
         Write-Host ("Layout: AtlasV1; anchors from {0}" -f $atlas.Path)
-        Write-Host 'The 69-map Atlas baseline is installed before the geographic overlay.'
+        Write-Host "The $($script:ExpectedMapCount)-map Atlas baseline is installed before the geographic overlay."
         Invoke-GeographicInstaller -SourceRootPath $sourceRootFull -DestinationPath $destinationFull -AtlasPath $atlas.Path -ValidationOnly $false
     }
     Write-Host 'Restart Tacview after changing the installed terrain set.'

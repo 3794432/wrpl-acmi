@@ -40,8 +40,8 @@ func TestAtlasReferencesAreFrozenInCatalogOrder(t *testing.T) {
 		}
 		index++
 	}
-	if index != 69 {
-		t.Fatalf("atlas contains %d entries, want 69", index)
+	if index != 71 {
+		t.Fatalf("atlas contains %d entries, want 71", index)
 	}
 }
 

@@ -217,6 +217,18 @@
       "source_runway_candidates": 108,
       "status": "Configured"
     },
+    "avg_red_desert": {
+      "missions": 0,
+      "missions_with_runways": 0,
+      "source_runway_candidates": 0,
+      "status": "NoSourcedLandRunway"
+    },
+    "avn_japan": {
+      "missions": 0,
+      "missions_with_runways": 0,
+      "source_runway_candidates": 0,
+      "status": "NoSourcedLandRunway"
+    },
     "berlin": {
       "missions": 18,
       "missions_with_runways": 8,
@@ -53078,6 +53090,18 @@
       ],
       "reason": "matching root mission with source-backed airfield geometry",
       "status": "Configured"
+    },
+    {
+      "map_id": "avg_red_desert",
+      "missions": [],
+      "reason": "Tournament terrain is supported; runway mission geometry has not been reviewed for this map",
+      "status": "NoSourcedLandRunway"
+    },
+    {
+      "map_id": "avn_japan",
+      "missions": [],
+      "reason": "Tournament terrain is supported; runway mission geometry has not been reviewed for this map",
+      "status": "NoSourcedLandRunway"
     },
     {
       "map_id": "berlin",

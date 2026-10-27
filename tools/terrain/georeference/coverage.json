@@ -3,9 +3,9 @@
   "source_repository": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE",
   "source_commit": "c26c0069558079df6597a7bc147cb91391509f89",
   "checked_at_utc": "2026-10-21T04:47:05.229Z",
-  "supported_map_count": 69,
+  "supported_map_count": 71,
   "enabled_count": 14,
-  "disabled_count": 55,
+  "disabled_count": 57,
   "installation": {
     "layout": "geographic",
     "output_directory": "WarThunderMaps",
@@ -54,7 +54,7 @@
     "disabled-low": 20,
     "disabled-advisory": 12,
     "disabled-candidate-check": 3,
-    "disabled-unresolved": 3
+    "disabled-unresolved": 5
   },
   "enabled": [
     {
@@ -1180,6 +1180,30 @@
         21.207147245816206,
         60.59272661480007
       ]
+    },
+    {
+      "id": "avn_japan",
+      "confidence": "unresolved",
+      "method": "Atlas technical placement; no geographic estimate",
+      "reason": "Atlas fallback: tournament terrain added without a reviewed geographic reference",
+      "atlas_footprint": [
+        59.40613552023639,
+        59.705713259072944,
+        60.59386447976361,
+        60.294286740927056
+      ]
+    },
+    {
+      "id": "avg_red_desert",
+      "confidence": "unresolved",
+      "method": "Atlas technical placement; no geographic estimate",
+      "reason": "Atlas fallback: tournament terrain added without a reviewed geographic reference",
+      "atlas_footprint": [
+        99.40613552023639,
+        59.705713259072944,
+        100.59386447976361,
+        60.294286740927056
+      ]
     }
   ],
   "special_checks": {
@@ -1195,5 +1219,6 @@
       "accepted": false,
       "result": "disabled; upstream terrain solve rejected for land/water swap"
     }
-  }
+  },
+  "catalog_updated_at_utc": "2026-10-27T04:11:27.243628+00:00"
 }

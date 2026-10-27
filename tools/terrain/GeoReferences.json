@@ -667,6 +667,20 @@
       "confidence": "unresolved",
       "method": "ocr+gazetteer+dem-match",
       "source": "https://github.com/ShioUmiusi/WT-MAP-ANALYZE/blob/c26c0069558079df6597a7bc147cb91391509f89/dataset/geo/index.json"
+    },
+    "avn_japan": {
+      "enabled": false,
+      "reason": "Atlas fallback: tournament terrain added without a reviewed geographic reference",
+      "confidence": "unresolved",
+      "method": "Atlas technical placement; no geographic estimate",
+      "source": "https://github.com/gszabi99/War-Thunder-Datamine/blob/f7952e4291e9fd7b6fe38e84020dddef925c3457/aces.vromfs.bin_u/levels/avn_japan.blkx"
+    },
+    "avg_red_desert": {
+      "enabled": false,
+      "reason": "Atlas fallback: tournament terrain added without a reviewed geographic reference",
+      "confidence": "unresolved",
+      "method": "Atlas technical placement; no geographic estimate",
+      "source": "https://github.com/gszabi99/War-Thunder-Datamine/blob/f7952e4291e9fd7b6fe38e84020dddef925c3457/aces.vromfs.bin_u/levels/avg_red_desert.blkx"
     }
   }
 }

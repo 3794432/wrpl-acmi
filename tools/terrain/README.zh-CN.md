@@ -2,7 +2,7 @@
 
 [English](README.md) · [项目说明](../../README.zh-CN.md) · [构建与发布](../../docs/standalone-build.zh-CN.md)
 
-地形工具将本机《战争雷霆》的编译后关卡转换为 Tacview 高程数据，再通过独立安装器写入 Tacview 的自定义地形目录。完整转换集包含 69 张地图；游戏地形资产不提交到 Git。
+地形工具将本机《战争雷霆》的编译后关卡转换为 Tacview 高程数据，再通过独立安装器写入 Tacview 的自定义地形目录。完整转换集包含 71 张地图；游戏地形资产不提交到 Git。
 
 如果已经取得含地形数据的安装器，可直接阅读[安装转换后的地形](#安装转换后的地形)。只有需要自行提取或打包地形时，才需要准备下述构建环境。
 
@@ -43,7 +43,7 @@ git -C .\War-Thunder-Datamine sparse-checkout set aces.vromfs.bin_u/levels
 git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
 ```
 
-稀疏检出仅获取转换所需的关卡目录。转换器会核对 `AtlasReferences.json` 所列 69 张地图的目标 `.blkx` 文件，无需完整检出 Datamine。
+稀疏检出仅获取转换所需的关卡目录。转换器会核对 `AtlasReferences.json` 所列 71 张地图的目标 `.blkx` 文件，无需完整检出 Datamine。
 
 ### 转换并生成发布包
 
@@ -103,7 +103,7 @@ dist/wrpl-acmi/
 
 使用 `-TerrainSource` 打包或安装已有转换目录时，来源根目录必须同时包含 `AtlasReferences.json` 和 `GeoReferences.json`。
 
-`terrain/` 是 `-WithTerrain` 构建时的暂存目录。完整来源包含 69 个地图目录；`.data` 使用以米为单位的 16 位有符号小端高程，按从北到南、从西到东排列。`metadata.json` 记录尺寸、采样边界和 SHA-256，源 XML 使用安装器要求的零点模板。
+`terrain/` 是 `-WithTerrain` 构建时的暂存目录。完整来源包含 71 个地图目录；`.data` 使用以米为单位的 16 位有符号小端高程，按从北到南、从西到东排列。`metadata.json` 记录尺寸、采样边界和 SHA-256，源 XML 使用安装器要求的零点模板。
 
 `smalltests` 中的合成数据仅供测试。含数据的独立安装器不依赖相邻的 `data/`、`terrain/` 或 `tools/` 目录。发布包清单及完整性标记见[构建与发布](../../docs/standalone-build.zh-CN.md)。
 
@@ -135,7 +135,7 @@ Datamine 仅提供配置，不能单独生成游戏高程。将 `.bin` 或 `.blk
 
 ### 坐标布局
 
-默认 geographic 布局包含 14 张使用已审核地理估算位置的地图，以及 55 张使用 Atlas 回退的地图。转换结果、导出器内嵌配置和安装器元数据应使用同一套 69 张地图参考数据。
+默认 geographic 布局包含 14 张使用已审核地理估算位置的地图，以及 57 张使用 Atlas 回退的地图。转换结果、导出器内嵌配置和安装器元数据应使用同一套 71 张地图参考数据。
 
 需要纯 Atlas 技术布局时，安装器使用 `-atlas`，导出器使用 `-terrain-layout atlas`。仅改变一侧会导致错位。`-alt` 只能增加以米为单位的垂直偏移。原理见[地理坐标](../../docs/TERRAIN_GEOGRAPHIC.md)和 [Atlas 布局](../../docs/terrain-atlas.md)，逐图审核结果见[覆盖清单](georeference/coverage.json)。
 
@@ -174,3 +174,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltes
 ```
 
 测试覆盖生成文件、格式转换和往返校验。列出命令不表示当前环境已执行通过，也不能替代两个 Tacview 版本的图形界面验证。
+
+## 比赛空战地图
+
+71 张地图目录包含日本港口（`avn_japan`）和红色沙漠（`avg_red_desert`）。即使内部文件名带陆战或海战前缀，也会按显式构建清单转换。两张地图在默认 geographic 布局下均采用 Atlas 回退；已有地图坐标不变。红色沙漠使用完整地图地形加局部 HM2 叠加，不能将局部高度图拉伸到全图。本次增加地形支持，这两张地图的跑道源几何尚未审核。重新构建两个 EXE 并安装完整地形后，从原始回放重新导出。

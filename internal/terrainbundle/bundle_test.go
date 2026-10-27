@@ -88,7 +88,7 @@ func TestRealReferenceFormatsAndWrappedFixturePack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load published AtlasReferences.json: %v", err)
 	}
-	if len(flatIDs) != 69 || flatIDs[0] != "air_afghan" || flatIDs[len(flatIDs)-1] != "zhengzhou" {
+	if len(flatIDs) != 71 || flatIDs[0] != "air_afghan" || flatIDs[len(flatIDs)-1] != "zhengzhou" {
 		t.Fatalf("published AtlasReferences IDs = %d, first=%q last=%q", len(flatIDs), flatIDs[0], flatIDs[len(flatIDs)-1])
 	}
 	if flatDigest == [32]byte{} {

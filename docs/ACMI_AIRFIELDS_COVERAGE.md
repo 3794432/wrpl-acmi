@@ -2,7 +2,7 @@
 
 [中文](ACMI_AIRFIELDS_COVERAGE.zh-CN.md) · [Airfield selection](ACMI_AIRFIELDS.md)
 
-The catalogue contains 69 maps and 457 mission entries. Usable runway definitions are available for 67 maps. This page describes source coverage; actual export also depends on the replay's map, mission, and evidence for conditional layouts.
+The catalogue contains 71 maps and 457 mission entries. Usable runway definitions are available for 67 maps. This page describes source coverage; actual export also depends on the replay's map, mission, and evidence for conditional layouts.
 
 The mission count is the number of catalogue entries for that map. Definition counts include alternatives across missions, ranks, and conditions, so they are not counts of airports active in one match. Missing or ambiguous geometry is omitted.
 
@@ -79,10 +79,13 @@ The mission count is the number of catalogue entries for that map. Definition co
 | `tunisia` | 3 | 108 | Source configured |
 | `wake_island` | 3 | 1 | Source configured |
 | `zhengzhou` | 6 | 203 | Source configured |
+| `avn_japan` | 0 | 0 | See notes below |
+| `avg_red_desert` | 0 | 0 | See notes below |
 
 ## Maps without usable runway sources
 
 - `air_race_phiphi_islands`: all eight checked race missions define air starts and no land-runway geometry.
 - `caribbean_islands`: the bounded CTA ship and event-name search found no mission whose root level is this map. The terrain level exists, but the checked mission sources establish neither a land runway nor carrier-only operation. This does not establish absence across all game versions.
+- `avn_japan`, `avg_red_desert`: terrain support added; runway mission geometry has not yet been reviewed.
 
 Actual selection and elevation provenance are recorded in the ACMI `WT_Airfield*` fields.

@@ -25,8 +25,8 @@ no network access. Level configs must match the local game assets.
 
 ## Build package
 
-The authoritative package membership is `../AtlasReferences.json`: exactly 69
-IDs, including `avg_egypt_sinai` and excluding the unavailable
+The authoritative package membership is `../AtlasReferences.json`: currently 71
+IDs, including `avg_egypt_sinai`, `avn_japan`, and `avg_red_desert` and excluding the unavailable
 `air_race_africa_canyon`. Catalog and batch results are checked against that
 file; omissions or extra IDs fail the build.
 
@@ -42,7 +42,7 @@ Optional parameters are `-Resolution` (default 4096, range 2-8192),
 `-TimeoutSeconds` (default 1200), `-Resume`, `-SkipVerify`, and
 `-ValidateOnly`. It performs no installation into Tacview AppData.
 
-The wrapper validates all 69 sources/configs, builds `catalog.json`, converts
+The wrapper validates all 71 sources/configs, builds `catalog.json`, converts
 serially through one worker per map, writes `summary.json`, runs the independent
 verifier by default, and creates `terrain-build.json`. Each worker installs a
 2 GiB Windows Job object limit before importing NumPy. `-Resume` reuses only a
@@ -81,7 +81,7 @@ applies the selected geographic or Atlas placement later.
 `avg_egypt_sinai` must finish as `render_mesh_hm2_overlay`: no lmap ray tracer,
 `render_mesh` as the base surface, a positive HM2 overlay contribution, and
 both HM2 and FRT blocks present. Finalization checks this mode, all raster
-hashes and sizes, exact 69-map directory membership, the complete manifest,
+hashes and sizes, exact 71-map directory membership, the complete manifest,
 zero-origin XML, and the copied reference hashes. It rejects extra or missing
 maps.
 
@@ -92,19 +92,19 @@ Run from this directory or pass absolute script paths.
 ```powershell
 # Catalog only
 python -B catalog.py --client '<game>' --datamine '<datamine>' `
-  --targets ..\AtlasReferences.json --expected-targets 69 `
+  --targets ..\AtlasReferences.json --expected-targets 71 `
   --output '<output>\catalog.json' --air-only
 
 # Conversion only
 python -B batch.py --catalog '<output>\catalog.json' `
-  --references ..\AtlasReferences.json --expected-targets 69 `
+  --references ..\AtlasReferences.json --expected-targets 71 `
   --output '<output>' --resolution 4096 --timeout 1200
 
 # Summary, verification, and strict finalization
 python -B summarize.py --root '<output>' --catalog '<output>\catalog.json'
 python -B verify_outputs.py --root '<output>' --catalog '<output>\catalog.json'
 python -B finalize.py --root '<output>' --references ..\AtlasReferences.json `
-  --catalog '<output>\catalog.json' --expected-count 69 `
+  --catalog '<output>\catalog.json' --expected-count 71 `
   --special avg_egypt_sinai=render_mesh_hm2_overlay
 ```
 
@@ -131,3 +131,5 @@ HPND. Full texts supplied with those packages are in `LICENSES/`.
 War Thunder and its assets belong to Gaijin Entertainment. This project is not
 affiliated with or endorsed by Gaijin. No game binary or level configuration is
 distributed here.
+
+The wrapper derives target count from `AtlasReferences.json` (bounded to 1-128 maps). Japanese Port and Red Desert are explicit tournament targets despite their `avn_`/`avg_` prefixes. Their pinned level configs define the full 65536 m square; the HM2 patch in Red Desert covers only 4096 m square and must be overlaid on the full terrain.

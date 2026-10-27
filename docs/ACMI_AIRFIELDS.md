@@ -6,7 +6,7 @@
 
 ## Sources and coverage
 
-The catalogue records coverage for all 69 terrain-map IDs. The coverage report distinguishes available runway definitions from unresolved sources. A map entry does not guarantee that a runway can be exported; missing source geometry is left unresolved.
+The catalogue records coverage for all 71 terrain-map IDs. The coverage report distinguishes available runway definitions from unresolved sources. A map entry does not guarantee that a runway can be exported; missing source geometry is left unresolved.
 
 Sources are [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) at `f7952e4291e9fd7b6fe38e84020dddef925c3457`. Root missions assign maps; imported helper levels may be unrelated placeholders. Mission object-group matrices transform explicit prefab `airfield.start`, `end` and `width`. Direct mission `addAirfield` definitions are also collected. Dimensions are not inferred from filenames: the prefab named `dynaf_pg_1line_3000_universal` defines a 3200 m × 120 m strip.
 

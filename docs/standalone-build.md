@@ -29,7 +29,7 @@ This builds `wrpl-acmi.exe` and `wrpl-terrain-installer.exe`. The exporter is co
 .\build.ps1 -TerrainSource ".\converted-terrain"
 ```
 
-`-TerrainSource` accepts an already converted terrain directory, such as the result of the 69-map conversion. The build appends that payload to `wrpl-terrain-installer.exe`. Preparing or packaging an existing payload with this option does not require Python, Git, a War Thunder client, or Tacview on the build machine. The source tree and Go toolchain are still required to build the executables.
+`-TerrainSource` accepts an already converted terrain directory, such as the result of the 71-map conversion. The build appends that payload to `wrpl-terrain-installer.exe`. Preparing or packaging an existing payload with this option does not require Python, Git, a War Thunder client, or Tacview on the build machine. The source tree and Go toolchain are still required to build the executables.
 
 `-TerrainSource` does not convert, reshape, or relocate the supplied maps. It does not change the converter's default `-out` behavior either; a converter run without `-out` continues to write to the current working directory.
 
@@ -42,7 +42,7 @@ This builds `wrpl-acmi.exe` and `wrpl-terrain-installer.exe`. The exporter is co
   -Python ".\.venv\Scripts\python.exe"
 ```
 
-This converts the 69 maps from the local game and pinned Datamine checkout, then embeds the result in the same installer executable. It requires the converter prerequisites described in the [terrain guide](../tools/terrain/README.md). Use `-ResumeTerrain` with the same arguments to resume an interrupted conversion. `-TerrainSource` and `-WithTerrain` are mutually exclusive.
+This converts the 71 maps from the local game and pinned Datamine checkout, then embeds the result in the same installer executable. It requires the converter prerequisites described in the [terrain guide](../tools/terrain/README.md). Use `-ResumeTerrain` with the same arguments to resume an interrupted conversion. `-TerrainSource` and `-WithTerrain` are mutually exclusive.
 
 ### Build options and completion
 
@@ -62,7 +62,7 @@ Without `-ResumeTerrain`, conversion refuses an existing nonempty terrain output
 
 ## Install terrain
 
-With an embedded payload, the default install uses the included 69-map set:
+With an embedded payload, the default install uses the included 71-map set:
 
 ```powershell
 .\wrpl-terrain-installer.exe
@@ -86,7 +86,7 @@ The supported options are:
 | `-validate-only` | Validate the source and write nothing to the destination. |
 | `-atlas` | Install the technical Atlas coordinate layout. Pair it with exporter `wrpl-acmi.exe -terrain-layout atlas`. |
 
-`-profile auto` looks for the Tacview executable and selects the matching encoding. If it cannot find Tacview, it falls back to the 1.9.4 profile. Running the installer again can reuse its cache. For the full 69-map set at the default 4096 resolution, allow at least 8 GB of free disk space for temporary extraction, original rasters and the 1.9.4 height copies.
+`-profile auto` looks for the Tacview executable and selects the matching encoding. If it cannot find Tacview, it falls back to the 1.9.4 profile. Running the installer again can reuse its cache. For the full 71-map set at the default 4096 resolution, allow at least 8 GB of free disk space for temporary extraction, original rasters and the 1.9.4 height copies.
 
 The installer verifies source data against its SHA-256 metadata before writing the target. Validation confirms the supplied data and supported encoding path; it does not establish that a Tacview GUI loaded or rendered the terrain correctly.
 
@@ -116,3 +116,5 @@ new terrain or replace a changed installer.
 Game height data is not committed to Git. A payload-bearing installer contains the converted data in its appended package. The source tree stores the converter, installer and configuration; build the data-bearing executable locally from converted game terrain.
 
 The embedded replay defaults make the exporter independent of package folders. `wrpl-acmi.exe -ecshashes` defaults to `embedded`; an explicit JSON path overrides the table, and an empty value disables it. If no War Thunder terrain is installed, Tacview can show its default ocean or background terrain, while the exported aircraft, ground objects, missiles, bombs, and countermeasures remain in the ACMI. Terrain installation changes the displayed landscape, not the replay object export.
+
+The asset-copy workflow is pinned to the older 69-map installer. Do not reuse that payload for a 71-map release: build a new terrain-bearing installer with `-WithTerrain` or `-TerrainSource`, including `avn_japan` and `avg_red_desert`.

@@ -40,6 +40,13 @@ try {
             if ((Get-FileHash -LiteralPath $original).Hash -ne (Get-FileHash -LiteralPath $installed).Hash) { throw "Canonical raster changed: $id" }
             if (-not (Test-Path -LiteralPath (Join-Path $destination "_uint16/$id.data"))) { throw "Unsigned cache missing: $id" }
         }
+        # A prior release has fewer owned maps than the incoming catalogue.
+        # RestoreOnly must accept that owned set without opening the new install
+        # to partial sources. This deliberately omits -AllowPartial.
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoRoot 'cmd/terrain-install/install-wrapper.ps1') -InstallScript (Join-Path $repoRoot 'tools/terrain/Install-All-Terrains.ps1') -FormatScript (Join-Path $repoRoot 'tools/terrain/Set-Tacview-Terrain-Format.ps1') -SourceRoot $fixture -Destination $destination -Profile 1.9.5 -RestoreOnly
+        if ($LASTEXITCODE -ne 0) { throw 'Restoring an older map catalogue before upgrade failed.' }
+        $restored = Get-Content -LiteralPath (Join-Path $destination 'WarThunderMaps.format.json') -Raw | ConvertFrom-Json
+        if ($restored.profile -ne '1.9.5') { throw 'Older catalogue restore did not select native format.' }
         & $installer -destination $destination -profile 1.9.4 -allow-partial
         if ($LASTEXITCODE -ne 0) { throw 'Standalone repeat installation failed.' }
         # Reproduce an older index left behind after its state/cache were lost.

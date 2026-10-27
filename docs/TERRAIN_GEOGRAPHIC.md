@@ -17,7 +17,7 @@
 
 完整环境准备见[从零构建](../tools/terrain/README.zh-CN.md#从零构建)。地形高度来自本机游戏的 `levels/*.bin`；Datamine 固定提交 `f7952e4291e9fd7b6fe38e84020dddef925c3457` 提供边界、水位等配置，不能单独生成高程。
 
-若使用脚本安装入口，`-SourceRoot` 必须指向包含全部 69 张地图的转换目录，其中应有 `maps/<id>/<id>.data`、元数据和零点 XML，不能指向 Datamine 或原始关卡目录：
+若使用脚本安装入口，`-SourceRoot` 必须指向包含全部 71 张地图的转换目录，其中应有 `maps/<id>/<id>.data`、元数据和零点 XML，不能指向 Datamine 或原始关卡目录：
 
 ```powershell
 .\dist\wrpl-acmi\tools\terrain\Install-All-Terrains.cmd -SourceRoot .\dist\wrpl-acmi\terrain -AtlasReferences .\dist\wrpl-acmi\tools\terrain\AtlasReferences.json
@@ -44,7 +44,7 @@ latitude  = minLatitude  + v * (maxLatitude  - minLatitude)
 
 ## 定位筛选与 Atlas 回退
 
-参考集包含 69 张地图，其中 14 张采用已审核的地理估算位置（5 张为 high、9 张为 medium），55 张使用 Atlas 回退。已知错误、低置信、未解算、范围不匹配或与最终地形重叠的结果均被排除。
+参考集包含 71 张地图，其中 14 张采用已审核的地理估算位置（5 张为 high、9 张为 medium），57 张使用 Atlas 回退。已知错误、低置信、未解算、范围不匹配或与最终地形重叠的结果均被排除。
 
 采用地理估算的地图写入 `WT_GeoreferenceStatus=Estimated`。回退地图则写入 `WT_GeoreferenceStatus=AtlasFallback` 及原因。Atlas 坐标用于技术展示，不代表真实地理位置，也不是针对旧回放的兼容模式。
 
@@ -54,7 +54,7 @@ Sinai、Grand Canyon 和 Israel 的已知错误定位不予采用，其中包括
 
 ACMI 记录 `WT_GeoreferenceConfigSHA256` 和上游提交，安装清单记录同一配置的校验值，可据此核对导出器与地形是否使用同版映射。
 
-配置在编译时内嵌。修改 JSON 后，需要重新编译导出器并重新安装地形，不能只更新其中一份文件。转换数据、导出器配置和安装器元数据应始终使用完整且一致的 69 地图参考集。
+配置在编译时内嵌。修改 JSON 后，需要重新编译导出器并重新安装地形，不能只更新其中一份文件。转换数据、导出器配置和安装器元数据应始终使用完整且一致的 71 地图参考集。
 
 安装器更新每张地图的 XML，不同时保留该地图旧的 Atlas 定义。高程 `.data` 可复用，无需仅为更新水平位置而重新提取高度；该过程也不包含地表纹理。
 

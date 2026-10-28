@@ -38,6 +38,8 @@ Download the executables from the [latest release](https://github.com/3794432/wr
 * [`wrpl-acmi.exe`](https://github.com/3794432/wrpl-acmi/releases/latest/download/wrpl-acmi.exe) converts replays to `.acmi` files (required)
 * [`wrpl-terrain-installer.exe`](https://github.com/3794432/wrpl-acmi/releases/latest/download/wrpl-terrain-installer.exe) installs terrain for Tacview (optional)
 
+The local-game conversion installer described below is built from the current `dev` branch. Older releases may contain a terrain installer with pre-generated game data instead; check the release notes before following these installation instructions.
+
 ### Convert `.wrpl` replays to `.acmi` files
 
 The following example runs the converter in PowerShell:
@@ -65,19 +67,25 @@ See the [export guide](docs/acmi-export.md) for complete options, output rules, 
 
 Installing terrain is optional. Without the in-game terrain, the ACMI file still contains the exported replay objects, but Tacview's background terrain may not match the game map.
 
-An installer containing terrain data can be run directly:
+The standalone installer contains no pre-generated `.data` terrain. Put `wrpl-terrain-installer.exe` in your War Thunder game root (the directory containing `levels/` and `aces.vromfs.bin`), then run it:
 
 ```powershell
-.\wrpl-acmi\wrpl-terrain-installer.exe
+.\wrpl-terrain-installer.exe
 ```
 
-The default installation location is `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`. The installer depends on Windows PowerShell. At the default resolution, reserve at least 8 GB of free space for the complete 71-map set; the installed data occupies about 4 GB. After installation, fully quit and restart Tacview, then re-export previously exported replays from their original `.wrpl` files to ensure that tracks and terrain use the same coordinate configuration.
+By default, it reads the game directory containing the EXE, regardless of the current working directory. It converts the local assets at resolution 4096 and installs them to `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`. Game assets remain read-only. Portable CPython and four pinned packages are bundled in the EXE: users do not need to install Python, Go, or Git, and runtime operation needs no network or game-data download. The installation helpers use system Windows PowerShell.
+
+The first run converts all 71 maps one at a time and can take several minutes. Low overall CPU usage is expected during this serial conversion. Reserve at least 8 GB of free space for the cache, installation, and temporary files at the default resolution. Later runs reuse unchanged converted maps; deleting the reported map cache means converting them again.
+
+Use `-game <directory>` to select another game installation, `-cache <directory>` to change the default `%LOCALAPPDATA%\wrpl-acmi\terrain` cache, and `-resolution 4096` to select the conversion resolution. Map conversion results and logs are retained for resuming; source hashes are checked before reuse. At completion, the installer prints the cache path and a reminder to delete it manually when no longer needed. It does not clean caches automatically. `-profile auto`, `-profile 1.9.4`, and `-profile 1.9.5` select Tacview height encoding. `-validate-only` checks inputs without converting all maps or changing the installation destination; `-convert-only` creates the converted cache without installing. `-source <directory>` is a manual override for an existing converted terrain directory and skips automatic game reading. See the [terrain guide](tools/terrain/README.md) for commands.
+
+After installation, fully quit and restart Tacview, then re-export previously exported replays from their original `.wrpl` files to ensure that tracks and terrain use the same coordinate configuration.
 
 Exports and installations use the geographic layout by default. Of the 71 maps, 14 use reviewed WGS84 estimates and 57 use Atlas fallback coordinates. Atlas coordinates are for technical display, not real-world placement. To select Atlas explicitly, pair the installer's `-atlas` option with the exporter's `-terrain-layout atlas`; `-alt` changes only the vertical offset.
 
 The terrain set includes the tournament maps Japanese Port (`avn_japan`) and Red Desert (`avg_red_desert`), both using Atlas fallback. Update both executables, run the new installer, and re-export the original replay to use these maps. Existing map coordinates are unchanged. The installer supports upgrading an older 69-map installation, including the Tacview 1.9.4 format.
 
-Terrain heights come from the game's `levels/*.bin` files. Boundaries, water levels, and other configuration come from [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine), and geographic latitude and longitude placement comes from the reference data in [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE).
+The automatic installer reads terrain heights from local `levels/*.bin` files and boundaries, water levels, and other configuration from local `aces.vromfs.bin`. The separate developer pipeline can use [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) configuration. Geographic latitude and longitude placement comes from the reference data in [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE). The known catalogue remains 71 maps; this installer change adds no runway geometry.
 
 ## ACMI content and data types
 
@@ -112,22 +120,20 @@ Set-Location .\wrpl-acmi
 The default output directory is `dist\wrpl-acmi`, containing two independently usable programs:
 
 * `wrpl-acmi.exe` converts replays; its default data is embedded.
-* `wrpl-terrain-installer.exe` installs converted game terrain in Tacview. A normal build does not include terrain data, and installation requires an external terrain directory.
+* `wrpl-terrain-installer.exe` bundles the conversion runtime, reads the user's local game, and installs converted terrain in Tacview. It contains no pre-generated `.data` files.
 
-A complete converted terrain directory can be bundled into the installer:
+By default, `build.ps1` fetches hash-pinned open-source CPython runtime and wheel artifacts at build time, using `tools/terrain/runtime-lock.json`; it downloads no game data. `-PythonRuntime` selects a prepared runtime directory, and `-RuntimeCache` selects the build cache. The former `-WithTerrain` and `-TerrainSource` options are rejected with a migration error; converted game assets are no longer packaged into the public installer.
 
-```powershell
-.\build.ps1 -TerrainSource ".\converted-terrain"
-```
-
-Extracting and converting terrain from the local game also requires 64-bit Python 3.12, Git, the converter dependencies, and a pinned [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) configuration. See the [terrain tool guide](tools/terrain/README.md#build-from-scratch) for environment setup and complete commands, and the [build and release guide](docs/standalone-build.md) for build options, resume support, and release artifacts. Historical releases may lag behind dev; build from that branch when you need the current implementation.
+The manual developer pipeline `tools/terrain/build-terrain.ps1` still uses Python and a pinned Datamine checkout, separately from end-user automatic local conversion. See the [terrain tool guide](tools/terrain/README.md#build-from-scratch) and [build and release guide](docs/standalone-build.md). Historical releases may lag behind dev; build from that branch when you need the current implementation.
 
 ## Responsibility, related projects, and license
 
-This project is still in early development. You are responsible for the consequences of running builds and release artifacts from this repository. The repository's [source-build workflow](.github/workflows/source-build.yml) configures exporter, parser-library, and synthetic terrain checks. Terrain conversion and its installer depend on game assets in the build environment. Loading and rendering in the Tacview GUI also require separate verification.
+This project is still in early development. You are responsible for the consequences of running builds and release artifacts from this repository. The repository's [source-build workflow](.github/workflows/source-build.yml) configures exporter, parser-library, and synthetic terrain checks. Building the standalone installer does not require game assets; converting real terrain requires the user's local game. Loading and rendering in the Tacview GUI also require separate verification.
 
 This project is based on [wrpl-inspector](https://github.com/maxsupermanhd/wrpl-inspector) v3, retaining its Go replay parser library and dear-imgui graphical inspector alongside a headless `cmd/acmi` exporter. The Go module path remains `github.com/maxsupermanhd/wrpl-inspector/v3`.
 
 Some project content comes from [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) and [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE).
 
 This project and the [wrpl-inspector](https://github.com/maxsupermanhd/wrpl-inspector) library are released under the [AGPL-3.0 license](LICENSE). Upstream copyright and license notices are retained. Maps and game assets are owned by [Gaijin Entertainment](https://gaijinent.com/).
+
+Bundled runtime and dependency notices are included in the extracted runtime's `LICENSES/` directory. Avoiding pre-generated game-data distribution reduces redistribution, but does not establish permission to extract, convert, use, or redistribute game assets.

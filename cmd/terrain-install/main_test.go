@@ -15,7 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maxsupermanhd/wrpl-inspector/v3/internal/terrainbundle"
 	terrainres "github.com/maxsupermanhd/wrpl-inspector/v3/tools/terrain"
 )
 
@@ -54,6 +53,10 @@ func TestParseOptionsRejectsInvalidInput(t *testing.T) {
 		{"-profile", "1.9.6"},
 		{"-unknown"},
 		{"positional"},
+		{"-resolution", "1"},
+		{"-resolution", "8193"},
+		{"-validate-only", "-convert-only"},
+		{"-source", "converted", "-game", "game"},
 	} {
 		if _, err := parseOptions(args, func(string) string { return t.TempDir() }, io.Discard); err == nil {
 			t.Fatalf("parseOptions(%q) accepted invalid input", args)
@@ -371,22 +374,15 @@ func TestWrapperFailureRetainsTempLogAndError(t *testing.T) {
 	}
 }
 
-func TestNoPayloadWithoutSourceExplainsBuildOptions(t *testing.T) {
+func TestLocalConversionFailureDoesNotInstall(t *testing.T) {
 	called := false
-	deps := fakeDependencies(func(context.Context, []string, io.Writer, io.Writer) error {
-		called = true
-		return nil
-	})
-	deps.extract = func(string, string) (bool, error) { return false, nil }
-	opts := options{destination: filepath.Join(t.TempDir(), "destination"), profile: profile194}
-	err := runInstall(context.Background(), opts, deps, io.Discard, io.Discard)
-	if err == nil || called {
-		t.Fatalf("missing payload: err=%v called=%v", err, called)
+	deps := fakeDependencies(func(context.Context, []string, io.Writer, io.Writer) error { called = true; return nil })
+	deps.prepare = func(context.Context, options, io.Writer, io.Writer) (string, func(), error) {
+		return "", nil, errors.New("missing local game assets")
 	}
-	for _, text := range []string{"-source", "-TerrainSource", "-WithTerrain", "no terrain payload"} {
-		if !strings.Contains(err.Error(), text) {
-			t.Fatalf("missing-payload error lacks %q: %v", text, err)
-		}
+	err := runInstall(context.Background(), options{destination: filepath.Join(t.TempDir(), "destination"), profile: profile194}, deps, io.Discard, io.Discard)
+	if err == nil || called || !strings.Contains(err.Error(), "local game") {
+		t.Fatalf("err=%v installed=%v", err, called)
 	}
 }
 
@@ -505,65 +501,71 @@ func TestSyntheticPowerShellInstallProfiles(t *testing.T) {
 	}
 }
 
-func TestEmbeddedPayloadBecomesSourceWithoutOverridingItsReferences(t *testing.T) {
-	source, err := filepath.Abs(filepath.Join("..", "..", "tools", "terrain", "smalltests", "geographic", "fixture"))
-	if err != nil {
+func TestLocalConversionFeedsInstallerAndHoldsCacheLock(t *testing.T) {
+	source, destination := makeFixturePaths(t)
+	sentinel := filepath.Join(source, "maps", "keep.data")
+	if err := os.WriteFile(sentinel, []byte("cached terrain"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(source, "AtlasReferences.json")); err != nil {
-		t.Skip("synthetic geographic fixture has not been generated")
-	}
-	testRoot, err := os.MkdirTemp(filepath.Join("..", ".."), ".terrain-payload-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(testRoot)
-	stub := filepath.Join(testRoot, "stub.exe")
-	if err := os.WriteFile(stub, []byte("synthetic executable stub"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	packed := filepath.Join(testRoot, "wrpl-terrain-installer.exe")
-	if err := terrainbundle.Pack(stub, source, packed); err != nil {
-		t.Fatalf("pack synthetic terrain payload: %v", err)
-	}
-	// Payload extraction publishes with a directory rename. Keep its temporary
-	// files in the workspace so this test also runs under restricted sandboxes.
-	t.Setenv("TEMP", testRoot)
-	t.Setenv("TMP", testRoot)
-
-	capturedSource := ""
-	deps := defaultDependencies()
-	deps.getenv = func(string) string { return "" }
-	deps.executable = func() (string, error) { return packed, nil }
-	deps.run = func(_ context.Context, args []string, _, _ io.Writer) error {
-		capturedSource = argumentFor(args, "-SourceRoot")
-		for _, name := range []string{"AtlasReferences.json", "GeoReferences.json"} {
-			fromPayload, err := os.ReadFile(filepath.Join(capturedSource, name))
-			if err != nil {
-				t.Fatalf("payload is missing %s: %v", name, err)
-			}
-			fromFixture, err := os.ReadFile(filepath.Join(source, name))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !bytes.Equal(fromPayload, fromFixture) {
-				t.Fatalf("payload %s does not match the supplied source reference", name)
-			}
+	converted, released, calls := false, false, 0
+	deps := fakeDependencies(func(_ context.Context, args []string, _, _ io.Writer) error {
+		if !converted || released {
+			t.Fatal("install ran before conversion, or after releasing its cache lock")
 		}
+		if argumentFor(args, "-SourceRoot") != source {
+			t.Fatal("installer did not receive converted source")
+		}
+		calls++
 		return nil
+	})
+	deps.prepare = func(context.Context, options, io.Writer, io.Writer) (string, func(), error) {
+		converted = true
+		return source, func() { released = true }, nil
 	}
-	opts := options{destination: filepath.Join(testRoot, "destination"), profile: profile194, validateOnly: true}
-	if err := runInstall(context.Background(), opts, deps, io.Discard, io.Discard); err != nil {
+	var output bytes.Buffer
+	err := runInstall(context.Background(), options{destination: destination, profile: profile195}, deps, &output, io.Discard)
+	if err != nil || calls != 2 || !released {
+		t.Fatalf("err=%v calls=%d released=%v", err, calls, released)
+	}
+	if _, err := os.Stat(sentinel); err != nil {
+		t.Fatal("installation removed the conversion cache:", err)
+	}
+	if !strings.Contains(output.String(), "Map conversion cache retained at: "+source) || !strings.Contains(output.String(), "manually") {
+		t.Fatalf("missing manual cleanup notice: %s", output.String())
+	}
+}
+
+func TestLocalPreflightAndConvertOnlyNeverInstall(t *testing.T) {
+	for _, preflight := range []bool{true, false} {
+		released := false
+		deps := fakeDependencies(func(context.Context, []string, io.Writer, io.Writer) error { t.Fatal("unexpected install"); return nil })
+		deps.prepare = func(_ context.Context, got options, _, _ io.Writer) (string, func(), error) {
+			if got.validateOnly != preflight || got.convertOnly == preflight {
+				t.Fatal("conversion mode was lost")
+			}
+			return "cache", func() { released = true }, nil
+		}
+		err := runInstall(context.Background(), options{destination: "destination", validateOnly: preflight, convertOnly: !preflight}, deps, io.Discard, io.Discard)
+		if err != nil || !released {
+			t.Fatalf("err=%v released=%v", err, released)
+		}
+	}
+}
+
+func TestDefaultGameRootUsesExecutableDirectory(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "levels"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if filepath.Base(capturedSource) != "payload" {
-		t.Fatalf("embedded source root = %q, want the temporary payload directory", capturedSource)
+	if err := os.WriteFile(filepath.Join(root, "aces.vromfs.bin"), []byte("game"), 0o600); err != nil {
+		t.Fatal(err)
 	}
-	if _, err := os.Stat(capturedSource); !os.IsNotExist(err) {
-		t.Fatalf("temporary payload was not removed after success: %v", err)
+	got, err := localGameRoot("", filepath.Join(root, "installer.exe"))
+	if err != nil || got != root {
+		t.Fatalf("got %q, %v", got, err)
 	}
-	if _, err := os.Stat(opts.destination); !os.IsNotExist(err) {
-		t.Fatalf("validate-only payload path wrote the destination: %v", err)
+	if _, err = localGameRoot(t.TempDir(), filepath.Join(root, "installer.exe")); err == nil {
+		t.Fatal("accepted non-game directory")
 	}
 }
 
@@ -583,11 +585,11 @@ func makeFixturePaths(t *testing.T) (string, string) {
 
 func fakeDependencies(run func(context.Context, []string, io.Writer, io.Writer) error) dependencies {
 	return dependencies{
-		getenv:      func(string) string { return "" },
-		mkdirTemp:   os.MkdirTemp,
-		removeAll:   os.RemoveAll,
-		executable:  os.Executable,
-		extract:     func(string, string) (bool, error) { return false, nil },
+		getenv:     func(string) string { return "" },
+		mkdirTemp:  os.MkdirTemp,
+		removeAll:  os.RemoveAll,
+		executable: os.Executable,
+
 		materialize: terrainres.Materialize,
 		run:         run,
 		readVersion: func(string) (string, error) { return "1.9.5.0", nil },

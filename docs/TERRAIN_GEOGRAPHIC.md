@@ -8,14 +8,14 @@
 
 ## 构建与安装
 
-准备好游戏、Datamine 和 Python 环境后，可在仓库根目录构建并运行独立安装器：
+在仓库根目录构建独立安装器后，指定本机游戏目录运行；也可将 EXE 放到游戏根目录后直接双击：
 
 ```powershell
-.\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
-.\dist\wrpl-acmi\wrpl-terrain-installer.exe
+.\build.ps1
+.\dist\wrpl-acmi\wrpl-terrain-installer.exe -game "C:\Path\To\War Thunder"
 ```
 
-完整环境准备见[从零构建](../tools/terrain/README.zh-CN.md#从零构建)。地形高度来自本机游戏的 `levels/*.bin`；Datamine 固定提交 `f7952e4291e9fd7b6fe38e84020dddef925c3457` 提供边界、水位等配置，不能单独生成高程。
+完整环境准备见[从零构建](../tools/terrain/README.zh-CN.md#从零构建)。安装器内置转换运行环境，从本机 `levels/*.bin` 读取地形，从本机 `aces.vromfs.bin` 读取边界和水位，不附带预生成高程，也不需要用户安装 Python 或准备 Datamine。构建阶段只下载固定哈希的开源运行库；运行阶段离线转换。
 
 若使用脚本安装入口，`-SourceRoot` 必须指向包含全部 71 张地图的转换目录，其中应有 `maps/<id>/<id>.data`、元数据和零点 XML，不能指向 Datamine 或原始关卡目录：
 

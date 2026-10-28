@@ -469,6 +469,11 @@ def main(argv: list[str] | None = None) -> int:
                     command = [
                         sys.executable,
                         "-B",
+                        "-u",
+                        "-X", "utf8",
+                        "-c",
+                        "import sys,runpy;sys.path.insert(0,sys.argv[1]);sys.argv=sys.argv[2:];runpy.run_path(sys.argv[0],run_name='__main__')",
+                        str(SCRIPT_DIR.resolve()),
                         str(WORKER.resolve()),
                         "--entry",
                         str(entry_path),

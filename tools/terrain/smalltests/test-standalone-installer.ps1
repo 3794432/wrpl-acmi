@@ -18,19 +18,16 @@ try {
     $single = Join-Path $runtimeFull 'only-one-file'
     New-Item -ItemType Directory -Path $single | Out-Null
     $installer = Join-Path $single 'wrpl-terrain-installer.exe'
-    $go = (Get-Command go -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
-    Push-Location $repoRoot
-    try {
-        & $go run ./cmd/terrain-pack -stub (Join-Path $package 'wrpl-terrain-installer.exe') -source $fixture -out $installer
-        if ($LASTEXITCODE -ne 0) { throw 'Synthetic terrain packaging failed.' }
-    } finally { Pop-Location }
+    # The public executable contains a runtime only. Synthetic game heights
+    # stay in the explicit local fixture directory and are never appended.
+    Copy-Item -LiteralPath (Join-Path $package 'wrpl-terrain-installer.exe') -Destination $installer
     $destination = Join-Path $runtimeFull 'Tacview/Data/Terrain/Custom/WarThunderMaps'
     Push-Location $single
     try {
-        & $installer -destination $destination -profile 1.9.4 -validate-only -allow-partial
+        & $installer -source $fixture -destination $destination -profile 1.9.4 -validate-only -allow-partial
         if ($LASTEXITCODE -ne 0) { throw 'Standalone validation failed.' }
         if (Test-Path -LiteralPath $destination) { throw 'ValidateOnly wrote the destination.' }
-        & $installer -destination $destination -profile 1.9.4 -allow-partial
+        & $installer -source $fixture -destination $destination -profile 1.9.4 -allow-partial
         if ($LASTEXITCODE -ne 0) { throw 'Standalone 1.9.4 installation failed.' }
         $state = Get-Content -LiteralPath (Join-Path $destination 'WarThunderMaps.format.json') -Raw | ConvertFrom-Json
         if ($state.profile -ne '1.9.4') { throw 'Wrong installed profile.' }
@@ -47,7 +44,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Restoring an older map catalogue before upgrade failed.' }
         $restored = Get-Content -LiteralPath (Join-Path $destination 'WarThunderMaps.format.json') -Raw | ConvertFrom-Json
         if ($restored.profile -ne '1.9.5') { throw 'Older catalogue restore did not select native format.' }
-        & $installer -destination $destination -profile 1.9.4 -allow-partial
+        & $installer -source $fixture -destination $destination -profile 1.9.4 -allow-partial
         if ($LASTEXITCODE -ne 0) { throw 'Standalone repeat installation failed.' }
         # Reproduce an older index left behind after its state/cache were lost.
         foreach ($id in @('geo_alpha', 'geo_beta')) {
@@ -59,20 +56,20 @@ try {
             [IO.File]::Delete((Join-Path $cache $name))
         }
         [IO.Directory]::Delete($cache, $false)
-        & $installer -destination $destination -profile 1.9.4 -allow-partial
+        & $installer -source $fixture -destination $destination -profile 1.9.4 -allow-partial
         if ($LASTEXITCODE -ne 0) { throw 'Legacy index without state/cache could not be repaired.' }
         $state = Get-Content -LiteralPath (Join-Path $destination 'WarThunderMaps.format.json') -Raw | ConvertFrom-Json
         if ($state.profile -ne '1.9.4') { throw 'Legacy repair did not restore the 1.9.4 state.' }
         foreach ($id in @('geo_alpha', 'geo_beta')) {
             if (-not (Test-Path -LiteralPath (Join-Path $destination "_uint16/$id.data"))) { throw "Legacy cache repair missing: $id" }
         }
-        & $installer -destination $destination -profile 1.9.5 -allow-partial
+        & $installer -source $fixture -destination $destination -profile 1.9.5 -allow-partial
         if ($LASTEXITCODE -ne 0) { throw 'Standalone 1.9.5 installation failed.' }
         $state = Get-Content -LiteralPath (Join-Path $destination 'WarThunderMaps.format.json') -Raw | ConvertFrom-Json
         if ($state.profile -ne '1.9.5') { throw 'Profile switch did not complete.' }
         if (@(Get-ChildItem -LiteralPath $single -Force).Count -ne 1) { throw 'Installer left dependencies beside the executable.' }
     } finally { Pop-Location }
-    Write-Host 'PASS: single-file payload validation, offline installation, repeat installation, legacy index repair, both profiles, and canonical raster hashes.'
+    Write-Host 'PASS: single-file runtime with explicit local-source validation, offline installation, repeat installation, legacy index repair, both profiles, and canonical raster hashes.'
 } finally {
     $env:TEMP = $oldTemp
     $env:TMP = $oldTmp

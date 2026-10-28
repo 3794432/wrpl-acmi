@@ -6,7 +6,9 @@ param(
     [string]$TerrainSource,
     [string]$GameRoot,
     [string]$DatamineRoot,
-    [string]$Python = 'python'
+    [string]$Python = 'python',
+    [string]$PythonRuntime,
+    [string]$RuntimeCache = (Join-Path $env:LOCALAPPDATA 'wrpl-acmi-build/terrain-runtime')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,21 +33,15 @@ function Copy-PackageTree([string]$Source, [string]$Destination) {
         Copy-Item -LiteralPath $file.FullName -Destination $target -Force
     }
 }
-if ($WithTerrain -and (-not $GameRoot -or -not $DatamineRoot)) {
-    throw '-WithTerrain requires -GameRoot and -DatamineRoot.'
+if ($WithTerrain -or $TerrainSource -or $ResumeTerrain -or $GameRoot -or $DatamineRoot) {
+    throw 'Game terrain payload packaging has been removed. Build normally, then place wrpl-terrain-installer.exe in the game root to convert local assets. Use tools/terrain/build-terrain.ps1 only for a separate developer conversion.'
 }
-if ($WithTerrain -and $TerrainSource) { throw 'Use either -WithTerrain or -TerrainSource.' }
-if ($TerrainSource) {
-    $TerrainSource = (Resolve-Path -LiteralPath $TerrainSource).Path
-    if (-not (Test-Path -LiteralPath $TerrainSource -PathType Container)) { throw '-TerrainSource must be a converted terrain directory.' }
+if ((Test-Path -LiteralPath (Join-Path $output 'terrain')) -or
+    @((Get-ChildItem -LiteralPath $output -File -Filter '*.data' -Recurse -ErrorAction SilentlyContinue) | Select-Object -First 1).Count -gt 0) {
+    throw 'OutputRoot contains old terrain data. Choose a new output directory; public packages must not include game rasters.'
 }
-if ($ResumeTerrain -and -not $WithTerrain) { throw '-ResumeTerrain requires -WithTerrain.' }
-if ($WithTerrain) {
-    # Resolve inputs before entering the repository directory.
-    $GameRoot = (Resolve-Path -LiteralPath $GameRoot).Path
-    $DatamineRoot = (Resolve-Path -LiteralPath $DatamineRoot).Path
-    $Python = (Get-Command $Python -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
-}
+if ($PythonRuntime) { $PythonRuntime = (Resolve-Path -LiteralPath $PythonRuntime).Path }
+$RuntimeCache = [IO.Path]::GetFullPath($RuntimeCache)
 # Hosted runners can expose several Go installations. Respect PATH precedence.
 $go = (Get-Command go -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 New-Item -ItemType Directory -Path $output -Force | Out-Null
@@ -80,19 +76,15 @@ try {
         Copy-Item -LiteralPath (Join-Path $repoRoot $name) -Destination $output -Force
     }
     Copy-Item -LiteralPath (Join-Path $repoRoot 'tools/run.bat') -Destination (Join-Path $output 'run.bat') -Force
-    if ($WithTerrain) {
-        & (Join-Path $repoRoot 'tools/terrain/build-terrain.ps1') -GameRoot $GameRoot -DatamineRoot $DatamineRoot -OutputRoot (Join-Path $output 'terrain') -Python $Python -Resume:$ResumeTerrain
-        if (-not $?) { throw 'Terrain build failed.' }
-        $TerrainSource = Join-Path $output 'terrain'
-    }
     $installer = Join-Path $output 'wrpl-terrain-installer.exe'
-    if ($TerrainSource) {
-        & $go run ./cmd/terrain-pack -stub $installerStub -source $TerrainSource -out $installerPacked
-        if ($LASTEXITCODE -ne 0) { throw "Terrain installer packaging failed (exit $LASTEXITCODE)." }
-        Move-Item -LiteralPath $installerPacked -Destination $installer -Force
-    } else {
-        Move-Item -LiteralPath $installerStub -Destination $installer -Force
+    if (-not $PythonRuntime) {
+        $runtimeOutput = & (Join-Path $repoRoot 'tools/terrain/build-runtime.ps1') -CacheRoot $RuntimeCache
+        if (-not $?) { throw 'Portable runtime build failed.' }
+        $PythonRuntime = [string](@($runtimeOutput)[-1])
     }
+    & $go run ./cmd/terrain-runtime-pack -stub $installerStub -runtime $PythonRuntime -out $installerPacked
+    if ($LASTEXITCODE -ne 0) { throw "Portable-runtime packaging failed (exit $LASTEXITCODE)." }
+    Move-Item -LiteralPath $installerPacked -Destination $installer -Force
     $binaries = @{
         'wrpl-acmi.exe' = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant()
         'wrpl-terrain-installer.exe' = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -100,19 +92,18 @@ try {
     $manifest = [ordered]@{
         schema_version = 1
         built_utc = [DateTime]::UtcNow.ToString('o')
-        terrain_built = [bool]$WithTerrain
-        terrain_installer_includes_data = [bool]$TerrainSource
+        terrain_built = $false
+        terrain_installer_includes_data = $false
+        terrain_installer_local_conversion = $true
+        terrain_installer_includes_python_runtime = $true
         binaries_sha256 = $binaries
     }
     $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'build-manifest.json') -Encoding UTF8
     Remove-Item -LiteralPath $incomplete -Force
     Write-Host "Runtime package ready: $output"
     Write-Host 'wrpl-acmi.exe runs independently; no adjacent data files or installed terrain are required.'
-    if ($TerrainSource) {
-        Write-Host 'wrpl-terrain-installer.exe contains the terrain data and can install it on its own.'
-    } else {
-        Write-Host 'Terrain installer contains no game heights: pass -source <converted-terrain>, or rebuild with -TerrainSource / -WithTerrain.'
-    }
+    Write-Host 'Terrain installer includes conversion code and its open-source runtime, with no game heights.'
+    Write-Host 'Place wrpl-terrain-installer.exe in the War Thunder root (beside levels/ and aces.vromfs.bin), then run it.'
 } finally {
     if (Test-Path -LiteralPath $installerStub -PathType Leaf) { Remove-Item -LiteralPath $installerStub -Force }
     if (Test-Path -LiteralPath $installerPacked -PathType Leaf) { Remove-Item -LiteralPath $installerPacked -Force }

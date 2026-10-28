@@ -11,11 +11,11 @@ Atlas 将地图放置在固定、互不重叠的技术坐标上，便于检查�
 导出器与地形安装器必须使用相同布局。独立安装器的示例如下：
 
 ```powershell
-.\wrpl-terrain-installer.exe -source "C:\Terrain\converted-terrain" -atlas
+.\wrpl-terrain-installer.exe -game "C:\Games\War Thunder" -atlas
 .\wrpl-acmi.exe -terrain-layout atlas -in "C:\Replays\replay.wrpl" -out "C:\Replays\replay-atlas.acmi"
 ```
 
-安装器已经内嵌地形数据时，可以省略 `-source`。Atlas 的地图标识使用 `WarThunder.Atlas1.<id>`。仅修改导出器或安装器一侧，会导致轨迹与地形不匹配。
+安装器不内嵌游戏高程，会从本机游戏转换；放在游戏根目录时可省略 `-game`。`-source` 仅用于手动安装已有转换目录。Atlas 的地图标识使用 `WarThunder.Atlas1.<id>`。仅修改导出器或安装器一侧，会导致轨迹与地形不匹配。
 
 使用源码中的脚本入口时，对应选项为 `-AtlasOnly`，而不是独立 EXE 的 `-atlas`：
 
@@ -30,7 +30,7 @@ Atlas 将地图放置在固定、互不重叠的技术坐标上，便于检查�
 重新安装时省略 Atlas 选项，并按默认布局重新导出：
 
 ```powershell
-.\wrpl-terrain-installer.exe -source "C:\Terrain\converted-terrain"
+.\wrpl-terrain-installer.exe -game "C:\Games\War Thunder"
 .\wrpl-acmi.exe -in "C:\Replays\replay.wrpl" -out "C:\Replays\replay.acmi"
 ```
 

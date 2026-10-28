@@ -1,35 +1,44 @@
 # Terrain extraction, conversion, and installation
 
-[简体中文](README.zh-CN.md) · [Project README](../../README.md)
+[简体中文](README.zh-CN.md) · [Project README](../../README.md) · [Build and release](../../docs/standalone-build.md)
 
-The terrain tools convert local War Thunder level data into a 71-map Tacview height set. The build script can then package that set in a standalone installer. Game terrain assets are not stored in Git.
+The standalone installer reads the user's local War Thunder assets, converts the 71 known maps, and installs them in Tacview. It bundles portable CPython and four pinned packages, with no pre-generated `.data` terrain. Game assets are not stored in Git or included in the new installer.
 
-If you already have an installer containing terrain data, go to [installation](#install-converted-terrain). The conversion environment is needed only when extracting or rebuilding terrain.
+For normal use, go to [installation](#install-converted-terrain). The manual Python/Datamine workflow below is for developers and is separate from the installer's automatic local reader.
 
 ## Prerequisites
 
-- Windows PowerShell and Go 1.25.6 or newer to build the executables (`go.mod` currently declares Go 1.25.6).
-- To convert terrain from scratch: 64-bit Python 3.12, the converter's pip requirements, Git, a local War Thunder client with the compiled `levels/*.bin` files, and a Datamine checkout at `f7952e4291e9fd7b6fe38e84020dddef925c3457`.
-- To package an existing converted directory with `-TerrainSource`: no Python, Git, game installation, or Tacview is required on the build machine.
-- At install time: system Windows PowerShell (`powershell.exe`) and embedded or external converted terrain. Tacview is needed to view the result. Allow at least 8 GB of free space for the full map set at default resolution. The game, converter scripts, Python, Go, and Git are not required.
+| Operation | Requirements |
+| --- | --- |
+| Build the executables | Windows PowerShell, Go 1.25.6 or newer, and source. The default build fetches hash-pinned open-source runtime/wheel artifacts at build time, not game data. |
+| Run automatic local conversion and installation | Windows with system Windows PowerShell, the standalone installer, and local `levels/*.bin` plus `aces.vromfs.bin`. No user-installed Python, Go, Git, network, or game-data download at runtime. |
+| Run manual developer conversion | 64-bit Python 3.12, converter requirements, local compiled game levels, and matching Datamine configuration. Git is used to obtain the pinned checkout below. |
+| Export replays | Standalone `wrpl-acmi.exe`; terrain conversion or installation is optional. |
 
 ## Build from scratch
 
-The following steps fetch dev, prepare conversion inputs, and build both executables with terrain included in the installer. First confirm that `python` is 64-bit Python 3.12. Replace the example `-GameRoot` with your game directory.
+### Build the standalone programs
 
-### Get the source and prepare Python
+From the source root:
+
+```powershell
+.\build.ps1
+```
+
+This builds both EXEs, including the self-contained terrain installer. `tools/terrain/runtime-lock.json` pins the exact runtime version, four packages, and artifact hashes. `-PythonRuntime <directory>` selects a prepared runtime, and `-RuntimeCache <directory>` selects the build cache. No game or Datamine checkout is needed to build the installer.
+
+The former `-WithTerrain` and `-TerrainSource` build options are rejected with a migration error. Converted game data is no longer packaged into the public installer. Use runtime `-source` for a manual existing-converted-source override.
+
+### Prepare manual developer conversion
+
+These steps apply only to `tools/terrain/build-terrain.ps1`. End users do not need this environment or a Datamine download.
 
 ```powershell
 git clone --branch dev --single-branch https://github.com/3794432/wrpl-acmi.git
 Set-Location .\wrpl-acmi
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r .\tools\terrain\converter\requirements.txt
-```
 
-### Get the pinned level configuration
-
-```powershell
 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/gszabi99/War-Thunder-Datamine.git .\War-Thunder-Datamine
 git -C .\War-Thunder-Datamine fetch --depth 1 origin f7952e4291e9fd7b6fe38e84020dddef925c3457
 git -C .\War-Thunder-Datamine sparse-checkout init --cone
@@ -37,91 +46,88 @@ git -C .\War-Thunder-Datamine sparse-checkout set aces.vromfs.bin_u/levels
 git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
 ```
 
-### Convert and build
+Confirm that `python` is 64-bit Python 3.12. `requirements.txt` pins NumPy 2.3.5, Pillow 12.3.0, pyooz 0.0.8, and zstandard 0.25.0. The sparse checkout provides the 71 target level configs listed in `AtlasReferences.json`. Manual configs must match the local game assets.
+
+### Convert manually
 
 ```powershell
-.\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
+.\tools\terrain\build-terrain.ps1 -GameRoot "C:\Games\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -OutputRoot ".\converted-terrain" -Python ".\.venv\Scripts\python.exe"
 ```
 
-The sparse checkout selects only `aces.vromfs.bin_u/levels`; the converter needs the 71 target `.blkx` files listed in `AtlasReferences.json` from the pinned revision, not a full Datamine checkout. `requirements.txt` pins NumPy 2.3.5, Pillow 12.3.0, pyooz 0.0.8, and zstandard 0.25.0.
+This generates a converted source directory, without building an installer or installing into Tacview.
 
-`build.ps1` accepts `-OutputRoot` (default `dist\wrpl-acmi`), `-TerrainSource`, `-WithTerrain`, `-ResumeTerrain`, `-GameRoot`, `-DatamineRoot`, and `-Python` (default `python`). Every build produces `wrpl-acmi.exe` and `wrpl-terrain-installer.exe`. With `-WithTerrain`, the script calls `tools/terrain/build-terrain.ps1`, stages the converted maps in `dist/wrpl-acmi/terrain`, and appends them to the installer. Use the explicit venv interpreter for `-Python` when that is not the default `python` on `PATH`.
+| Manual wrapper option | Meaning |
+| --- | --- |
+| `-ValidateOnly` | Check inputs without writing converted output. |
+| `-Resume` | Resume in the same output directory; without it a nonempty output is rejected. |
+| `-Resolution` | Output resolution; defaults to 4096. |
+| `-TimeoutSeconds` | Per-map timeout; defaults to 1200 seconds. |
 
-## Separate conversion and packaging
-
-To package an existing 71-map directory:
-
-```powershell
-.\build.ps1 -TerrainSource ".\converted-terrain"
-```
-
-`-TerrainSource` and `-WithTerrain` are mutually exclusive. An ordinary `build.ps1` invocation creates a terrain installer with logic only, not a complete offline terrain package. The build does not install anything into Tacview. Packaging does not change the converter's output rule: omitting converter `-out` still writes to the current working directory.
-
-If conversion stops partway through, rerun the same command with `-ResumeTerrain`; the flag requires `-WithTerrain` and is passed to the converter. Without it, a repeated terrain build refuses the existing nonempty output directory.
-
-To build only the terrain package, invoke the converter wrapper directly after installing the requirements:
-
-```powershell
-.\tools\terrain\build-terrain.ps1 -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -OutputRoot ".\converted-terrain" -Python ".\.venv\Scripts\python.exe"
-```
-
-`-ValidateOnly` checks all inputs without writing output. After an interrupted run, use `-Resume` with the same output directory. `-Resolution` defaults to 4096 pixels and `-TimeoutSeconds` defaults to 1200 per map.
+See [BUILD-CONTRACT.md](converter/BUILD-CONTRACT.md) for the output safety rules, conversion commands, and verification contract. This manual wrapper's options are distinct from the standalone EXE's lowercase options.
 
 ## Package structure and format
 
-The main terrain-related files are shown below. The package also contains project documentation, license files, and other supporting tools.
+The release contains `wrpl-acmi.exe` and `wrpl-terrain-installer.exe`, documentation, license notices, and supporting files. The installer carries the runtime and conversion tools, not converted maps; it needs no adjacent `data/`, `terrain/`, or `tools/` directory.
+
+Conversion creates a local cache (default `%LOCALAPPDATA%\wrpl-acmi\terrain`), including resumable map results and logs. A complete converted source, including a manual source for `-source`, has this terrain structure:
 
 ```text
-dist/wrpl-acmi/
-  wrpl-acmi.exe
-  wrpl-terrain-installer.exe        # payload included with -TerrainSource or -WithTerrain
-  build-manifest.json
-  run.bat
-  data/                            # auxiliary package copy; the exporter embeds its defaults
-  docs/
-  tools/terrain/                   # converter, installer, metadata and license notices
-  terrain/                         # staging source present after a -WithTerrain build
-    AtlasReferences.json
-    GeoReferences.json
-    maps/<id>/<id>.data
-    maps/<id>/metadata.json
-    maps/<id>/CustomHeightmapList.xml
+<converted-source>/
+  AtlasReferences.json
+  GeoReferences.json
+  maps/<id>/<id>.data
+  maps/<id>/metadata.json
+  maps/<id>/CustomHeightmapList.xml
 ```
 
-Both `AtlasReferences.json` and `GeoReferences.json` are required at the terrain source root for `-TerrainSource` packaging and installation.
-
-The complete terrain source contains 71 map directories. The raster is signed little-endian 16-bit metres, ordered north-to-south and west-to-east; `metadata.json` records dimensions, sampling bounds, and SHA-256. The XML starts from the zero-origin template expected by the installer. Synthetic `smalltests` terrain is only for installer tests. The standalone EXE appends the payload; it does not depend on adjacent `data/`, `terrain/`, or `tools/` directories. See [Single-file release build](../../docs/standalone-build.md) for distribution details.
+The catalogue has 71 maps. Rasters use signed little-endian 16-bit metres, ordered north-to-south and west-to-east. Metadata records dimensions, bounds, and SHA-256; source XML uses the zero-origin template that the installer places geographically or in Atlas. The manual wrapper also produces catalogues and verification reports described in the build contract. Synthetic `smalltests` terrain is for tests only.
 
 ## Input sources and licensing
 
 | Input | Role | Source and license |
 | --- | --- | --- |
 | Compiled client terrain | Actual heights and geometry, including `levels/<id>.bin` | The user's War Thunder installation. Game assets belong to Gaijin Entertainment and are not distributed by this repository. |
+| Local game configuration | Bounds, water levels, and related settings for automatic conversion | Read from the user's local `aces.vromfs.bin`; not downloaded at runtime. |
 | Datamine level configuration | Map bounds, water level, and related `.blkx` settings | [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) at commit `f7952e4291e9fd7b6fe38e84020dddef925c3457`; repo data, no license file was found at that revision. Used locally as conversion input and not distributed. |
 | Geographic references | Reviewed WGS84 estimates placed in `GeoReferences.json` | [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE) commit `c26c0069558079df6597a7bc147cb91391509f89`; MIT. See `georeference/UPSTREAM-NOTICE.md` and `georeference/UPSTREAM-MIT.txt`. |
 | Python modules | Decoding and raster work | NumPy 2.3.5 is BSD-3-Clause; pyooz 0.0.8 is GPL-3.0-or-later; zstandard 0.25.0 is BSD-3-Clause; Pillow 12.3.0 is HPND. |
 
 This project's code is AGPL-3.0. Each dependency and upstream source keeps its own license. Datamine supplies configuration only; the actual terrain heights must come from the installed game's compiled level files. Renaming a `.bin` or `.blkx` file to `.data` does not convert it.
 
+Datamine is used only by the manual developer workflow above; the automatic installer reads local game configuration. The runtime and wheel pins are authoritative in `runtime-lock.json`. CPython and dependency notices are included in the extracted runtime's `LICENSES/` directory; preserve them when preparing or distributing the runtime. Converter attribution is in [THIRD-PARTY-NOTICES.md](converter/THIRD-PARTY-NOTICES.md). Reducing redistribution of game data does not establish permission to extract, convert, use, or redistribute game assets.
+
 The GPL-3.0-or-later `ooz` decoder shipped by pyooz handles the Oodle-compressed terrain streams. A fresh pip environment needs no proprietary Oodle DLL or key.
 
 ## Install converted terrain
 
-The preferred release path is the standalone installer at the package root:
+Put the standalone EXE in the War Thunder game root containing `levels/` and `aces.vromfs.bin`, then run it:
 
 ```powershell
-.\dist\wrpl-acmi\wrpl-terrain-installer.exe
+.\wrpl-terrain-installer.exe
 ```
 
-When the installer was built without a payload, or when installing a different converted directory, pass `-source`:
+The default game root is the EXE directory, not the current working directory. Game assets remain read-only by default. The bundled runtime performs conversion offline; no user-installed Python, Go, Git, or game-data download is required. To run from elsewhere, select the game directory explicitly:
 
 ```powershell
-.\dist\wrpl-acmi\wrpl-terrain-installer.exe -source "C:\Terrain\converted-terrain"
+.\wrpl-terrain-installer.exe -game "C:\Games\War Thunder" -resolution 4096
 ```
 
-`-source` is optional for a payload-bearing installer and required for a logic-only build. The default destination is Tacview's `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`; use `-destination <directory>` for another location. The installer verifies source metadata and SHA-256 values before writing the target. `-validate-only` checks the source without writing the destination.
+The default destination is `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`; use `-destination <directory>` for another location. The default resolution is 4096. `-cache <directory>` overrides `%LOCALAPPDATA%\wrpl-acmi\terrain`, which stores resumable maps and logs. Rerunning checks source hashes before reusing results. Keep the reported logs when investigating a failed conversion or installation.
 
-`-profile` selects height encoding: `auto` is the default and detects the installed Tacview version; if Tacview cannot be found, it falls back to `1.9.4`. Explicit values are `1.9.4` and `1.9.5`. Running the installer again can reuse its cache, but temporary extraction plus the installed maps can require several gigabytes of free disk space.
+`-profile` selects height encoding: `auto` detects Tacview and falls back to `1.9.4` if it cannot be found. Explicit values are `1.9.4` and `1.9.5`.
+
+```powershell
+# Validate inputs without changing the destination or converting all maps
+.\wrpl-terrain-installer.exe -game "C:\Games\War Thunder" -validate-only
+
+# Convert into the cache without installing
+.\wrpl-terrain-installer.exe -game "C:\Games\War Thunder" -cache "D:\TerrainCache" -convert-only
+
+# Manual existing-converted-source override: no automatic game reading
+.\wrpl-terrain-installer.exe -source "C:\Terrain\converted-terrain"
+```
+
+`-validate-only` checks inputs without destination changes; it does not convert the full catalogue or prove every map can be converted. `-convert-only` creates the converted cache without installing. `-source` requires a complete converted directory with both reference JSON files, and bypasses the automatic local-game reader. The installer verifies converted metadata and SHA-256 before installation. With `-source`, validation checks that supplied source. Neither validation mode establishes Tacview GUI rendering.
 
 ### Coordinate layout
 
@@ -172,4 +178,6 @@ The presence of these checks does not assert that every test or build has passed
 
 ## Tournament air maps
 
-The 71-map catalogue includes Japanese Port (`avn_japan`) and Red Desert (`avg_red_desert`). Their ground/naval filename prefixes do not exclude them from the explicit build targets. Both use Atlas fallback, including in the default geographic layout; existing map anchors are unchanged. Red Desert requires the full-map terrain decoder plus its partial HM2 overlay, not a stretched local height patch. These entries add terrain support; source-backed runway geometry for these two maps has not yet been reviewed. Rebuild both executables and reinstall the complete terrain set before re-exporting these replays.
+The 71-map catalogue includes Japanese Port (`avn_japan`) and Red Desert (`avg_red_desert`). Their ground/naval filename prefixes do not exclude them from the explicit targets. Both use Atlas fallback, including in the default geographic layout; existing map anchors are unchanged. Red Desert requires the full-map terrain decoder plus its partial HM2 overlay, not a stretched local height patch. The local-game installer change adds no runway geometry; source-backed runway geometry for these two maps has not yet been reviewed. Update both executables, run the local-game installer, and re-export the original replays.
+
+Map conversion caches and logs are retained, including after installation. At completion the program prints the map-cache directory and a reminder to remove it manually when no longer needed. Removing it requires conversion again for a later installation. No automatic cache cleanup is performed.

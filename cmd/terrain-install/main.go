@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/maxsupermanhd/wrpl-inspector/v3/internal/terrainbundle"
 	terrainres "github.com/maxsupermanhd/wrpl-inspector/v3/tools/terrain"
 )
 
@@ -35,6 +35,10 @@ var wrapperSource []byte
 
 type options struct {
 	sourceRoot   string
+	gameRoot     string
+	cacheRoot    string
+	resolution   int
+	convertOnly  bool
 	destination  string
 	profile      string
 	validateOnly bool
@@ -47,7 +51,7 @@ type dependencies struct {
 	mkdirTemp   func(string, string) (string, error)
 	removeAll   func(string) error
 	executable  func() (string, error)
-	extract     func(string, string) (bool, error)
+	prepare     func(context.Context, options, io.Writer, io.Writer) (string, func(), error)
 	materialize func(string) error
 	run         func(context.Context, []string, io.Writer, io.Writer) error
 	readVersion func(string) (string, error)
@@ -59,7 +63,7 @@ func defaultDependencies() dependencies {
 		mkdirTemp:   os.MkdirTemp,
 		removeAll:   os.RemoveAll,
 		executable:  os.Executable,
-		extract:     terrainbundle.Extract,
+		prepare:     prepareLocalTerrain,
 		materialize: terrainres.Materialize,
 		run:         runPowerShell,
 		readVersion: readExecutableFileVersion,
@@ -79,8 +83,16 @@ func (e *retainedError) Error() string {
 func (e *retainedError) Unwrap() error { return e.Err }
 
 func main() {
-	if err := runMain(context.Background(), os.Args[1:], os.Stdout, os.Stderr); err != nil {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	err := runMain(ctx, os.Args[1:], os.Stdout, os.Stderr)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
+	}
+	if len(os.Args) == 1 {
+		pauseOnDoubleClick()
+	}
+	if err != nil {
 		os.Exit(1)
 	}
 }
@@ -111,12 +123,17 @@ func parseOptions(args []string, getenv func(string) string, output io.Writer) (
 	fs.SetOutput(output)
 	fs.Usage = func() {
 		fmt.Fprintf(output, "Usage: %s [options]\n\n", installerName)
-		fmt.Fprintln(output, "Installs a converted War Thunder terrain set into Tacview using Windows PowerShell.")
-		fmt.Fprintln(output, "Without -source, terrain is extracted from the payload appended to this executable.")
+		fmt.Fprintln(output, "Converts local War Thunder terrain and installs it into Tacview.")
+		fmt.Fprintln(output, "Place this executable in the War Thunder root, beside levels/ and aces.vromfs.bin.")
+		fmt.Fprintln(output, "Game data is read locally; no pre-generated game terrain is included or downloaded.")
 		fmt.Fprintln(output)
 		fs.PrintDefaults()
 	}
-	fs.StringVar(&opts.sourceRoot, "source", "", "optional converted terrain root; defaults to the payload embedded in this executable")
+	fs.StringVar(&opts.sourceRoot, "source", "", "optional existing converted terrain; bypasses local conversion")
+	fs.StringVar(&opts.gameRoot, "game", "", "War Thunder root; defaults to the directory containing this executable")
+	fs.StringVar(&opts.cacheRoot, "cache", "", "local conversion/runtime cache; default: %LOCALAPPDATA%\\wrpl-acmi\\terrain")
+	fs.IntVar(&opts.resolution, "resolution", 4096, "conversion grid resolution (2-8192; native HM2 grids keep their resolution)")
+	fs.BoolVar(&opts.convertOnly, "convert-only", false, "convert into the local cache without installing into Tacview")
 	fs.StringVar(&opts.destination, "destination", defaultDest, "Tacview terrain destination (default: %APPDATA%\\Tacview\\Data\\Terrain\\Custom\\WarThunderMaps)")
 	fs.StringVar(&opts.profile, "profile", profileAuto, "Tacview format: auto, 1.9.4, or 1.9.5")
 	fs.BoolVar(&opts.validateOnly, "validate-only", false, "validate the source only; do not write the destination or select a format")
@@ -127,6 +144,15 @@ func parseOptions(args []string, getenv func(string) string, output io.Writer) (
 	}
 	if fs.NArg() != 0 {
 		return options{}, fmt.Errorf("unexpected positional arguments: %s", strings.Join(fs.Args(), " "))
+	}
+	if opts.resolution < 2 || opts.resolution > 8192 {
+		return options{}, errors.New("-resolution must be between 2 and 8192")
+	}
+	if opts.convertOnly && opts.validateOnly {
+		return options{}, errors.New("-convert-only and -validate-only are mutually exclusive")
+	}
+	if opts.sourceRoot != "" && (opts.gameRoot != "" || opts.convertOnly) {
+		return options{}, errors.New("-source cannot be combined with -game or -convert-only")
 	}
 	opts.profile = strings.ToLower(strings.TrimSpace(opts.profile))
 	switch opts.profile {
@@ -157,24 +183,22 @@ func runInstall(ctx context.Context, opts options, deps dependencies, stdout, st
 
 	sourceRoot := opts.sourceRoot
 	if sourceRoot == "" {
+		if deps.prepare == nil {
+			return errors.New("internal error: local terrain conversion is unavailable")
+		}
+		var release func()
 		var err error
-		tempDir, err = deps.mkdirTemp("", "wrpl-terrain-installer-*")
+		sourceRoot, release, err = deps.prepare(ctx, opts, stdout, stderr)
+		if release != nil {
+			defer release()
+		}
 		if err != nil {
-			return fmt.Errorf("create temporary installer directory: %w", err)
+			return err
 		}
-		exePath, err := deps.executable()
-		if err != nil {
-			return fmt.Errorf("locate this executable: %w", err)
+		if opts.validateOnly || opts.convertOnly {
+			printCacheNotice(stdout, sourceRoot)
+			return nil
 		}
-		payloadDir := filepath.Join(tempDir, "payload")
-		found, err := deps.extract(exePath, payloadDir)
-		if err != nil {
-			return fmt.Errorf("extract embedded terrain payload: %w", err)
-		}
-		if !found {
-			return errors.New("this executable contains no terrain payload; pass -source <converted-terrain>, or rebuild with build.ps1 -TerrainSource <converted-terrain> or -WithTerrain. A logic-only build does not contain War Thunder heights")
-		}
-		sourceRoot = payloadDir
 	}
 
 	var err error
@@ -279,7 +303,14 @@ func runInstall(ctx context.Context, opts options, deps dependencies, stdout, st
 		return err
 	}
 	fmt.Fprintf(stdout, "Terrain installation completed with profile %s. Restart Tacview.\n", targetProfile)
+	if opts.sourceRoot == "" {
+		printCacheNotice(stdout, sourceRoot)
+	}
 	return nil
+}
+
+func printCacheNotice(output io.Writer, source string) {
+	fmt.Fprintf(output, "Map conversion cache retained at: %s\nPlease delete this cache directory manually when it is no longer needed.\n", source)
 }
 
 func buildWrapperArgs(wrapperPath, installScript, formatScript, sourceRoot, destination, profile string, validateOnly, atlasOnly, allowPartial bool) []string {

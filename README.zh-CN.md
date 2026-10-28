@@ -39,6 +39,8 @@
 * ["wrpl-acmi.exe"](https://github.com/3794432/wrpl-acmi/releases/latest/download/wrpl-acmi.exe)用于将回放转换为`.acmi` (必选)
 * ["wrpl-terrain-installer.exe"](https://github.com/3794432/wrpl-acmi/releases/latest/download/wrpl-terrain-installer.exe)用于为 Tacview 安装地形 (可选)
 
+下文所述的本机游戏转换安装器由当前 `dev` 分支构建。较旧的 Release 可能仍提供内含预生成游戏数据的地形安装器，请先查看发布说明，确认是否适用以下安装方式。
+
 ### 将`.wrpl`回放转换为`.acmi`文件
 
 在 PowerShell 中运行该转换程序的示例如下:
@@ -66,19 +68,25 @@
 
 安装地形是可选步骤. 未安装游戏内地形时, ACMI 仍会包含导出的回放对象, 但 Tacview 的背景地形可能与游戏地图不符.
 
-含地形数据的安装器可直接运行：
+独立安装器不含预生成的 `.data` 地形。将 `wrpl-terrain-installer.exe` 放在《战争雷霆》游戏根目录（包含 `levels/` 和 `aces.vromfs.bin` 的目录），然后运行：
 
 ```powershell
-.\wrpl-acmi\wrpl-terrain-installer.exe
+.\wrpl-terrain-installer.exe
 ```
 
-地形默认安装位置为`%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`, 安装器依赖 Windows PowerShell; 完整 71 张地图在默认分辨率下安装时, 建议预留至少 8 GB 空间, 安装后占用约 4 GB 空间. 安装后应完全退出并重启 Tacview, 再从原始`.wrpl`重新导出先前导出的回放, 以确保轨迹与地形使用相同坐标配置.
+默认游戏目录取 EXE 所在目录，与当前工作目录无关。安装器以默认 4096 分辨率转换本机资产，再安装到 `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`，游戏资产保持只读。EXE 内含便携 CPython 和四个固定版本依赖；用户无需安装 Python、Go 或 Git，运行时无需联网，也不下载游戏数据。安装辅助步骤使用系统 Windows PowerShell。
+
+首次运行会依次转换全部 71 张地图，可能需要数分钟；当前为逐图串行转换，总体 CPU 占用较低属于正常现象。默认分辨率下，请为缓存、安装结果和临时文件预留至少 8 GB 空间。再次运行会复用未变化的地图转换结果；删除提示中的地图缓存后，下次需要重新转换。
+
+可用 `-game <目录>` 指定其他游戏目录，`-cache <目录>` 更改默认的 `%LOCALAPPDATA%\wrpl-acmi\terrain` 缓存，`-resolution 4096` 指定转换分辨率。地图转换缓存及日志保留以便续作，复用前核对源文件哈希。运行结束时显示缓存路径，并提示不再需要时手动清理，不自动删除。`-profile auto`、`-profile 1.9.4`、`-profile 1.9.5` 用于选择 Tacview 高程编码。`-validate-only` 检查输入，不转换全部地图，也不修改安装目标；`-convert-only` 仅生成转换缓存，不安装。`-source <目录>` 手动指定已有转换目录，此模式跳过自动读取游戏。命令示例见[地形工具说明](tools/terrain/README.zh-CN.md)。
+
+安装后应完全退出并重启 Tacview，再从原始 `.wrpl` 重新导出先前导出的回放，以确保轨迹与地形使用相同坐标配置。
 
 导出和安装默认使用 geographic 布局, 71 张地图中. 14 张采用经审核的 WGS84 估算位置, 57 张使用 Atlas 回退坐标. Atlas 坐标用于技术展示, 不代表真实地理位置, 显式选择 Atlas 时,安装器的`-atlas`必须与导出器的 `-terrain-layout atlas` 配套使用,`-alt`仅调整垂直偏移.
 
 地形集已包含比赛地图日本港口（`avn_japan`）和红色沙漠（`avg_red_desert`），两张均使用 Atlas 回退。使用这两张地图时，请同时更新两个 EXE，运行新版安装器，再从原始回放重新导出。已有地图坐标保持不变；安装器支持从旧版 69 张地图升级，包括 Tacview 1.9.4 格式。
 
-地形高度来自游戏内的 `levels/*.bin`, 边界, 水位等来自 [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine), 在地球上的经纬度定位来自 [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE) 的经纬度参考.
+自动安装器从本机 `levels/*.bin` 读取高程，从本机 `aces.vromfs.bin` 读取边界、水位等配置。独立的开发者流程仍可使用 [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) 配置。经纬度定位来自 [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE) 的参考数据。已知地图目录仍为 71 张；本次安装器变更不新增跑道几何。
 
 ## ACMI内容与数据类型
 
@@ -113,22 +121,19 @@ Set-Location .\wrpl-acmi
 默认输出目录为 `dist\wrpl-acmi`, 其中包含两个可独立使用的程序：
 
 * `wrpl-acmi.exe` 用于导出回放, 默认数据已内嵌.
-* `wrpl-terrain-installer.exe` 将转换后的游戏地形安装到 Tacview, 普通构建不包含地形数据, 安装时需额外提供地形目录.
+* `wrpl-terrain-installer.exe` 内含转换运行时，读取用户本机游戏并将转换后的地形安装到 Tacview，不含预生成的 `.data` 文件。
 
-可将完整的转换后地形目录打包到安装器中: 
+`build.ps1` 默认在构建时下载经哈希固定的开源 CPython 运行时和 wheel，版本及哈希以 `tools/terrain/runtime-lock.json` 为准，不下载游戏数据。`-PythonRuntime` 可选择已准备的运行时目录，`-RuntimeCache` 可指定构建缓存。旧参数 `-WithTerrain` 和 `-TerrainSource` 会被拒绝并提示迁移；公开安装器不再打包转换后的游戏资产。
 
-```powershell
-.\build.ps1 -TerrainSource ".\converted-terrain"
-```
-
-从本机游戏提取和转换地形, 还需要 64 位 Python 3.12, Git, 转换器依赖, 及固定版本的 [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) 配置. 环境准备和完整命令见[地形工具说明](tools/terrain/README.zh-CN.md#从零构建); 构建参数, 断点续作, 和发布产物见[构建与发布指南](docs/standalone-build.zh-CN.md). 历史发布可能落后于 dev, 需要当前实现时应从该分支构建.
+开发者手动流程 `tools/terrain/build-terrain.ps1` 仍使用 Python 和固定版本 Datamine，与终端用户的自动本机转换分开。环境及命令见[地形工具说明](tools/terrain/README.zh-CN.md#从零构建)，构建参数和发布产物见[构建与发布指南](docs/standalone-build.zh-CN.md)。历史发布可能落后于 dev，需要当前实现时应从该分支构建。
 
 ## 责任, 相关项目, 与许可
 
-本项目尚在早期开发中, 运行本仓库编译及发布产物时自行对运行造成的后果负责. 仓库的[源码构建工作流](.github/workflows/source-build.yml)配置了导出器, 解析库及合成地形检查, 地形转换及其安装器依赖构建环境的游戏资产, Tacview 图形界面的加载和渲染也需要另行验证.
+本项目尚在早期开发中, 运行本仓库编译及发布产物时自行对运行造成的后果负责. 仓库的[源码构建工作流](.github/workflows/source-build.yml)配置了导出器、解析库及合成地形检查。构建独立安装器不需要游戏资产，真实地形转换需要用户本机游戏；Tacview 图形界面的加载和渲染也需要另行验证。
 
 本项目基于 [wrpl-inspector](https://github.com/maxsupermanhd/wrpl-inspector) v3 开发, 保留了 Go 回放解析库和 dear-imgui 图形检查器, 并提供无图形界面的导出器`cmd/acmi`; Go 模块路径仍为`github.com/maxsupermanhd/wrpl-inspector/v3`.
 本项目部分内容来自 [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) 和  [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE).
 
 本项目及 [wrpl-inspector](https://github.com/maxsupermanhd/wrpl-inspector) 库按 [AGPL-3.0 license](https://github.com/3794432/wrpl-acmi#AGPL-3.0-1-ov-file) 发布. 上游版权与许可声明予以保留. 地图和游戏资产归 [Gaijin Entertainment](https://gaijinent.com/) 所有.
 
+内嵌运行时及依赖的许可声明随运行时解压到 `LICENSES/` 目录。避免分发预生成的游戏数据可减少再分发，但并不代表已获得提取、转换、使用或再分发游戏资产的许可。

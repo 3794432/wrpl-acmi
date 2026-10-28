@@ -4,9 +4,47 @@ This directory is the complete source for cataloging, decoding, writing, and
 checking the Tacview terrain package. It contains no game assets, compiled
 extensions, downloaded level configs, or generated catalogs.
 
-## Requirements
+## Standalone local-game runtime contract
 
-- Windows x64 and Python 3.12 are the tested runtime.
+The public `wrpl-terrain-installer.exe` bundles portable CPython, the converter,
+reference configuration, and four pinned packages. It contains no pre-generated
+`.data` terrain or game-data payload. Exact runtime and wheel versions and hashes
+are pinned in `../runtime-lock.json`; the four packages are NumPy, Pillow, pyooz,
+and zstandard. Users need no separately installed Python, Go, or Git, no network,
+and no game-data download at runtime. Installation helpers use system Windows
+PowerShell.
+
+The automatic path reads local `levels/*.bin` and configuration from local
+`aces.vromfs.bin`. By default the game root is the directory containing the EXE,
+not the current working directory. `-game <dir>` overrides it. Game assets remain
+read-only by default. This path does not require a Datamine checkout.
+
+`-resolution` defaults to 4096. The default converted-map cache is
+`%LOCALAPPDATA%\wrpl-acmi\terrain`, overridden by `-cache <dir>`. It retains
+resumable map results and logs and checks source hashes before reuse. The default
+installation target is `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`;
+`-destination <dir>` overrides it. Height profiles are `-profile auto`, `1.9.4`,
+and `1.9.5`.
+
+`-validate-only` checks inputs with no destination changes. It does not convert
+all maps or prove full conversion succeeds. `-convert-only` creates the converted
+cache without installing. `-source <dir>` is a manual existing-converted-source
+override and bypasses automatic game reading. The known catalogue remains 71
+maps; this installer change adds no runway geometry.
+
+The root `build.ps1` builds this self-contained installer by default. It fetches
+hash-pinned open-source runtime and wheel artifacts at **build time**, never game
+data. `-PythonRuntime <dir>` selects a prepared runtime and `-RuntimeCache <dir>`
+selects the build artifact cache, separately from the runtime converted-map cache.
+Legacy `-WithTerrain` and `-TerrainSource` options are rejected with a migration
+error. Do not append converted game assets to the public installer.
+
+The following sections describe the separate developer manual Python/Datamine
+pipeline, `../build-terrain.ps1`, rather than prerequisites for end users.
+
+## Manual pipeline requirements
+
+- The manual pipeline targets Windows x64 and Python 3.12.
 - Install the exact dependencies from this directory:
 
 ```powershell
@@ -20,10 +58,12 @@ zstandard 0.25.0. The wrapper checks these versions and fails before writing.
 Inputs are a local War Thunder installation containing `levels/*.bin`, a clone
 or complete local extraction of War Thunder Datamine with
 `aces.vromfs.bin_u/levels/*.blkx` (a flattened `levels` directory is also
-accepted), `AtlasReferences.json`, and `GeoReferences.json`. The build performs
-no network access. Level configs must match the local game assets.
+accepted), `AtlasReferences.json`, and `GeoReferences.json`. Once its inputs and
+dependencies are prepared, the manual conversion performs no network access.
+Level configs must match the local game assets. Fetching runtime artifacts during
+the standalone EXE build is a separate build-time operation.
 
-## Build package
+## Build a manual converted source
 
 The authoritative package membership is `../AtlasReferences.json`: currently 71
 IDs, including `avg_egypt_sinai`, `avn_japan`, and `avg_red_desert` and excluding the unavailable
@@ -128,8 +168,16 @@ licenses. The repository's AGPL-3.0 text is retained in `LICENSES/AGPL-3.0.txt`;
 `pyooz` is GPL-3.0-or-later, zstandard and NumPy are BSD-3-Clause, and Pillow is
 HPND. Full texts supplied with those packages are in `LICENSES/`.
 
+The bundled portable runtime retains CPython and dependency notices in its
+extracted `LICENSES/` directory. Preserve those notices when preparing or
+distributing a runtime. Omitting pre-generated game data reduces redistribution
+but does not establish permission to extract, convert, use, or redistribute game
+assets.
+
 War Thunder and its assets belong to Gaijin Entertainment. This project is not
 affiliated with or endorsed by Gaijin. No game binary or level configuration is
 distributed here.
 
 The wrapper derives target count from `AtlasReferences.json` (bounded to 1-128 maps). Japanese Port and Red Desert are explicit tournament targets despite their `avn_`/`avg_` prefixes. Their pinned level configs define the full 65536 m square; the HM2 patch in Red Desert covers only 4096 m square and must be overlaid on the full terrain.
+
+Map conversion caches and logs are retained, including after installation. At completion the program prints the map-cache directory and a reminder to remove it manually when no longer needed. Removing it requires conversion again for a later installation. No automatic cache cleanup is performed.

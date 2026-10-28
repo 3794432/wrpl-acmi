@@ -2,40 +2,43 @@
 
 [English](README.md) · [项目说明](../../README.zh-CN.md) · [构建与发布](../../docs/standalone-build.zh-CN.md)
 
-地形工具将本机《战争雷霆》的编译后关卡转换为 Tacview 高程数据，再通过独立安装器写入 Tacview 的自定义地形目录。完整转换集包含 71 张地图；游戏地形资产不提交到 Git。
+独立安装器读取用户本机《战争雷霆》资产，转换 71 张已知地图，再安装到 Tacview。EXE 内含便携 CPython 和四个固定版本依赖，不含预生成的 `.data` 地形。游戏资产不提交到 Git，也不包含在新版安装器中。
 
-如果已经取得含地形数据的安装器，可直接阅读[安装转换后的地形](#安装转换后的地形)。只有需要自行提取或打包地形时，才需要准备下述构建环境。
+正常使用请阅读[安装转换后的地形](#安装转换后的地形)。下述手动 Python/Datamine 流程供开发者使用，与安装器自动读取本机游戏的流程分开。
 
 ## 环境要求
 
 | 操作 | 所需环境 |
 | --- | --- |
-| 从零转换并构建 | Windows PowerShell、Go 1.25.6 或更高版本、64 位 Python 3.12、转换器依赖、Git、本机游戏文件及固定版本 Datamine。 |
-| 打包已有转换目录 | Windows PowerShell、Go 及项目源码；不需要 Python、Git、游戏或 Tacview。 |
-| 安装地形 | 系统 Windows PowerShell 及内嵌或外部地形数据。查看结果需要 Tacview，安装过程不需要游戏、Python、Go 或 Git。 |
-| 导出回放 | 独立的 `wrpl-acmi.exe`；无需先转换或安装地形。 |
-
-默认分辨率的完整地图集建议预留至少 8 GB 磁盘空间，用于安装时的临时展开、原始栅格及兼容高程副本。
+| 构建程序 | Windows PowerShell、Go 1.25.6 或更高版本及源码。默认在构建时下载经哈希固定的开源运行时和 wheel，不下载游戏数据。 |
+| 自动转换并安装本机地形 | Windows、系统 Windows PowerShell、独立安装器及本机 `levels/*.bin` 和 `aces.vromfs.bin`。运行时无需用户安装 Python、Go、Git，无需联网或下载游戏数据。 |
+| 开发者手动转换 | 64 位 Python 3.12、转换器依赖、本机编译后关卡和匹配的 Datamine 配置。以下使用 Git 获取固定提交。 |
+| 导出回放 | 独立 `wrpl-acmi.exe`；转换或安装地形为可选步骤。 |
 
 ## 从零构建
 
-以下命令从 dev 分支获取源码，准备转换环境，再构建含地形数据的安装器。运行前，请确认 `python` 对应 64 位 Python 3.12，并将 `-GameRoot` 改为本机游戏目录。
+### 构建独立程序
 
-### 获取源码并准备 Python
+在源码根目录运行：
+
+```powershell
+.\build.ps1
+```
+
+该命令生成两个 EXE，其中地形安装器为自包含程序。`tools/terrain/runtime-lock.json` 固定确切的运行时版本、四个依赖及制品哈希。`-PythonRuntime <目录>` 选择已准备的运行时，`-RuntimeCache <目录>` 指定构建缓存。构建安装器无需游戏或 Datamine。
+
+旧构建参数 `-WithTerrain` 和 `-TerrainSource` 会被拒绝并提示迁移。公开安装器不再打包转换后的游戏数据。手动使用已有转换目录时，请传入安装器运行参数 `-source`。
+
+### 准备开发者手动转换环境
+
+这些步骤仅用于 `tools/terrain/build-terrain.ps1`；终端用户无需准备此环境或下载 Datamine。
 
 ```powershell
 git clone --branch dev --single-branch https://github.com/3794432/wrpl-acmi.git
 Set-Location .\wrpl-acmi
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r .\tools\terrain\converter\requirements.txt
-```
 
-依赖版本由 `requirements.txt` 固定：NumPy 2.3.5、Pillow 12.3.0、pyooz 0.0.8 和 zstandard 0.25.0。
-
-### 获取固定版本的关卡配置
-
-```powershell
 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/gszabi99/War-Thunder-Datamine.git .\War-Thunder-Datamine
 git -C .\War-Thunder-Datamine fetch --depth 1 origin f7952e4291e9fd7b6fe38e84020dddef925c3457
 git -C .\War-Thunder-Datamine sparse-checkout init --cone
@@ -43,95 +46,88 @@ git -C .\War-Thunder-Datamine sparse-checkout set aces.vromfs.bin_u/levels
 git -C .\War-Thunder-Datamine checkout --detach FETCH_HEAD
 ```
 
-稀疏检出仅获取转换所需的关卡目录。转换器会核对 `AtlasReferences.json` 所列 71 张地图的目标 `.blkx` 文件，无需完整检出 Datamine。
+确认 `python` 为 64 位 Python 3.12。`requirements.txt` 固定 NumPy 2.3.5、Pillow 12.3.0、pyooz 0.0.8 和 zstandard 0.25.0。稀疏检出提供 `AtlasReferences.json` 所列 71 张地图的目标配置；手动配置必须与本机游戏资产匹配。
 
-### 转换并生成发布包
-
-```powershell
-.\build.ps1 -WithTerrain -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -Python ".\.venv\Scripts\python.exe"
-```
-
-该命令调用 `tools/terrain/build-terrain.ps1`，将转换结果写入 `dist/wrpl-acmi/terrain`，再附加到 `wrpl-terrain-installer.exe`。同时生成独立导出器 `wrpl-acmi.exe`。构建过程不会向 Tacview 安装任何内容。
-
-`-Python` 默认为 `python`；使用虚拟环境时应显式指定解释器。`-OutputRoot` 可更改发布包目录。转换中断后，在相同命令后添加 `-ResumeTerrain` 继续；该选项只能与 `-WithTerrain` 同用。未指定时，脚本会拒绝覆盖已有的非空地形输出目录。
-
-## 分别执行转换与打包
-
-只需要生成地形目录时，可在准备好依赖后运行：
+### 手动转换
 
 ```powershell
-.\tools\terrain\build-terrain.ps1 -GameRoot "C:\Path\To\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -OutputRoot ".\converted-terrain" -Python ".\.venv\Scripts\python.exe"
+.\tools\terrain\build-terrain.ps1 -GameRoot "C:\Games\War Thunder" -DatamineRoot ".\War-Thunder-Datamine" -OutputRoot ".\converted-terrain" -Python ".\.venv\Scripts\python.exe"
 ```
 
-| 选项 | 说明 |
+该命令生成转换来源目录，不构建安装器，也不向 Tacview 安装。
+
+| 手动脚本参数 | 说明 |
 | --- | --- |
-| `-ValidateOnly` | 检查全部输入，不写转换结果。 |
-| `-Resume` | 在原输出目录继续中断的转换。 |
-| `-Resolution` | 每张地图的输出分辨率，默认 4096 像素。 |
-| `-TimeoutSeconds` | 每张地图的转换超时，默认 1200 秒。 |
+| `-ValidateOnly` | 检查输入，不写转换结果。 |
+| `-Resume` | 在同一输出目录续作；未指定时拒绝非空输出目录。 |
+| `-Resolution` | 输出分辨率，默认 4096。 |
+| `-TimeoutSeconds` | 每张地图超时，默认 1200 秒。 |
 
-已有完整转换目录时，可单独打包：
-
-```powershell
-.\build.ps1 -TerrainSource ".\converted-terrain"
-```
-
-`-TerrainSource` 与 `-WithTerrain` 互斥。普通的 `build.ps1` 调用仍会生成安装器，但不含地形数据，安装时必须另行提供 `-source`。
-
-打包不会重新转换或移动源地图，也不会改变底层转换器的输出约定：直接调用转换器且未指定 `-out` 时，结果写入当前工作目录。
+输出路径限制、转换命令和校验约定见 [BUILD-CONTRACT.md](converter/BUILD-CONTRACT.md)。该手动脚本的参数与独立 EXE 的小写参数不同。
 
 ## 产物结构与数据格式
 
-以下列出地形相关的主要产物；发布包还包含项目说明、许可及其他辅助工具。
+发布包包含 `wrpl-acmi.exe`、`wrpl-terrain-installer.exe`、文档、许可声明和辅助文件。安装器携带运行时及转换工具，不携带已转换地图，也不依赖相邻的 `data/`、`terrain/` 或 `tools/` 目录。
+
+转换生成本地缓存，默认位于 `%LOCALAPPDATA%\wrpl-acmi\terrain`，包含可续作的地图结果和日志。完整转换来源（包括手动 `-source` 来源）具有以下地形结构：
 
 ```text
-dist/wrpl-acmi/
-  wrpl-acmi.exe
-  wrpl-terrain-installer.exe
-  build-manifest.json
-  run.bat
-  data/
-  docs/
-  tools/terrain/
-  terrain/
-    AtlasReferences.json
-    GeoReferences.json
-    maps/<id>/<id>.data
-    maps/<id>/metadata.json
-    maps/<id>/CustomHeightmapList.xml
+<converted-source>/
+  AtlasReferences.json
+  GeoReferences.json
+  maps/<id>/<id>.data
+  maps/<id>/metadata.json
+  maps/<id>/CustomHeightmapList.xml
 ```
 
-使用 `-TerrainSource` 打包或安装已有转换目录时，来源根目录必须同时包含 `AtlasReferences.json` 和 `GeoReferences.json`。
-
-`terrain/` 是 `-WithTerrain` 构建时的暂存目录。完整来源包含 71 个地图目录；`.data` 使用以米为单位的 16 位有符号小端高程，按从北到南、从西到东排列。`metadata.json` 记录尺寸、采样边界和 SHA-256，源 XML 使用安装器要求的零点模板。
-
-`smalltests` 中的合成数据仅供测试。含数据的独立安装器不依赖相邻的 `data/`、`terrain/` 或 `tools/` 目录。发布包清单及完整性标记见[构建与发布](../../docs/standalone-build.zh-CN.md)。
+目录包含 71 张地图。栅格使用以米为单位的有符号 16 位小端高程，按从北到南、从西到东排列。元数据记录尺寸、边界和 SHA-256；来源 XML 使用零点模板，由安装器应用 geographic 或 Atlas 定位。手动脚本还生成构建约定中列出的目录和校验报告。`smalltests` 合成地形仅用于测试。
 
 ## 输入来源与许可
 
 | 输入 | 用途 | 来源与许可说明 |
 | --- | --- | --- |
 | 客户端编译后地形 | 提供实际高度与几何，包括 `levels/<id>.bin`。 | 用户本机游戏；资产归 Gaijin Entertainment 所有，不随源码仓库分发。 |
+| 本机游戏配置 | 为自动转换提供边界、水位等设置。 | 读取用户本机的 `aces.vromfs.bin`，运行时不下载。 |
 | Datamine 关卡配置 | 提供地图边界、水位及相关设置。 | [War-Thunder-Datamine](https://github.com/gszabi99/War-Thunder-Datamine) 提交 `f7952e4291e9fd7b6fe38e84020dddef925c3457`。既有来源记录未在该提交发现许可文件；此处作为本地转换输入，不随仓库分发。 |
 | 地理参考 | 提供经审核的 WGS84 估算位置。 | [WT-MAP-ANALYZE](https://github.com/ShioUmiusi/WT-MAP-ANALYZE) 提交 `c26c0069558079df6597a7bc147cb91391509f89`，MIT 许可。 |
 | Python 依赖 | 解码压缩数据并处理栅格。 | NumPy 和 zstandard 为 BSD-3-Clause；pyooz 为 GPL-3.0-or-later；Pillow 为 HPND。 |
 
 项目代码按 AGPL-3.0 发布，各上游来源保留自己的许可。地理参考的声明见 [UPSTREAM-NOTICE.md](georeference/UPSTREAM-NOTICE.md) 和 [UPSTREAM-MIT.txt](georeference/UPSTREAM-MIT.txt)；转换器依赖声明见 [THIRD-PARTY-NOTICES.md](converter/THIRD-PARTY-NOTICES.md)。
 
+Datamine 仅用于上述开发者手动流程，自动安装器读取本机游戏配置。运行时及 wheel 的固定版本以 `runtime-lock.json` 为准。CPython 和依赖声明随运行时解压到 `LICENSES/` 目录，准备或分发运行时时须保留。减少游戏数据再分发，并不代表已获得提取、转换、使用或再分发游戏资产的许可。
+
 Datamine 仅提供配置，不能单独生成游戏高程。将 `.bin` 或 `.blkx` 改名为 `.data` 也不能替代转换。pyooz 所附的 GPL-3.0-or-later ooz 解码器用于读取 Oodle 压缩流，正常安装 pip 依赖后不需要专有 Oodle DLL 或密钥。
 
 ## 安装转换后的地形
 
-含地形数据的安装器可直接运行；不含数据或希望更换来源时，使用第二种写法：
+将独立 EXE 放在包含 `levels/` 和 `aces.vromfs.bin` 的游戏根目录，然后运行：
 
 ```powershell
-.\dist\wrpl-acmi\wrpl-terrain-installer.exe
-.\dist\wrpl-acmi\wrpl-terrain-installer.exe -source "C:\Terrain\converted-terrain"
+.\wrpl-terrain-installer.exe
 ```
 
-默认目标为 `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`，可用 `-destination <目录>` 更改。安装器会在写入目标前校验来源元数据与 SHA-256；`-validate-only` 只验证来源，不写目标。
+默认游戏根目录为 EXE 所在目录，不是当前工作目录。默认保持游戏资产只读。内嵌运行时离线执行转换，无需用户安装 Python、Go、Git，也不下载游戏数据。EXE 位于其他位置时，可显式选择游戏目录：
 
-`-profile auto` 默认检测 Tacview 版本，找不到时采用 1.9.4 配置。也可显式指定 `-profile 1.9.4` 或 `-profile 1.9.5`。再次运行时可以复用缓存。
+```powershell
+.\wrpl-terrain-installer.exe -game "C:\Games\War Thunder" -resolution 4096
+```
+
+默认目标为 `%APPDATA%\Tacview\Data\Terrain\Custom\WarThunderMaps`，可用 `-destination <目录>` 更改。分辨率默认 4096。`-cache <目录>` 更改默认的 `%LOCALAPPDATA%\wrpl-acmi\terrain` 缓存，其中保留可续作地图和日志；再次运行时检查源文件哈希再决定是否复用。排查转换或安装失败时请保留程序报告的日志。
+
+`-profile auto` 默认检测 Tacview 版本，找不到时采用 1.9.4 配置。也可显式指定 `-profile 1.9.4` 或 `-profile 1.9.5`。
+
+```powershell
+# 检查输入，不改变目标目录，也不转换全部地图
+.\wrpl-terrain-installer.exe -game "C:\Games\War Thunder" -validate-only
+
+# 仅转换到缓存，不安装
+.\wrpl-terrain-installer.exe -game "C:\Games\War Thunder" -cache "D:\TerrainCache" -convert-only
+
+# 手动指定已有转换来源，不自动读取游戏
+.\wrpl-terrain-installer.exe -source "C:\Terrain\converted-terrain"
+```
+
+`-validate-only` 检查输入，不修改目标目录；不会转换全部地图，也不证明每张地图均可转换。`-convert-only` 生成转换缓存但不安装。`-source` 需要含两个参考 JSON 文件的完整转换目录，跳过自动读取本机游戏。安装前会校验转换元数据及 SHA-256；`-source` 模式下校验的是指定来源。校验通过不代表 Tacview 界面已正确渲染。
 
 ### 坐标布局
 
@@ -177,4 +173,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\terrain\smalltes
 
 ## 比赛空战地图
 
-71 张地图目录包含日本港口（`avn_japan`）和红色沙漠（`avg_red_desert`）。即使内部文件名带陆战或海战前缀，也会按显式构建清单转换。两张地图在默认 geographic 布局下均采用 Atlas 回退；已有地图坐标不变。红色沙漠使用完整地图地形加局部 HM2 叠加，不能将局部高度图拉伸到全图。本次增加地形支持，这两张地图的跑道源几何尚未审核。重新构建两个 EXE 并安装完整地形后，从原始回放重新导出。
+71 张地图目录包含日本港口（`avn_japan`）和红色沙漠（`avg_red_desert`）。即使内部文件名带陆战或海战前缀，也会按显式清单转换。两张地图在默认 geographic 布局下均采用 Atlas 回退；已有地图坐标不变。红色沙漠使用完整地图地形加局部 HM2 叠加，不能将局部高度图拉伸到全图。本次本机游戏安装器变更不新增跑道几何，这两张地图的跑道源几何尚未审核。更新两个 EXE，运行本机游戏安装器，再从原始回放重新导出。
+
+地图转换缓存及日志在安装后继续保留，不自动删除。运行结束时显示缓存路径，并提示不再需要时手动清理；清理后再次安装需要重新转换。

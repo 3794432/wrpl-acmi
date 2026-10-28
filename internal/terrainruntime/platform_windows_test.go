@@ -12,9 +12,12 @@ func TestRejectWindowsJunctions(t *testing.T) {
 	r := fixture(t)
 	parent := t.TempDir()
 	link := filepath.Join(parent, "junction")
-	command := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", `$ErrorActionPreference='Stop'; New-Item -ItemType Junction -Path $env:WRPL_TEST_LINK -Target $env:WRPL_TEST_TARGET | Out-Null`)
-	command.Env = append(os.Environ(), "WRPL_TEST_LINK="+link, "WRPL_TEST_TARGET="+r)
-	if output, err := command.CombinedOutput(); err != nil {
+	createJunction := func(link, target string) ([]byte, error) {
+		command := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", `$ErrorActionPreference='Stop'; New-Item -ItemType Junction -Path $env:WRPL_TEST_LINK -Target $env:WRPL_TEST_TARGET | Out-Null`)
+		command.Env = append(os.Environ(), "WRPL_TEST_LINK="+link, "WRPL_TEST_TARGET="+target)
+		return command.CombinedOutput()
+	}
+	if output, err := createJunction(link, r); err != nil {
 		t.Skipf("junction creation unavailable: %v: %s", err, output)
 	}
 	defer os.Remove(link)
@@ -45,8 +48,7 @@ func TestRejectWindowsJunctions(t *testing.T) {
 		t.Fatal(err)
 	}
 	link = filepath.Join(r, "Lib")
-	command.Env = append(os.Environ(), "WRPL_TEST_LINK="+link, "WRPL_TEST_TARGET="+filepath.Join(parent, "Lib"))
-	if output, err := command.CombinedOutput(); err != nil {
+	if output, err := createJunction(link, filepath.Join(parent, "Lib")); err != nil {
 		t.Fatalf("create inner junction: %v: %s", err, output)
 	}
 	defer os.Remove(link)

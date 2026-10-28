@@ -508,13 +508,13 @@ func TestLocalConversionFeedsInstallerAndHoldsCacheLock(t *testing.T) {
 		t.Fatal(err)
 	}
 	converted, released, calls := false, false, 0
+	var receivedSource string
 	deps := fakeDependencies(func(_ context.Context, args []string, _, _ io.Writer) error {
 		if !converted || released {
 			t.Fatal("install ran before conversion, or after releasing its cache lock")
 		}
-		if argumentFor(args, "-SourceRoot") != source {
-			t.Fatal("installer did not receive converted source")
-		}
+		receivedSource = argumentFor(args, "-SourceRoot")
+		assertSameDirectory(t, receivedSource, source)
 		calls++
 		return nil
 	})
@@ -530,7 +530,7 @@ func TestLocalConversionFeedsInstallerAndHoldsCacheLock(t *testing.T) {
 	if _, err := os.Stat(sentinel); err != nil {
 		t.Fatal("installation removed the conversion cache:", err)
 	}
-	if !strings.Contains(output.String(), "Map conversion cache retained at: "+source) || !strings.Contains(output.String(), "manually") {
+	if !strings.Contains(output.String(), "Map conversion cache retained at: "+receivedSource) || !strings.Contains(output.String(), "manually") {
 		t.Fatalf("missing manual cleanup notice: %s", output.String())
 	}
 }
@@ -561,11 +561,27 @@ func TestDefaultGameRootUsesExecutableDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := localGameRoot("", filepath.Join(root, "installer.exe"))
-	if err != nil || got != root {
+	if err != nil {
 		t.Fatalf("got %q, %v", got, err)
 	}
+	assertSameDirectory(t, got, root)
 	if _, err = localGameRoot(t.TempDir(), filepath.Join(root, "installer.exe")); err == nil {
 		t.Fatal("accepted non-game directory")
+	}
+}
+
+func assertSameDirectory(t *testing.T, got, want string) {
+	t.Helper()
+	gotInfo, err := os.Stat(got)
+	if err != nil {
+		t.Fatalf("stat directory %q: %v", got, err)
+	}
+	wantInfo, err := os.Stat(want)
+	if err != nil {
+		t.Fatalf("stat expected directory %q: %v", want, err)
+	}
+	if !gotInfo.IsDir() || !wantInfo.IsDir() || !os.SameFile(gotInfo, wantInfo) {
+		t.Fatalf("directory %q does not refer to %q", got, want)
 	}
 }
 

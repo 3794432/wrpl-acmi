@@ -63,3 +63,18 @@ func TestMissileOwnerAmmoSnapshot(t *testing.T) {
 		t.Fatalf("unguided launch inherited aircraft ordnance: %+v", s.OwnerWeapons)
 	}
 }
+
+func TestBombOwnerAmmoSnapshot(t *testing.T) {
+	p := NewMetadataParser(spawnTestMaps(), true)
+	const owner = uint64(321)
+	p.ownerWeapons[owner] = []groundmeta.StorageWeapon{{Launcher: "us_gbu_39", Count: 4}}
+	r := danet.NewBitReader(spawnRocketValue(owner, 0, 9<<16, 1, 2, 3))
+	s := p.readProjectileConstruction(701, r, 100, "bomb", nil, projectileKindBomb)
+	if s == nil || len(s.OwnerWeapons) != 1 || s.OwnerWeapons[0].Launcher != "us_gbu_39" {
+		t.Fatalf("bomb snapshot missing: %+v", s)
+	}
+	p.ownerWeapons[owner][0].Count = 0
+	if s.OwnerWeapons[0].Count != 4 {
+		t.Fatal("later ammunition change modified the bomb snapshot")
+	}
+}

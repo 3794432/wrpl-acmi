@@ -85,6 +85,9 @@ The default format is ACMI 2.1. Select `-acmi-version 2.2` explicitly when requi
 | `-alt` | `0` | Vertical offset in metres; horizontal placement is unchanged. |
 | `-ecshashes` | `embedded` | ECS name table; a JSON path overrides it, an empty value disables it. |
 | `-missile-models` | `embedded` | Model-completion table; also accepts `off` or a schema 1 JSON path. |
+| `-bomb-models` | `embedded` | Bomb model aliases; accepts `off` or a schema 1 aliases-only JSON table (empty `replays`). Independent of missile naming. |
+| `-estimate-bomb-trajectories` | `true` | Estimate release-only bomb motion from a valid parent velocity and gravity. Explicitly labelled; `false` retains stationary release markers. |
+| `-sam-model-fallback` | `latest` | For unresolved SAM models, prefer radar ammunition and the latest reviewed variant within its family, marked `Assumed`. Use `off` to keep uncertain identities unresolved. Does not replace recorded identities or seeker states. |
 | `-missile-guidance` | `embedded` | Static guidance table; also accepts `off` or a schema 1 JSON path. |
 
 ### Content switches
@@ -141,7 +144,9 @@ PhiPhi's eight checked race missions have air starts and no land-runway source. 
 
 Missiles retain synchronized positions. Speed, acceleration, turn rate, and G are calculated from the position sequence. Model candidates, static guidance type, and INS duration have their own evidence and should not be confused with motion estimates. See [models](ACMI_MODELS.md) and [guidance](ACMI_GUIDANCE.md) (Chinese).
 
-Bombs use WeaponSync positions when available. A construction-only bomb is marked `Release position only`; no missing trajectory or impact time is inferred. See [bombs](ACMI_BOMBS.md) (Chinese).
+Bombs use WeaponSync positions when available. For construction-only bombs, the default `-estimate-bomb-trajectories=true` adds a labelled ballistic estimate when a valid parent velocity is available. This is not recorded flight or a measured impact. Disabling the flag, or lacking a usable parent, retains `Release position only`. See [estimate rules](acmi-information.md#estimated-bomb-motion) and [bombs](ACMI_BOMBS.md) (Chinese).
+
+Bomb names are completed by default from a verified Datamine alias catalogue, weapon reports and unique actual owner loadouts. Native `Name`/`CallSign` show the model; `WT_BombModel*` properties retain the identity source and confidence. Missing or conflicting evidence retains `Bomb`. See [model identification](acmi-information.md#bomb-models); use `-bomb-models off` to disable naming without disabling bomb tracks.
 
 Countermeasure types require owner-ammunition evidence identifying one active type. Mixed or unresolved releases display as Chaff with `fallback` confidence and an `UnknownAsChaff` source marker. Recorded positions take priority over explicitly labelled short estimated trajectories. See [countermeasures](ACMI_COUNTERMEASURES.md).
 

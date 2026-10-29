@@ -36,6 +36,7 @@ func TestKillParserReadsBoundedFieldsWithoutECS(t *testing.T) {
 		t.Fatalf("result type = %T", result)
 	}
 	if entry.CurrentTime != 1234 || entry.KillerPid != 17 || entry.VictimPid != 18 ||
+		!entry.HasKillerPID || !entry.HasVictimPID ||
 		!entry.HasKillerUID || entry.KillerUid != 42 || !entry.HasVictimUID || entry.VictimUid != 77 ||
 		entry.PlayerVehicle != "vehicle" || entry.PlayerWeapon != "cannon" || entry.DestroyedWeapon != "tail" {
 		t.Fatalf("parsed entry = %+v", entry)
@@ -72,6 +73,19 @@ func TestKillParserDistinguishesUIDZeroFromMissingFields(t *testing.T) {
 	pair = result.(KillEntry)
 	if pair.HasKillerUID || pair.HasVictimUID {
 		t.Fatalf("missing UIDs reported present: %+v", pair)
+	}
+}
+
+func TestKillParserDistinguishesPIDZeroFromMissingFields(t *testing.T) {
+	for _, present := range []bool{true, false} {
+		fields := []killTestField{{num: 0xa, data: killTestString("gun")}}
+		if present {
+			fields = append(fields, killTestField{num: 1, data: killTestU32(0)}, killTestField{num: 0xb, data: killTestU32(0)})
+		}
+		entry, err := parseKillEntry(killTestPacket(2000, fields))
+		if err != nil || entry.HasKillerPID != present || entry.HasVictimPID != present || entry.KillerPid != 0 || entry.VictimPid != 0 {
+			t.Fatalf("PID presence %v: %+v %v", present, entry, err)
+		}
 	}
 }
 

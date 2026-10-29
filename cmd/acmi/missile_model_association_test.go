@@ -131,7 +131,7 @@ func TestMissileModelAssociationsMixedLoadoutKeepsCandidatesOnly(t *testing.T) {
 	if strings.Join(info.ModelCandidates, " / ") != strings.Join(want, " / ") {
 		t.Fatalf("candidates = %#v, want %#v", info.ModelCandidates, want)
 	}
-	if tr.name != "AAM (unknown)" {
+	if tr.name != "AAM (unk)" {
 		t.Fatalf("mixed loadout changed fallback name to %q", tr.name)
 	}
 }

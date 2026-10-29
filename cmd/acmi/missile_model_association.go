@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"sort"
 	"strings"
 
@@ -20,6 +21,7 @@ type missileAssociationCandidate struct {
 	internal   string
 	confidence string
 	guidance   string
+	role       string
 }
 
 type missileAssociationOwnerKey struct {
@@ -198,13 +200,17 @@ func collectMissileAssociationEvidence(tracks []*track, aliases missileAssociati
 			current.key.ownerEID = tr.projectileSource.OwnerEID
 			current.key.parentUID = missileAssociationParentUID(tr)
 			current.key.generation = tr.projectileSource.ID >> 22
-			current.key.weaponID = info.WeaponID
+			// Group by the original nonzero serializer token, including short
+			// tokens not covered by the legacy public numeric-ID convention.
+			token := tr.projectileSource.LeadingULEB
+			current.key.weaponID = uint32(token)
 			current.key.template = current.template
 			current.key.kind = current.kind
 			current.hasKey = current.key.ownerEID != 0 && current.key.parentUID != 0 &&
-				info.HasWeaponID && current.templateOK &&
+				token > 0 && token <= math.MaxUint32 && current.templateOK &&
 				(current.kind == missileNameArmamentTriggerAAM || current.kind == missileNameArmamentTriggerAGM)
-			current.constraintsOK = current.templateOK && current.kind == missileNameArmamentTriggerAAM
+			current.constraintsOK = current.templateOK &&
+				(current.kind == missileNameArmamentTriggerAAM || current.kind == missileNameArmamentTriggerAGM)
 			current.candidates, current.ambiguous, current.conflict =
 				missileAssociationOwnerCandidates(tr.projectileSource, aliases)
 			current.incomplete = missileAssociationHasUnresolvedAmmo(tr.projectileSource, aliases)
@@ -275,6 +281,7 @@ func newMissileAssociationAliasIndex(table *missileModelTable) missileAssociatio
 			model: entry.Model, internal: entry.InternalName,
 			confidence: entry.Confidence,
 			guidance:   missileAssociationAliasGuidance(entry),
+			role:       entry.Role,
 		}
 		missileAssociationIndexCandidate(index, strings.ToLower(strings.TrimSpace(key)), candidate)
 		if normalized := normalizeMissileWeaponAliasKey(key); normalized != "" {
@@ -285,6 +292,18 @@ func newMissileAssociationAliasIndex(table *missileModelTable) missileAssociatio
 }
 
 func missileAssociationAliasGuidance(entry missileModelAliasEntry) string {
+	if entry.Role == "AGM" {
+		// Optical here includes TV/IIR. It is a compatibility constraint, not
+		// a claim of IR homing or a native ACMI guidance classification.
+		value := strings.ToLower(entry.Source)
+		if strings.Contains(value, "guidancetype=optical") {
+			return "Optical"
+		}
+		if strings.Contains(value, "guidancetype=radar") {
+			return "Radar"
+		}
+		return ""
+	}
 	for _, name := range []string{entry.InternalName, normalizeMissileWeaponAliasKey(entry.InternalName)} {
 		if name == "" {
 			continue
@@ -351,6 +370,7 @@ func missileAssociationOwnerCandidates(source *projectiles.Projectile, aliases m
 		internal         string
 		confidence       string
 		guidance         string
+		role             string
 		guidanceConflict bool
 	}
 	aggregates := make(map[string]*aggregate)
@@ -364,12 +384,15 @@ func missileAssociationOwnerCandidates(source *projectiles.Projectile, aliases m
 				if current == nil {
 					aggregates[candidate.model] = &aggregate{
 						model: candidate.model, internal: candidate.internal,
-						confidence: candidate.confidence, guidance: candidate.guidance,
+						confidence: candidate.confidence, guidance: candidate.guidance, role: candidate.role,
 					}
 					continue
 				}
 				if current.confidence != "confirmed" && candidate.confidence == "confirmed" {
 					current.confidence = "confirmed"
+				}
+				if current.role != candidate.role {
+					current.guidanceConflict = true
 				}
 				if current.guidance == "" {
 					current.guidance = candidate.guidance
@@ -388,7 +411,7 @@ func missileAssociationOwnerCandidates(source *projectiles.Projectile, aliases m
 	for _, aggregate := range aggregates {
 		candidate := missileAssociationCandidate{
 			model: aggregate.model, internal: aggregate.internal,
-			confidence: aggregate.confidence, guidance: aggregate.guidance,
+			confidence: aggregate.confidence, guidance: aggregate.guidance, role: aggregate.role,
 		}
 		result = append(result, candidate)
 		if aggregate.guidanceConflict {
@@ -450,6 +473,12 @@ func missileAssociationHasUnresolvedAmmo(source *projectiles.Projectile, aliases
 }
 
 func missileAssociationCandidateAllowed(candidate missileAssociationCandidate, kind uint32, template string) bool {
+	if candidate.role == "AGM" {
+		if kind != missileNameArmamentTriggerAGM {
+			return false
+		}
+		return template == "rocket" || template == "rocket+arh_shell" && candidate.guidance == "Radar"
+	}
 	if kind != missileNameArmamentTriggerAAM {
 		// The explicit alias table currently describes air-to-air missiles.
 		// An AGM trigger therefore cannot select one of these rows.
@@ -479,9 +508,9 @@ func missileAssociationFilterCandidates(candidates []missileAssociationCandidate
 func missileAssociationSeekerAllows(guidance string, kind projectiles.SeekerKind) bool {
 	switch kind {
 	case projectiles.SeekerKindIR:
-		return guidance == "IR"
+		return guidance == "IR" || guidance == "Optical"
 	case projectiles.SeekerKindRadar:
-		return guidance == "ARH" || guidance == "SARH"
+		return guidance == "ARH" || guidance == "SARH" || guidance == "Radar"
 	default:
 		return true
 	}
@@ -504,6 +533,12 @@ func buildMissileAssociationGroups(evidence []*missileAssociationEvidence, alias
 		}
 		guidance := missileAssociationGuidanceForModel(aliases, current.info.Model, current.info.InternalName)
 		candidate := missileAssociationCandidate{model: current.info.Model, internal: current.info.InternalName, guidance: guidance}
+		for _, alias := range aliases.candidatesFor(current.info.InternalName) {
+			if missileAssociationSameModel(alias.model, current.info.Model) {
+				candidate.role = alias.role
+				break
+			}
+		}
 		if !missileAssociationCandidateAllowed(candidate, current.kind, current.template) ||
 			!missileAssociationSeekerAllows(guidance, current.seekerKind) {
 			continue

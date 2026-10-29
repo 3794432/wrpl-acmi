@@ -59,7 +59,7 @@
     },
     "su_pl5e2": {
       "model": "PL-5E II",
-      "internal_name": "su_pl5e2",
+      "internal_name": "pl_5e2",
       "confidence": "confirmed",
       "source": "datamine su_pl5e2.blkx: bulletName=pl_5e2, guidanceType=optical, opticalSeeker (IR AAM)"
     },

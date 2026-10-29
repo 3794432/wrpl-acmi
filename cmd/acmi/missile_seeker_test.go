@@ -243,6 +243,8 @@ func TestMissileSeekerRadarModeRequiresExplicitARH(t *testing.T) {
 		{name: "SARH", track: &track{key: trackKey{missile: true}, missileGuidance: &missileGuidanceInfo{Type: "SARH", Confidence: "confirmed"}}, want: "0"},
 		{name: "inferred ARH", track: &track{key: trackKey{missile: true}, missileGuidance: &missileGuidanceInfo{Type: "ARH", Confidence: "inferred"}}, want: "0"},
 		{name: "explicit template ARH", track: &track{key: trackKey{missile: true}, projectileSource: &projectiles.Projectile{Template: "arh_shell"}}, want: "1"},
+		{name: "inferred name retains explicit template radar", track: &track{key: trackKey{missile: true}, projectileSource: &projectiles.Projectile{Template: "rocket+arh_shell"}, missileGuidance: &missileGuidanceInfo{Type: "ARH", Confidence: "inferred"}}, want: "1"},
+		{name: "conflict blocks even explicit template", track: &track{key: trackKey{missile: true}, projectileSource: &projectiles.Projectile{Template: "rocket+arh_shell"}, missileGuidance: &missileGuidanceInfo{Type: "Unknown", Confidence: "conflict"}}, want: "0"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

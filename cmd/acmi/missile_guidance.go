@@ -14,6 +14,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/projectiles"
 )
 
 const missileGuidanceMaxFileBytes = 1 << 20
@@ -370,6 +372,24 @@ func resolveMissileGuidance(tr *track, table *missileGuidanceTable, scopedIDs ma
 	if plainAAM {
 		constraints = append(constraints, []string{"IR", "SARH"})
 	}
+	// Recorded seeker layouts can classify AAM guidance independently of
+	// knowing the model. Radar alone still allows both ARH and SARH.
+	seekerKind, seekerConflict := missileAssociationSeekerKind(tr)
+	seekerAAM := tr.projectileSource != nil && tr.projectileSource.WeaponRef>>16 == missileNameArmamentTriggerAAM
+	if seekerAAM && seekerConflict {
+		return &missileGuidanceInfo{Type: "Unknown", Source: "WeaponSyncSeekerConflict", Confidence: "conflict"}
+	}
+	seekerEvidence := false
+	if seekerAAM {
+		switch seekerKind {
+		case projectiles.SeekerKindIR:
+			constraints = append(constraints, []string{"IR"})
+			seekerEvidence = true
+		case projectiles.SeekerKindRadar:
+			constraints = append(constraints, []string{"ARH", "SARH"})
+			seekerEvidence = true
+		}
+	}
 
 	if len(constraints) == 0 {
 		return &missileGuidanceInfo{Type: "Unknown", Source: "None", Confidence: "unknown"}
@@ -389,6 +409,13 @@ func resolveMissileGuidance(tr *track, table *missileGuidanceTable, scopedIDs ma
 				Source:     "Template" + selected + "Shell",
 				Confidence: "high",
 			}
+		}
+		if seekerEvidence {
+			source := "WeaponSyncSeeker"
+			if plainAAM && selected == "SARH" {
+				source += "+TemplateNonARH"
+			}
+			return &missileGuidanceInfo{Type: selected, Source: source, Confidence: "high"}
 		}
 	}
 

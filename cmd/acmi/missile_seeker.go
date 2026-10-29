@@ -88,18 +88,19 @@ func missileSeekerStateForSample(s acmiSample) (projectiles.SeekerState, bool) {
 }
 
 // missileSeekerExplicitARH accepts only a high-confidence ARH table result or
-// the explicit arh_shell template token. An inferred, conflicting, or SARH/IR
-// result cannot activate Tacview's missile radar mode.
+// the explicit arh_shell template token. Inferred guidance alone cannot
+// activate the radar, but must not erase independent explicit template evidence.
+// Conflicting or SARH/IR results always block activation.
 func missileSeekerExplicitARH(tr *track) bool {
 	if tr == nil || !tr.key.missile {
 		return false
 	}
 	if info := tr.missileGuidance; info != nil {
-		if info.Type == "SARH" || info.Type == "IR" || info.Confidence == "conflict" || info.Confidence == "inferred" {
+		if info.Type == "SARH" || info.Type == "IR" || info.Confidence == "conflict" {
 			return false
 		}
-		if info.Type == "ARH" {
-			return info.Confidence == "confirmed" || info.Confidence == "high"
+		if info.Type == "ARH" && (info.Confidence == "confirmed" || info.Confidence == "high") {
+			return true
 		}
 	}
 	if tr.projectileSource != nil {

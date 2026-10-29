@@ -26,6 +26,13 @@
 * Export track lists, missile flight parameters, and other `.csv` data files
 * Estimate heading, speed, G-load, and other native `.acmi` data from aircraft positions and attitudes
 * Export recorded post-launch seeker states and aircraft radar modes using native ACMI properties and readable labels; see [sensor states and compatibility](docs/ACMI_SENSOR_STATES.md)
+* Display missile models from full pinned AAM/AGM catalogues, including types absent from the sample replay (such as AIM-120D/B and R-77-1); use report/actual-loadout evidence for variants, or guidance-filtered carrier options for an explicitly inferred family
+* Export recorded SAM flight tracks, with explicit launcher identity and coalition, for the [catalogued surface-to-air systems](docs/acmi-information.md#surface-to-air-missiles)
+* Identify [air-to-ground missiles](docs/acmi-information.md#air-to-ground-missile-models) from weapon reports and exact owner loadouts, retaining unknown or mixed configurations
+* Identify [bomb models](docs/acmi-information.md#bomb-models); preserve recorded flight tracks and add labelled initial-velocity/gravity estimates for release-only bombs when possible
+* Unresolved SAM model names default to radar preference and the latest reviewed family variant, marked `Assumed`; use `-sam-model-fallback off` to retain only evidence-based naming
+* Include recorded attacker vehicle, player and weapon in native ground-unit destruction events, including posthumous attacks when the report retains a valid player identity
+* Omit unbound stationary initialization snapshots at convoy spawn points, avoiding temporary ground objects and misleading opening removal/death notifications
 
 The project is based on [wrpl-inspector v3](https://github.com/maxsupermanhd/wrpl-inspector), retaining its Go replay parser library and dear-imgui graphical inspector alongside a headless `cmd/acmi` exporter. Development takes place on the [dev branch](https://github.com/3794432/wrpl-acmi/tree/dev). The Go module path remains `github.com/maxsupermanhd/wrpl-inspector/v3`.
 
@@ -94,7 +101,7 @@ An `.acmi` file converted from `.wrpl` replay data contains original replay reco
 | Content | Data type |
 | --- | --- |
 | Aircraft and ground units | Positions come from the replay, and aircraft retain their attitude. Headings for moving ground units are inferred, and destroyed units are marked `Destroyed` before removal. Eligible static structures can use timestamped ECS construction positions. |
-| Missiles and bombs | Actual positions are preferred where available, and missile motion parameters are calculated from positions. Bombs with only construction records show their release position and are marked `Release position only`. |
+| Missiles and bombs | Actual positions are preferred where available, and missile motion parameters are calculated from positions. Bombs with only construction records use labelled initial-velocity/gravity trajectory estimates by default; `-estimate-bomb-trajectories=false` retains release-position markers. |
 | Countermeasures | When reliable ammunition evidence distinguishes Flare and Chaff, the identified type is used; unresolved types are shown as Chaff. Countermeasure tracks are estimated. |
 | Airfields and runways | Configured from the map, mission, and verifiable radar records. The catalogue covers 71 maps and 457 missions, with usable runway information for 67 maps. |
 | Radar target designations | Writes Tacview's `LockedTarget` property and calculable distance and angle information. A designation may include tracking information but does not mean the radar is in tracking mode. |

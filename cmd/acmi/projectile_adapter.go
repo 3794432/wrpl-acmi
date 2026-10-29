@@ -3,16 +3,22 @@ package main
 import (
 	"sort"
 
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/groundmeta"
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet/parser/projectiles"
 )
 
 // Join only identities supplied by the replay. A constructor's position is
 // retained together with subsequent recorded WeaponSync positions.
-func decodedMissileTracks(metadata *projectiles.MetadataParser, positions *projectiles.PositionParser) []missileTrack {
+func decodedMissileTracks(metadata *projectiles.MetadataParser, positions *projectiles.PositionParser, ground ...*groundmeta.Parser) []missileTrack {
 	if metadata == nil || positions == nil {
 		return nil
 	}
 	var result []missileTrack
+	var owners *groundmeta.Parser
+	if len(ground) > 0 {
+		owners = ground[0]
+	}
+	surface := surfaceMissileLaunches(metadata, owners)
 	byEntity := make(map[uint64][]projectiles.Sample)
 	for wireID, samples := range positions.Samples {
 		if id, ok := projectileEntityID(wireID); ok {
@@ -26,19 +32,40 @@ func decodedMissileTracks(metadata *projectiles.MetadataParser, positions *proje
 				guidedInstances++
 			}
 		}
+		reservedIDs := map[uint64]bool{}
 		for _, source := range instances {
-			if !guidedProjectile(source) {
+			if guidedProjectile(source) {
+				key := id
+				if guidedInstances > 1 {
+					key |= uint64(source.SpawnSample.Time) << 32
+				}
+				reservedIDs[key] = true
+			}
+		}
+		for _, source := range instances {
+			if !guidedProjectile(source) && surface[source] == nil {
 				continue
 			}
 			tr := missileTrack{
 				ID: id, Name: source.Name, ParentUID: source.ParentUID,
 				HasParent: source.HasParent, EndTime: source.EndTime, HasEnd: source.HasEnd,
-				Source: source,
+				Source:        source,
+				SurfaceLaunch: surface[source],
 			}
-			if guidedInstances > 1 {
+			if guidedInstances > 1 || surface[source] != nil {
 				// Reconstruction may reuse even the same full EID. Keep lifetimes
 				// separate without dropping the generation bits of the source EID.
+				// New SAM identities always include the construction time so they
+				// cannot renumber an existing air-launched lifetime on that EID.
 				tr.ID = uint64(source.SpawnSample.Time)<<32 | id
+			}
+			if surface[source] != nil {
+				// Initial snapshots can construct a SAM at t=0. Reserve existing
+				// aircraft-store keys before allocating any new surface keys.
+				for reservedIDs[tr.ID] {
+					tr.ID += uint64(1) << 32
+				}
+				reservedIDs[tr.ID] = true
 			}
 			add := func(s projectiles.Sample) {
 				if s.Time < source.SpawnSample.Time || (source.HasEnd && s.Time > source.EndTime) {

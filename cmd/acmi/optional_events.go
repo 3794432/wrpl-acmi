@@ -67,7 +67,7 @@ type optionalEventParser struct {
 // replay must not turn optional bookmarks into an unbounded heap allocation.
 func newOptionalEventParser(enabled map[string]bool, slot *packetslot.PacketSlotParser) *optionalEventParser {
 	p := &optionalEventParser{enabled: make(map[string]bool, 4), slot: slot}
-	for _, category := range []string{"chat", "join", "damage", "award"} {
+	for _, category := range []string{"chat", "join", "damage", "award", "kill"} {
 		if enabled[category] {
 			p.enabled[category] = true
 		}
@@ -90,7 +90,7 @@ func (p *optionalEventParser) ParsesMatching() map[byte][][]packet.ParsingCondit
 	if p.enabled["chat"] {
 		out[3] = nil
 	}
-	if p.enabled["join"] || p.enabled["damage"] {
+	if p.enabled["join"] || p.enabled["damage"] || p.enabled["kill"] {
 		out[4] = append(out[4], [][]packet.ParsingCondition{{
 			packet.NewParsingCondition(0, 0x02), packet.NewParsingCondition(1, 0x58),
 			packet.NewParsingCondition(2, 0x2d), packet.NewParsingCondition(3, 0xf0),
@@ -137,7 +137,7 @@ func (p *optionalEventParser) Parse(pk *packet.Packet) (any, error) {
 		payload := pk.PacketPayload
 		switch {
 		case payload[0] == 0x02 && payload[1] == 0x58 && payload[2] == 0x2d && payload[3] == 0xf0:
-			if !p.enabled["join"] && !p.enabled["damage"] {
+			if !p.enabled["join"] && !p.enabled["damage"] && !p.enabled["kill"] {
 				return nil, nil
 			}
 			if err := p.parseSlot(pk); err != nil {

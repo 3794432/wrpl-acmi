@@ -30,6 +30,8 @@ type missileModelInfo struct {
 	LeadingULEB       uint64
 	HasLeadingULEB    bool
 	Model             string
+	Family            string
+	FamilyCarrier     string
 	InternalName      string
 	Source            string
 	Confidence        string
@@ -192,6 +194,7 @@ func readMissileNameKillString(r *danet.BitReader, fieldBits uint32) (string, bo
 type missileWeaponAlias struct {
 	model    string
 	internal string
+	role     string
 }
 
 // Internal names are accepted only through this explicit list. In particular,
@@ -211,11 +214,17 @@ func missileWeaponAliasFor(name string) (missileWeaponAlias, bool) {
 }
 
 func missileWeaponAliasForWithTable(name string, aliases map[string]missileWeaponAlias) (missileWeaponAlias, bool) {
+	if alias, ok := aliases[strings.ToLower(strings.TrimSpace(name))]; ok && alias.role == "Bomb" {
+		return alias, true
+	}
 	key := normalizeMissileWeaponAliasKey(name)
 	if alias, ok := missileWeaponAliases[key]; ok {
 		return alias, true
 	}
 	alias, ok := aliases[key]
+	if alias.role == "Bomb" {
+		return missileWeaponAlias{}, false
+	}
 	return alias, ok
 }
 
@@ -248,11 +257,23 @@ type missileNameTrack struct {
 	hasEnd      bool
 	weaponID    uint32
 	hasWeaponID bool
+	trigger     uint32
 }
 
 type missileNamePropagationKey struct {
 	weaponID uint32
 	template string
+	trigger  uint32
+}
+
+// The serializer token is an opaque replay-local identity. Values below 129
+// are usable for correlation even though the legacy numeric-ID convention
+// cannot decode them. Zero/oversized tokens must never form shared groups.
+func missileNameGroupKey(d *missileNameTrack) (missileNamePropagationKey, bool) {
+	if d.source == nil || d.source.LeadingULEB == 0 || d.source.LeadingULEB > math.MaxUint32 {
+		return missileNamePropagationKey{}, false
+	}
+	return missileNamePropagationKey{weaponID: uint32(d.source.LeadingULEB), template: d.template, trigger: d.trigger}, true
 }
 
 type missileNameEvidence struct {
@@ -264,6 +285,7 @@ type missileNameEvidence struct {
 	hasGroup    bool
 	directTrack *missileNameTrack
 	ambiguous   bool
+	trigger     uint32
 }
 
 type missileNameGroupEvidence struct {
@@ -291,8 +313,9 @@ func applyMissileModelNamesWithAliases(tracks []*track, kills *missileNameKillPa
 		} else {
 			tr.name = ""
 		}
-		d := &missileNameTrack{track: tr, source: tr.projectileSource}
+		d := &missileNameTrack{track: tr, source: tr.projectileSource, trigger: missileNameArmamentTriggerAAM}
 		if d.source != nil {
+			d.trigger = d.source.WeaponRef >> 16
 			d.template = d.source.Template
 			d.parentUID, d.hasParent = d.source.ParentUID, d.source.HasParent
 			d.endTime, d.hasEnd = tr.end, tr.hasEnd
@@ -329,14 +352,13 @@ func applyMissileModelNamesWithAliases(tracks []*track, kills *missileNameKillPa
 			var nearby []*missileNameEvidence
 			if d.hasParent && d.hasEnd {
 				for _, ev := range byParent[d.parentUID] {
-					if missileNameTimeDelta(d.endTime, ev.kill.Time) <= missileNameMatchWindowMS {
+					if ev.trigger == d.trigger && missileNameTimeDelta(d.endTime, ev.kill.Time) <= missileNameMatchWindowMS {
 						nearby = append(nearby, ev)
 					}
 				}
 			}
 			info := infos[d]
-			if d.hasWeaponID {
-				key := missileNamePropagationKey{weaponID: d.weaponID, template: d.template}
+			if key, ok := missileNameGroupKey(d); ok {
 				group := groups[key]
 				conflict := group == nil || group.conflicting || group.model == ""
 				for _, ev := range nearby {
@@ -425,10 +447,20 @@ func correlateMissileNameKillsWithAliases(kills []missileNameKill, tracks []*mis
 
 		ev := &missileNameEvidence{
 			kill: kill, model: alias.model, internal: alias.internal,
+			trigger: missileNameArmamentTriggerAAM,
+		}
+		if alias.role == "AGM" {
+			ev.trigger = missileNameArmamentTriggerAGM
+		}
+		if alias.role == "Bomb" {
+			ev.trigger = bombNameCorrelationClass
 		}
 		leadingGroups := make(map[missileNamePropagationKey]bool)
 		withoutLeading := 0
 		for _, d := range tracksByParent[uint64(kill.KillerUID)] {
+			if d.trigger != ev.trigger {
+				continue
+			}
 			if !d.hasEnd {
 				continue
 			}
@@ -436,8 +468,8 @@ func correlateMissileNameKillsWithAliases(kills []missileNameKill, tracks []*mis
 				continue
 			}
 			ev.candidates = append(ev.candidates, d)
-			if d.hasWeaponID {
-				leadingGroups[missileNamePropagationKey{weaponID: d.weaponID, template: d.template}] = true
+			if key, ok := missileNameGroupKey(d); ok {
+				leadingGroups[key] = true
 			} else {
 				withoutLeading++
 			}
@@ -497,12 +529,15 @@ func missileNameFallback(tr *track) string {
 	if tr == nil || tr.projectileSource == nil {
 		return ""
 	}
+	if tr.surfaceLaunch != nil {
+		return "SAM (" + groundDisplayModelName(tr.surfaceLaunch.owner.RawModel) + ")"
+	}
 	trigger := tr.projectileSource.WeaponRef >> 16
 	if trigger == missileNameArmamentTriggerAAM {
 		if strings.Contains(strings.ToLower(tr.projectileSource.Template), "arh_shell") {
 			return "AAM (ARH)"
 		}
-		return "AAM (unknown)"
+		return "AAM (unk)"
 	}
 	if trigger == missileNameArmamentTriggerAGM {
 		return "AGM (unknown)"
@@ -526,6 +561,12 @@ func missileModelProperties(tr *track) []string {
 		"WT_MissileModelConfidence="+missileNameConfidence(model.Confidence),
 	)
 	if model.ModelTableApplied {
+		if model.Family != "" {
+			props = append(props, "WT_MissileFamily="+escapeACMIValue(model.Family), "WT_MissileVariantUnresolved=1")
+			if model.FamilyCarrier != "" {
+				props = append(props, "WT_MissileFamilyCarrier="+escapeACMIValue(model.FamilyCarrier))
+			}
+		}
 		if model.HasLeadingULEB {
 			props = append(props, "WT_LeadingULEB="+strconv.FormatUint(model.LeadingULEB, 10))
 		}
@@ -541,7 +582,7 @@ func missileModelProperties(tr *track) []string {
 
 func missileNameSource(source string) string {
 	switch source {
-	case "KillReportMatched", "ReplayWeaponIDFromKillReport", "ReplayWeaponIDFromModelTable", "ReplayOwnerLoadoutMatched", "ReplayOwnerLoadoutPropagated":
+	case "KillReportMatched", "ReplayWeaponIDFromKillReport", "ReplayWeaponIDFromModelTable", "ReplayOwnerLoadoutMatched", "ReplayOwnerLoadoutPropagated", "ReplayOwnerLoadoutFamily", "CarrierOptionsGuidanceFamily", "LauncherConfigurationSingleAmmo", samVariantFallbackSource:
 		return source
 	default:
 		return "Unknown"
@@ -550,7 +591,7 @@ func missileNameSource(source string) string {
 
 func missileNameConfidence(confidence string) string {
 	switch confidence {
-	case "Matched", "Inferred", "confirmed", "high", "medium", "low":
+	case "Matched", "Inferred", "Assumed", "confirmed", "high", "medium", "low":
 		return confidence
 	default:
 		return "Unknown"

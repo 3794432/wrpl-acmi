@@ -58,7 +58,7 @@ func TestMissileModelsRequireExactReplaySHA(t *testing.T) {
 			if adopted := applyMissileModelsForReplay([]*track{tr}, table, wrong); adopted != 0 {
 				t.Fatalf("wrong-SHA adopted = %d", adopted)
 			}
-			if tr.missileModel.Model != "" || tr.name != "AAM (unknown)" || tr.missileModel.ModelConflict != "" {
+			if tr.missileModel.Model != "" || tr.name != "AAM (unk)" || tr.missileModel.ModelConflict != "" {
 				t.Fatalf("wrong-SHA changed baseline: model=%+v name=%q", tr.missileModel, tr.name)
 			}
 		})
@@ -73,7 +73,7 @@ func TestMissileModelsLowAndMediumConfidenceNeverName(t *testing.T) {
 			applyMissileModelNames([]*track{tr}, nil)
 			applyMissileModelsForReplay([]*track{tr}, table, missileModelTestSHA)
 			info := tr.missileModel
-			if info.Model != "" || info.InternalName != "" || tr.name != "AAM (unknown)" {
+			if info.Model != "" || info.InternalName != "" || tr.name != "AAM (unk)" {
 				t.Fatalf("candidate evidence became a name: model=%+v name=%q", info, tr.name)
 			}
 			if info.Confidence != confidence || strings.Join(info.ModelCandidates, " / ") != "PL-5E II / AAM-3" {

@@ -81,14 +81,14 @@ func TestMissileGuidanceBareRocketIsUnknown(t *testing.T) {
 	// ULEB 223 is an IR row in the sample replay's weapon-ID table. Guidance
 	// must remain unknown because the Rocket construction itself is generic.
 	tr := missileNameTestTrack(1, missileNameTestSource(77, 2000, 223, 8, "rocket"), true)
-	tr.name = "AAM (unknown)"
+	tr.name = "AAM (unk)"
 	applyMissileGuidance([]*track{tr}, guidanceTestTable(nil))
 	info := tr.missileGuidance
 	if info == nil || info.Type != "Unknown" || info.Source != "TemplateNonARH" ||
 		info.Confidence != "unknown" || info.Candidates != "IR / SARH" {
 		t.Fatalf("bare rocket guidance = %+v", info)
 	}
-	if name := trackName(tr, nil, nil); name != "AAM (unknown)" {
+	if name := trackName(tr, nil, nil); name != "AAM (unk)" {
 		t.Fatalf("bare rocket fallback name = %q", name)
 	}
 }
@@ -150,7 +150,7 @@ func TestMissileGuidanceInheritsInferredModelConfidence(t *testing.T) {
 	}
 
 	fallback := guidanceTestTrack(3, "rocket", "jp_aam3", "Inferred")
-	fallback.name = "AAM (unknown)"
+	fallback.name = "AAM (unk)"
 	applyMissileGuidance([]*track{fallback}, table)
 	if name := trackName(fallback, nil, nil); name != "AAM (IR)" {
 		t.Fatalf("inferred IR fallback name = %q, want AAM (IR)", name)
@@ -162,7 +162,7 @@ func TestMissileGuidanceFallbackNameOnlyForUnnamedAAM(t *testing.T) {
 		"jp_aam3": {Guidance: "IR", Source: "datamine/jp_aam3", Confidence: "confirmed"},
 	})
 	unnamed := guidanceTestTrack(1, "rocket", "jp_aam3", "Matched")
-	unnamed.name = "AAM (unknown)"
+	unnamed.name = "AAM (unk)"
 	identified := guidanceTestTrack(2, "rocket", "jp_aam3", "Matched")
 	identified.name = "AAM-3"
 	agm := guidanceTestTrack(3, "rocket", "jp_aam3", "Matched")
@@ -183,7 +183,7 @@ func TestMissileGuidanceManualNameAndINSRemainUnchanged(t *testing.T) {
 	first := missileINSTestSample(0.3125, true, true)
 	first.t, first.x, first.y, first.z = 1000, 1, 2, 3
 	tr := &track{
-		key: trackKey{missile: true, id: 42}, name: "AAM (unknown)",
+		key: trackKey{missile: true, id: 42}, name: "AAM (unk)",
 		projectileSource: &projectiles.Projectile{Template: "rocket+arh_shell"},
 		samples:          []acmiSample{first, {t: 1100, x: 11, y: 2, z: 3}},
 	}
@@ -212,7 +212,7 @@ func TestMissileGuidanceOffIsNoOp(t *testing.T) {
 		t.Fatalf("off load = %+v/%v, want nil/nil", table, err)
 	}
 	tr := &track{
-		key: trackKey{missile: true, id: 7}, name: "AAM (unknown)",
+		key: trackKey{missile: true, id: 7}, name: "AAM (unk)",
 		projectileSource: &projectiles.Projectile{Template: "rocket+arh_shell"},
 		samples:          []acmiSample{{t: 1000, x: 1}, {t: 1100, x: 2}},
 	}
@@ -228,7 +228,7 @@ func TestMissileGuidanceOffIsNoOp(t *testing.T) {
 	if strings.Contains(after, "WT_Guidance") {
 		t.Fatalf("off wrote guidance fields:\n%s", after)
 	}
-	if !strings.Contains(after, "Name=AAM (unknown)") || !strings.Contains(after, "INS -- s") {
+	if !strings.Contains(after, "Name=AAM (unk)") || !strings.Contains(after, "INS -- s") {
 		t.Fatalf("off changed existing name or INS label:\n%s", after)
 	}
 }
@@ -340,7 +340,7 @@ func TestMissileGuidanceReplayScopedWeaponIDRequiresExactSHA(t *testing.T) {
 	}
 
 	correct := missileNameTestTrack(1, missileNameTestSource(77, 2000, 189, 8, "rocket"), true)
-	correct.name = "AAM (unknown)"
+	correct.name = "AAM (unk)"
 	applyMissileGuidanceForReplay([]*track{correct}, table, sha)
 	if info := correct.missileGuidance; info == nil || info.Type != "IR" ||
 		info.Source != "scoped replay weapon 60" || info.Confidence != "high" || info.Candidates != "" {
@@ -353,14 +353,14 @@ func TestMissileGuidanceReplayScopedWeaponIDRequiresExactSHA(t *testing.T) {
 	for _, wrong := range []string{"", strings.Repeat("0", 64), strings.Repeat("f", 64)} {
 		t.Run("wrong SHA "+wrong, func(t *testing.T) {
 			tr := missileNameTestTrack(2, missileNameTestSource(77, 2000, 189, 8, "rocket"), true)
-			tr.name = "AAM (unknown)"
+			tr.name = "AAM (unk)"
 			applyMissileGuidanceForReplay([]*track{tr}, table, wrong)
 			info := tr.missileGuidance
 			if info == nil || info.Type != "Unknown" || info.Source != "TemplateNonARH" ||
 				info.Confidence != "unknown" || info.Candidates != "IR / SARH" {
 				t.Fatalf("wrong-SHA guidance = %+v", info)
 			}
-			if name := trackName(tr, nil, nil); name != "AAM (unknown)" {
+			if name := trackName(tr, nil, nil); name != "AAM (unk)" {
 				t.Fatalf("wrong-SHA fallback name = %q", name)
 			}
 		})

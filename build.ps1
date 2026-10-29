@@ -72,6 +72,9 @@ try {
     Copy-PackageTree (Join-Path $repoRoot 'tools/terrain') (Join-Path $tools 'terrain')
     Copy-PackageTree (Join-Path $repoRoot 'tools/airfields') (Join-Path $tools 'airfields')
     Copy-PackageTree (Join-Path $repoRoot 'tools/countermeasures') (Join-Path $tools 'countermeasures')
+    Copy-PackageTree (Join-Path $repoRoot 'tools/sam') (Join-Path $tools 'sam')
+    Copy-PackageTree (Join-Path $repoRoot 'tools/agm') (Join-Path $tools 'agm')
+    Copy-PackageTree (Join-Path $repoRoot 'tools/bombs') (Join-Path $tools 'bombs')
     foreach ($name in @('README.md', 'README.zh-CN.md', 'LICENSE')) {
         Copy-Item -LiteralPath (Join-Path $repoRoot $name) -Destination $output -Force
     }

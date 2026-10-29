@@ -39,6 +39,10 @@ func applyGroundKillLifetimes(tracks []*track, kills []packetkill.KillEntry) {
 // Construction timestamps and full EIDs distinguish those identities; position
 // jumps, sample gaps and the final UID lookup are never identity evidence.
 func applyGroundIdentityHistory(tracks []*track, metadata *groundmeta.Parser, identifyModels bool) []*track {
+	return applyGroundIdentityHistoryWithKills(tracks, metadata, identifyModels, nil)
+}
+
+func applyGroundIdentityHistoryWithKills(tracks []*track, metadata *groundmeta.Parser, identifyModels bool, kills []packetkill.KillEntry) []*track {
 	if metadata == nil || len(metadata.All) == 0 {
 		return tracks
 	}
@@ -106,6 +110,17 @@ func applyGroundIdentityHistory(tracks []*track, metadata *groundmeta.Parser, id
 			if end <= start {
 				end = start + 1
 			}
+			// A stationary UID-only prefix before the first unambiguous ECS
+			// construction is an unbound initialization snapshot, not a prior
+			// vehicle generation. Exporting it and retiring it at construction
+			// produces phantom objects and Tacview deletion/death notifications.
+			// Keep moving history and possible real victim reports for normal
+			// lifetime resolution; neither age nor location alone suppresses data.
+			if index < 0 && !history[0].conflict && groundStationaryInitializationPrefix(tr.samples[start:end]) &&
+				!groundPrefixHasVictimReport(uid, sampleTime, history[0].info.ConstructionTime, kills) {
+				start = end
+				continue
+			}
 			part := *tr
 			part.key.sortie = tr.key.sortie + uint32(len(pieces))
 			part.samples = append([]acmiSample(nil), tr.samples[start:end]...)
@@ -157,4 +172,26 @@ func applyGroundIdentityHistory(tracks []*track, metadata *groundmeta.Parser, id
 		}
 	}
 	return append(out, extra...)
+}
+
+func groundStationaryInitializationPrefix(samples []acmiSample) bool {
+	if len(samples) == 0 {
+		return false
+	}
+	first := samples[0]
+	for _, sample := range samples[1:] {
+		if sample.x != first.x || sample.y != first.y || sample.z != first.z {
+			return false
+		}
+	}
+	return true
+}
+
+func groundPrefixHasVictimReport(uid uint64, begin, nextConstruction uint32, kills []packetkill.KillEntry) bool {
+	for _, kill := range kills {
+		if kill.HasVictimUID && kill.VictimUid != 0x7ff && uint64(kill.VictimUid) == uid && kill.CurrentTime >= begin && kill.CurrentTime < nextConstruction {
+			return true
+		}
+	}
+	return false
 }

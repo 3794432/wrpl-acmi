@@ -41,6 +41,7 @@ var (
 	listPath             = flag.String("list", "", "optional CSV listing of tracks and current names")
 	missileFlightLogPath = flag.String("missile-flight-log", "", "optional CSV of missile flight parameters and raw motion evidence")
 	missileModelsSpec    = flag.String("missile-models", "embedded", "missile model table: embedded (default), off, or a schema-1 JSON path")
+	samModelFallback     = flag.String("sam-model-fallback", "latest", "unresolved SAM model display: latest (prefer radar and latest reviewed variant; assumed), or off")
 	missileGuidanceSpec  = flag.String("missile-guidance", "embedded", "missile guidance table: embedded (default), off, or a schema-1 JSON path")
 	missileSeekers       = flag.Bool("missile-seeker", true, "export recorded post-launch seeker states and supported native Tacview lock properties")
 	countermeasures      = flag.Bool("countermeasures", true, "export aircraft countermeasure releases as Misc+Decoy events and tracks (real sync, or an estimated short trajectory when no sync exists)")
@@ -50,6 +51,8 @@ var (
 	radarLockLog         = flag.String("radar-lock-log", "", "optional CSV of every radar lock state change")
 	groundUnits          = flag.Bool("ground-units", true, "export recorded GroundModelPositions surface-unit tracks")
 	groundModels         = flag.Bool("ground-models", true, "identify surface-unit models from explicit replay metadata")
+	bombModelsSpec       = flag.String("bomb-models", "embedded", "bomb model aliases: embedded (default), off, or a schema-1 JSON table path")
+	estimateBombs        = flag.Bool("estimate-bomb-trajectories", true, "estimate release-only bomb paths from parent velocity and gravity; labelled, no drag/wind/guidance; false retains release markers")
 	estimateTelemetry    = flag.Bool("estimate-telemetry", true, "estimate aircraft telemetry from position and attitude (default on; set false to disable; zero wind, ISA; not recorded game telemetry)")
 	timelineBookmarks    = flag.Bool("bookmarks", false, "opt-in highlighted bookmarks for destruction, weapon releases, countermeasures and radar designation changes")
 	timelineEventsSpec   = flag.String("events", defaultTimelineEvents, "message categories: kill,chat,join,damage,radar by default; award is opt-in; all enables every category; none disables")
@@ -108,14 +111,15 @@ type trackKey struct {
 // missileTrack is the parser-to-writer adapter. ID is the full generation EID,
 // rather than an entity-array index, so recycled indices remain distinct.
 type missileTrack struct {
-	ID        uint64
-	Name      string
-	ParentUID uint64
-	HasParent bool
-	Samples   []acmiSample
-	EndTime   uint32
-	HasEnd    bool
-	Source    *projectiles.Projectile
+	ID            uint64
+	Name          string
+	ParentUID     uint64
+	HasParent     bool
+	Samples       []acmiSample
+	EndTime       uint32
+	HasEnd        bool
+	Source        *projectiles.Projectile
+	SurfaceLaunch *surfaceMissileLaunch
 }
 
 type acmiSample struct {
@@ -139,10 +143,13 @@ type track struct {
 	hasEnd               bool
 	retired              bool // replacement without a confirmed destruction report
 	projectileSource     *projectiles.Projectile
+	surfaceLaunch        *surfaceMissileLaunch
 	countermeasure       countermeasureIdentity
 	missileModel         *missileModelInfo
 	missileGuidance      *missileGuidanceInfo
 	bombPositionOnly     bool
+	bombModel            *missileModelInfo
+	bombEstimate         *bombTrajectoryEstimate
 	groundModel          *groundModelInfo
 	groundTeam           int32
 	groundTeamSource     string
@@ -175,6 +182,10 @@ func runACMIMain() (retErr error) {
 	if err := validateACMIVersion(*acmiFormatVersion); err != nil {
 		return err
 	}
+	*samModelFallback, err = parseSAMModelFallback(*samModelFallback)
+	if err != nil {
+		return err
+	}
 	inputPath, err := resolveCLIInput(*inPath, flag.Args())
 	if err != nil {
 		return err
@@ -191,6 +202,10 @@ func runACMIMain() (retErr error) {
 	missileModelTable, err := loadMissileModels(*missileModelsSpec)
 	if err != nil {
 		return err
+	}
+	bombModelTable, err := loadBombModels(*bombModelsSpec)
+	if err != nil {
+		return fmt.Errorf("bomb models: %w", err)
 	}
 	layout, err := parseTerrainLayout(*terrainLayoutName)
 	if err != nil {
@@ -285,9 +300,9 @@ func runACMIMain() (retErr error) {
 		ecs.ConstructionReservedByte = replay.Header.Version == 0x00018C1C
 		mgr = &ecs.Mgr
 		missileMetadata = projectiles.NewMetadataParser(*chms, replay.Header.Version == 0x00018C1C)
-		if *groundUnits || *airfields {
-			groundMetadata = groundmeta.NewParser(*chms, replay.Header.Version == 0x00018C1C)
-		}
+		// SAM identity and coalition also need ground owner metadata when the
+		// user disables ground-object and airfield output.
+		groundMetadata = groundmeta.NewParser(*chms, replay.Header.Version == 0x00018C1C)
 	}
 	slot := &packetslot.PacketSlotParser{}
 	fm := &packetfm.PacketFlightModelParser{KeepResults: true, ECS: mgr}
@@ -325,17 +340,27 @@ func runACMIMain() (retErr error) {
 
 	tracks := collectTracks(fm, paths, mgr, slot, aircraftSpawns)
 	destroyedAircraft := applyAircraftDestructions(tracks, aircraftDeaths)
-	tracks = appendMissileTracks(tracks, decodedMissileTracks(missileMetadata, missilePositions))
+	tracks = appendMissileTracks(tracks, decodedMissileTracks(missileMetadata, missilePositions, groundMetadata))
 	bombs := decodedBombTracks(missileMetadata, missilePositions)
 	applyMissileModelNamesWithAliases(tracks, missileNames, missileModelTable.killAliases())
 	applyMissileModelsForReplay(tracks, missileModelTable, replaySHA)
 	applyMissileModelAssociations(tracks, missileModelTable)
+	applyMissileFamilyNames(tracks, missileModelTable)
+	effectiveSAMFallback := "off"
+	if missileModelTable != nil {
+		effectiveSAMFallback = *samModelFallback
+		applySurfaceMissileModels(tracks, samMissileNames.Names)
+		if *samModelFallback == "latest" {
+			applySurfaceMissileFallbacks(tracks, samMissileNames.Names)
+		}
+	}
 	applyMissileGuidanceForReplay(tracks, guidance, replaySHA)
 	cmExport := prepareCountermeasures(missileMetadata, missilePositions, tracks, *countermeasures)
 	tracks = cmExport.Tracks
 	// Bombs use the next IDs after the established aircraft, missile and
 	// countermeasure tracks so this addition cannot renumber existing objects.
 	tracks = appendBombTracks(tracks, bombs)
+	applyBombModelNames(tracks, missileNames, bombModelTable)
 	if *groundUnits {
 		tracks = appendGroundTracks(tracks, paths.GroundPaths, paths.GroundEntities, paths.GroundEnds, groundMetadata)
 	}
@@ -345,8 +370,13 @@ func runACMIMain() (retErr error) {
 		if *groundModels {
 			applyGroundModelEvidence(tracks, replayGroundModelEvidence(groundMetadata.Models))
 		}
-		tracks = applyGroundIdentityHistory(tracks, groundMetadata, *groundModels)
+		tracks = applyGroundIdentityHistoryWithKills(tracks, groundMetadata, *groundModels, kills.Kills)
 		applyGroundKillLifetimes(tracks, kills.Kills)
+	}
+	applySurfaceMissileOwnership(tracks)
+	estimatedBombs := 0
+	if *estimateBombs {
+		estimatedBombs = applyBombTrajectoryEstimates(tracks)
 	}
 	var radarExport *radarLockExport
 	if *radarLocks || enabledEvents["radar"] {
@@ -388,13 +418,15 @@ func runACMIMain() (retErr error) {
 	source := acmiSourceContext{directory: input.directory}
 	messageEvents := optionalEvents.timeline(tracks, names)
 	attributedKills := 0
+	var groundDestructions map[trackKey]groundDestructionAttribution
 	if enabledEvents["kill"] {
-		killEvents := buildKillTimeline(tracks, kills.Kills, slot, names)
-		attributedKills = len(killEvents)
+		groundDestructions = buildGroundDestructionAttributions(tracks, kills.Kills, optionalEvents, names)
+		killEvents := buildKillTimeline(tracks, killsWithoutGroundDestructionEvents(tracks, kills.Kills, groundDestructions), slot, names)
+		attributedKills = len(killEvents) + len(groundDestructions)
 		messageEvents = append(messageEvents, killEvents...)
 	}
 	fmt.Printf("timeline: %d kill packets, %d attributed, %d omitted; %d messages before radar; skipped optional packets %d\n", len(kills.Kills), attributedKills, len(kills.Kills)-attributedKills, len(messageEvents), optionalEvents.Skipped)
-	if err := writeACMIWithContext(*outPath, replay.Header, tracks, slot, names, cmExport.Events, resolvedMapID, source, acmiWriterContext{radarLocks: radarExport, radarModes: radarModesExport, suppressSeekerProperties: !*missileSeekers, estimateTelemetry: *estimateTelemetry, airfields: airportMarkers, timeline: messageEvents, radarMessages: enabledEvents["radar"], suppressRadarProperties: !*radarLocks, eventCategories: *timelineEventsSpec}); err != nil {
+	if err := writeACMIWithContext(*outPath, replay.Header, tracks, slot, names, cmExport.Events, resolvedMapID, source, acmiWriterContext{radarLocks: radarExport, radarModes: radarModesExport, suppressSeekerProperties: !*missileSeekers, estimateTelemetry: *estimateTelemetry, airfields: airportMarkers, timeline: messageEvents, radarMessages: enabledEvents["radar"], suppressRadarProperties: !*radarLocks, eventCategories: *timelineEventsSpec, samModelFallback: effectiveSAMFallback, estimateBombTrajectories: *estimateBombs, groundDestructions: groundDestructions}); err != nil {
 		return err
 	}
 	if radarExport != nil && *radarLockLog != "" {
@@ -473,7 +505,7 @@ func runACMIMain() (retErr error) {
 	fmt.Printf("ground models identified: %d/%d\n", groundModelsIdentified, groundUnitsExported)
 	fmt.Printf("missiles exported: %d (%d recorded positions)\n", missiles, missileSamples)
 	fmt.Printf("missile models identified: %d/%d\n", missileModels, missiles)
-	fmt.Printf("bombs exported: %d (%d recorded positions)\n", bombsExported, bombSamples)
+	fmt.Printf("bombs exported: %d (%d total positions); estimated trajectories: %d\n", bombsExported, bombSamples, estimatedBombs)
 	if bombPositionMarkers > 0 {
 		fmt.Printf("bomb release-position markers: %d (no recorded flight trajectory)\n", bombPositionMarkers)
 		fmt.Fprintln(os.Stderr, "warning: some bombs have construction positions only; these are labelled release-position markers, not flight trajectories")
@@ -686,8 +718,9 @@ func appendMissileTracks(tracks []*track, inputs []missileTrack) []*track {
 			end:              in.EndTime,
 			hasEnd:           in.HasEnd,
 			projectileSource: in.Source,
+			surfaceLaunch:    in.SurfaceLaunch,
 		}
-		if in.HasParent {
+		if in.HasParent && in.SurfaceLaunch == nil {
 			parentTime := samples[0].t
 			if in.Source != nil {
 				parentTime = in.Source.SpawnSample.Time
@@ -764,6 +797,9 @@ type acmiWriterContext struct {
 	radarMessages            bool
 	suppressRadarProperties  bool
 	eventCategories          string
+	samModelFallback         string
+	estimateBombTrajectories bool
+	groundDestructions       map[trackKey]groundDestructionAttribution
 }
 
 func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, slot *packetslot.PacketSlotParser, names map[string]string, events []acmiEvent, mapID string, source acmiSourceContext, ctx acmiWriterContext) error {
@@ -988,7 +1024,7 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 				}
 				deletions[tr.end] = append(deletions[tr.end], "-"+id)
 				if !tr.retired {
-					updates[tr.end] = append(updates[tr.end], "0,Event=Destroyed|"+id)
+					updates[tr.end] = append(updates[tr.end], groundDestroyedEventLines(tr, id, ctx.groundDestructions)...)
 				}
 			}
 			continue
@@ -1034,7 +1070,7 @@ func writeACMIWithContext(path string, header wrpl.WRPLHeader, tracks []*track, 
 				times = append(times, tr.end)
 			}
 			if !tr.retired {
-				updates[tr.end] = append(updates[tr.end], "0,Event=Destroyed|"+id)
+				updates[tr.end] = append(updates[tr.end], groundDestroyedEventLines(tr, id, ctx.groundDestructions)...)
 			}
 			deletions[tr.end] = append(deletions[tr.end], "-"+id)
 		}
@@ -1241,7 +1277,10 @@ func acmiTrackProperties(tr *track, slot *packetslot.PacketSlotParser, names map
 		props = append(props, countermeasureEstimatedProperties(tr)...)
 	}
 	if tr.key.bomb {
-		if tr.bombPositionOnly {
+		props = append(props, bombModelProperties(tr)...)
+		if tr.bombEstimate != nil {
+			props = append(props, bombEstimatedProperties(tr)...)
+		} else if tr.bombPositionOnly {
 			props = append(props, "WT_BombPositionSource=Construction", "WT_BombTrajectoryAvailable=0", "Label=Release position only")
 		} else {
 			props = append(props, "WT_BombPositionSource=WeaponSync", "WT_BombTrajectoryAvailable=1")
@@ -1250,6 +1289,7 @@ func acmiTrackProperties(tr *track, slot *packetslot.PacketSlotParser, names map
 	if tr.key.missile {
 		props = append(props, missileModelProperties(tr)...)
 		props = append(props, missileGuidanceProperties(tr)...)
+		props = append(props, surfaceMissileProperties(tr)...)
 	}
 	return props
 }
@@ -1402,7 +1442,7 @@ func writeTrackList(path string, tracks []*track, slot *packetslot.PacketSlotPar
 		}
 		parentSource := ""
 		if (tr.key.missile || tr.key.bomb || tr.key.decoy) && tr.parent != nil {
-			parentSource = fmt.Sprintf("air:%d", tr.parent.key.id)
+			parentSource = fmt.Sprintf("%s:%d", trackListKind(tr.parent), tr.parent.key.id)
 		}
 		row := []string{
 			fmt.Sprintf("%s:%d", kind, tr.key.id),
@@ -1450,13 +1490,16 @@ func trackName(tr *track, slot *packetslot.PacketSlotParser, names map[string]st
 		return name
 	}
 	if tr.key.bomb {
+		if tr.bombModel != nil && tr.bombModel.Model != "" {
+			return tr.bombModel.Model
+		}
 		return bombDisplayName
 	}
 	if isGroundTrack(tr) && tr.groundModel != nil {
 		return tr.groundModel.DisplayName
 	}
 	if tr.key.missile && strings.TrimSpace(tr.name) != "" {
-		if tr.name == "AAM (unknown)" {
+		if tr.name == "AAM (unk)" {
 			if name := missileGuidanceFallbackName(tr); name != "" {
 				return name
 			}
@@ -1527,6 +1570,9 @@ func trackCoalition(tr *track, slot *packetslot.PacketSlotParser) string {
 	if tr.key.missile {
 		if tr.parent != nil {
 			return trackCoalition(tr.parent, slot)
+		}
+		if tr.surfaceLaunch != nil {
+			return tr.surfaceLaunch.coalition()
 		}
 		return "Neutral"
 	}

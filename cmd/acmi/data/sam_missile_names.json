@@ -1,0 +1,226 @@
+{
+  "schema": 1,
+  "source_commit": "f7952e4291e9fd7b6fe38e84020dddef925c3457",
+  "names": {
+    "105mm_bolide": {
+      "model": "BOLIDE",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5321 key='105mm_bolide' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "105mm_rb_70": {
+      "model": "RB 70",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5343 key='105mm_rb_70' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "105mm_rb_70_2": {
+      "model": "RB 70 Mk.2",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5345 key='105mm_rb_70_2' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "120mm_9m37m": {
+      "model": "9M37M",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3921 key='120mm_9m37m' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "127mm_mim72c": {
+      "model": "MIM-72C",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3825 key='127mm_mim72c' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "127mm_mim72e": {
+      "model": "MIM-72E",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3827 key='127mm_mim72e' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "127mm_mim72g": {
+      "model": "MIM-72G",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3826 key='127mm_mim72g' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "127mm_tc_1l": {
+      "model": "TC-1L",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3835 key='127mm_tc_1l' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "130mm_rapier_mk1e": {
+      "model": "Rapier Mk.1E",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3818 key='130mm_rapier_mk1e' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "130mm_rapier_mk2": {
+      "model": "Rapier Mk.2",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3819 key='130mm_rapier_mk2' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "130mm_starstreak_hvm": {
+      "model": "Starstreak HVM",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3906 key='130mm_starstreak_hvm' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "152mm_mim146": {
+      "model": "MIM-146",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3814 key='152mm_mim146' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "152mm_zur_9m311": {
+      "model": "9M311",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3923 key='152mm_zur_9m311' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "152mm_zur_9m311_1m": {
+      "model": "9M311-1M",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3924 key='152mm_zur_9m311_1m' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "160mm_sam_1c": {
+      "model": "Type 81C",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3772 key='160mm_sam_1c' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "160mm_sam_arh_1c": {
+      "model": "Type 81C ARH",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3773 key='160mm_sam_arh_1c' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "163mm_roland_1": {
+      "model": "Roland 1",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3811 key='163mm_roland_1' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "163mm_roland_2": {
+      "model": "Roland 2",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3810 key='163mm_roland_2' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "163mm_roland_3": {
+      "model": "Roland 3",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3808 key='163mm_roland_3' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "165mm_vt_1": {
+      "model": "VT1",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5748 key='165mm_vt_1' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "166mm_camm": {
+      "model": "CAMM",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3856 key='166mm_camm' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "166mm_camm_er": {
+      "model": "CAMM-ER",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3857 key='166mm_camm_er' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "170mm_zur_95ya6": {
+      "model": "95Ya6",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3845 key='170mm_zur_95ya6' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "209mm_9m33m3": {
+      "model": "9M33M3",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3806 key='209mm_9m33m3' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "239mm_9m331": {
+      "model": "9M331",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3802 key='239mm_9m331' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "239mm_hq17": {
+      "model": "HQ17",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3804 key='239mm_hq17' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "360mm_9m317ma": {
+      "model": "9M317MA",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3850 key='360mm_9m317ma' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "380mm_aster_30": {
+      "model": "Aster-30",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3853 key='380mm_aster_30' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "400mm_9m38": {
+      "model": "9M38",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7592 key='400mm_9m38' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "400mm_9m38m1": {
+      "model": "9M38M1",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7593 key='400mm_9m38m1' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "410mm_mim104b": {
+      "model": "MIM-104B",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7595 key='410mm_mim104b' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "508mm_5v55r": {
+      "model": "5V55R",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7594 key='508mm_5v55r' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "70mm_fim_92e": {
+      "model": "FIM-92E",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5326 key='70mm_fim_92e' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "70mm_fim_92k": {
+      "model": "FIM-92K",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5328 key='70mm_fim_92k' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "72mm_9m342": {
+      "model": "9М342",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7576 key='72mm_9m342' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "72mm_9m39": {
+      "model": "9М39",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7575 key='72mm_9m39' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "72mm_hn_6": {
+      "model": "HN-6",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5324 key='72mm_hn_6' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "80mm_type_91": {
+      "model": "Type 91",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5331 key='80mm_type_91' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "V_759": {
+      "model": "V-759",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7583 key='V_759' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "atam_mistral_sam": {
+      "model": "Mistral",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:4885 key='atam_mistral_sam' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "cn_fm_3000": {
+      "model": "FM-3000",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5743 key='cn_fm_3000' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "fb10_rocket": {
+      "model": "FB-10",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7589 key='fb10_rocket' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "fb10a_rocket": {
+      "model": "FB-10A",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7590 key='fb10a_rocket' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "fk_2000_rocket": {
+      "model": "FK-2000",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7591 key='fk_2000_rocket' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "il_derby_er_sam": {
+      "model": "I-Derby ER",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3830 key='il_derby_er_sam' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "il_derby_sam": {
+      "model": "I-Derby SR",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3828 key='il_derby_sam' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "il_python_5_sam": {
+      "model": "Python 5",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3829 key='il_python_5_sam' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "jp_type_03": {
+      "model": "Type 03",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5744 key='jp_type_03' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "us_aim_120c_7_sam": {
+      "model": "AIM-120C-7",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3832 key='us_aim_120c_7_sam' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "us_aim_9x_block_2": {
+      "model": "AIM-9X Block II",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:3831 key='us_aim_9x_block_2' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "us_amraam_er": {
+      "model": "AMRAAM-ER",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5745 key='us_amraam_er' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "us_iris_t": {
+      "model": "RBS 98",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5747 key='us_iris_t' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "us_iris_t_sl": {
+      "model": "IRIS-T SL",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:5742 key='us_iris_t_sl' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "us_mim_23a": {
+      "model": "MIM-23A",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7596 key='us_mim_23a' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    },
+    "us_mim_23b": {
+      "model": "MIM-23B",
+      "source": "lang.vromfs.bin_u/lang/units_weaponry.csv:7597 key='us_mim_23b' column=<English>; git_blob=3b34cb97a1b230f2fab1c60b34d41b817e5f9361; exact bulletName key"
+    }
+  }
+}

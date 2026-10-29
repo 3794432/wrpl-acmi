@@ -114,7 +114,7 @@ func TestMissileModelPropagationRequiresExactTemplate(t *testing.T) {
 	if direct.missileModel.Model != "PL-12" || sameTemplate.missileModel.Model != "PL-12" {
 		t.Fatalf("exact-template group was not named: direct=%+v sibling=%+v", direct.missileModel, sameTemplate.missileModel)
 	}
-	if differentTemplate.missileModel == nil || differentTemplate.missileModel.Model != "" || differentTemplate.name != "AAM (unknown)" {
+	if differentTemplate.missileModel == nil || differentTemplate.missileModel.Model != "" || differentTemplate.name != "AAM (unk)" {
 		t.Fatalf("same ID leaked across templates: %+v name=%q", differentTemplate.missileModel, differentTemplate.name)
 	}
 }
@@ -176,7 +176,7 @@ func TestMissileModelFallbackAndDecoyIsolation(t *testing.T) {
 	decoy.key = trackKey{decoy: true, id: 4}
 
 	applyMissileModelNames([]*track{arh, aam, agm, decoy}, newMissileNameKillParser())
-	wants := map[*track]string{arh: "AAM (ARH)", aam: "AAM (unknown)", agm: "AGM (unknown)"}
+	wants := map[*track]string{arh: "AAM (ARH)", aam: "AAM (unk)", agm: "AGM (unknown)"}
 	for tr, want := range wants {
 		if tr.name != want || tr.missileModel == nil || tr.missileModel.Model != "" {
 			t.Fatalf("fallback name=%q model=%+v, want name=%q and empty model", tr.name, tr.missileModel, want)

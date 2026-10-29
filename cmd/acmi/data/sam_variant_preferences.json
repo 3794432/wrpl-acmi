@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "policy": "UserPreferenceNotReplayEvidence",
+  "families": {
+    "FB-10": ["fb10a_rocket", "fb10_rocket"],
+    "Roland": ["163mm_roland_3", "163mm_roland_2", "163mm_roland_1"],
+    "Stinger": ["70mm_fim_92k", "70mm_fim_92e"],
+    "Chaparral": ["127mm_mim72g", "127mm_mim72e", "127mm_mim72c"],
+    "Derby": ["il_derby_er_sam", "il_derby_sam"],
+    "Type 81C": ["160mm_sam_arh_1c", "160mm_sam_1c"],
+    "RBS 70": ["105mm_bolide", "105mm_rb_70_2", "105mm_rb_70"],
+    "AMRAAM": ["us_amraam_er", "us_aim_120c_7_sam"],
+    "Rapier": ["130mm_rapier_mk2", "130mm_rapier_mk1e"],
+    "CAMM": ["166mm_camm_er", "166mm_camm"],
+    "9M311": ["152mm_zur_9m311_1m", "152mm_zur_9m311"],
+    "Igla": ["72mm_9m342", "72mm_9m39"]
+  }
+}

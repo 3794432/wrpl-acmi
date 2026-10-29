@@ -1,0 +1,1095 @@
+{
+  "schema": 1,
+  "source_commit": "f7952e4291e9fd7b6fe38e84020dddef925c3457",
+  "units": {
+    "cn_antelope_tc_1l_ads": {
+      "missiles": [
+        {
+          "bullet_name": "127mm_tc_1l",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_tc_1l_rocket_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_tc_1l_rocket_launcher_user_cannon.blkx#/127mm_tc_1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_tc_1l_rocket_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "cn_fk_2000": {
+      "missiles": [
+        {
+          "bullet_name": "fk_2000_rocket",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/180mm_fk_2000_rocket_launcher.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/180mm_fk_2000_rocket_launcher.blkx#/180mm_fk_2000_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/180mm_fk_2000_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "cn_hq_11": {
+      "missiles": [
+        {
+          "bullet_name": "cn_fm_3000",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/250mm_fm_3000_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": false,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/250mm_fm_3000_user_cannon.blkx#/250mm_fm_3000/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/250mm_fm_3000_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "cn_hq_17": {
+      "missiles": [
+        {
+          "bullet_name": "239mm_hq17",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_hq_17_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_hq_17_user_cannon.blkx#/239mm_9m331_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_hq_17_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "cn_pgz_04a": {
+      "missiles": [
+        {
+          "bullet_name": "72mm_hn_6",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/72mm_hn_6_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/72mm_hn_6_launcher_user_cannon.blkx#/72mm_hn_6_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/72mm_hn_6_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "cn_pgz_625_fb10": {
+      "missiles": [
+        {
+          "bullet_name": "fb10_rocket",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_fb_10_rocket_launcher.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "fb10a_rocket",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_fb_10_rocket_launcher.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_fb_10_rocket_launcher.blkx#/130mm_fb_10_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_fb_10_rocket_launcher.blkx#/130mm_fb_10a_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_fb_10_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "cn_tor_m1": {
+      "missiles": [
+        {
+          "bullet_name": "239mm_9m331",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_9m331_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_9m331_user_cannon.blkx#/239mm_9m331_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_9m331_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "fr_amx_30_roland": {
+      "missiles": [
+        {
+          "bullet_name": "163mm_roland_1",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        },
+        {
+          "bullet_name": "163mm_roland_3",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx#/163mm_roland_1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx#/163mm_roland_3_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "fr_crotale_ng": {
+      "missiles": [
+        {
+          "bullet_name": "165mm_vt_1",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_vt_1_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_vt_1_launcher_user_cannon.blkx#/163mm_roland_1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_vt_1_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "fr_samp_t_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "380mm_aster_30",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/380mm_aster_30_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/380mm_aster_30_user_cannon.blkx#/380mm_aster_30_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/380mm_aster_30_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "fr_vab_santal": {
+      "missiles": [
+        {
+          "bullet_name": "atam_mistral_sam",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/90mm_atam_mistral_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/90mm_atam_mistral_user_cannon.blkx#/90mm_mistral_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/90mm_atam_mistral_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "germ_9a33bm3": {
+      "missiles": [
+        {
+          "bullet_name": "209mm_9m33m3",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/209mm_9M33A3_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "germ_9a35_m": {
+      "missiles": [
+        {
+          "bullet_name": "120mm_9m37m",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "germ_flakpz_1a2_Gepard": {
+      "missiles": [
+        {
+          "bullet_name": "70mm_fim_92e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "70mm_fim_92k",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx#/70mm_stinger_block1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx#/70mm_stinger_block2_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "germ_flarakpz_1": {
+      "missiles": [
+        {
+          "bullet_name": "163mm_roland_2",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_2_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        },
+        {
+          "bullet_name": "163mm_roland_3",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_2_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_2_launcher_user_cannon.blkx#/163mm_roland_1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_2_launcher_user_cannon.blkx#/163mm_roland_3_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_2_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "germ_flarakrad": {
+      "missiles": [
+        {
+          "bullet_name": "165mm_vt_1",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_vt_1_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_vt_1_launcher_user_cannon.blkx#/163mm_roland_1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_vt_1_launcher_user_cannon.blkx#/163mm_vt_1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_vt_1_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "germ_iris_slm_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "us_iris_t_sl",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/180mm_iris_t_sl_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/180mm_iris_t_sl_user_cannon.blkx#/127mm_iris_t_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/180mm_iris_t_sl_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "germ_wiesel_2_adwc": {
+      "missiles": [
+        {
+          "bullet_name": "70mm_fim_92e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "70mm_fim_92k",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx#/70mm_stinger_block1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx#/70mm_stinger_block2_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "il_9a33bm3": {
+      "missiles": [
+        {
+          "bullet_name": "209mm_9m33m3",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/209mm_9M33A3_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "il_machbet": {
+      "missiles": [
+        {
+          "bullet_name": "70mm_fim_92e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_machbet_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "70mm_fim_92k",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_machbet_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_machbet_launcher_user_cannon.blkx#/70mm_stinger_block1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_machbet_launcher_user_cannon.blkx#/70mm_stinger_block2_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_machbet_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "il_mim_72_chaparral": {
+      "missiles": [
+        {
+          "bullet_name": "127mm_mim72e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72g_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "127mm_mim72g",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72g_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72g_launcher_user_cannon.blkx#/127mm_MIM72A_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72g_launcher_user_cannon.blkx#/127mm_MIM72G_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72g_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "il_spyder_aio": {
+      "missiles": [
+        {
+          "bullet_name": "il_derby_er_sam",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_spyder_launcher_user_cannon.blkx",
+          "guidance": "radar"
+        },
+        {
+          "bullet_name": "il_derby_sam",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_spyder_launcher_user_cannon.blkx",
+          "guidance": "radar"
+        },
+        {
+          "bullet_name": "il_python_5_sam",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_spyder_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_spyder_launcher_user_cannon.blkx#/160mm_derby_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_spyder_launcher_user_cannon.blkx#/160mm_derby_er_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_spyder_launcher_user_cannon.blkx#/160mm_python_5_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_spyder_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "il_tor_m1": {
+      "missiles": [
+        {
+          "bullet_name": "239mm_9m331",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_9m331_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_9m331_user_cannon.blkx#/239mm_9m331_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_9m331_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "it_9a33bm3": {
+      "missiles": [
+        {
+          "bullet_name": "209mm_9m33m3",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/209mm_9M33A3_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "it_9a35_m": {
+      "missiles": [
+        {
+          "bullet_name": "120mm_9m37m",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "it_otobreda_sidam_25_mistral": {
+      "missiles": [
+        {
+          "bullet_name": "atam_mistral_sam",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/90mm_atam_mistral_rocket_launcher.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/90mm_atam_mistral_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "it_samp_t_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "380mm_aster_30",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/380mm_aster_30_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/380mm_aster_30_user_cannon.blkx#/380mm_aster_30_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/380mm_aster_30_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "jp_type_03_chusam_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "jp_type_03",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/320mm_type_03_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/320mm_type_03_user_cannon.blkx#/320mm_type_03/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/320mm_type_03_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "jp_type_81_tansam": {
+      "missiles": [
+        {
+          "bullet_name": "160mm_sam_1c",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "160mm_sam_arh_1c",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_launcher_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_launcher_user_cannon.blkx#/160mm_type_81_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_launcher_user_cannon.blkx#/160mm_type_81_arh_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "jp_type_81_tansam_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "160mm_sam_1c",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_slave_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "160mm_sam_arh_1c",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_slave_launcher_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_slave_launcher_user_cannon.blkx#/160mm_type_81_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_slave_launcher_user_cannon.blkx#/160mm_type_81_arh_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/160mm_sam_1c_slave_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "jp_type_93": {
+      "missiles": [
+        {
+          "bullet_name": "80mm_type_91",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/80mm_type_91_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/80mm_type_91_launcher_user_cannon.blkx#/80mm_type_91_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/80mm_type_91_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "sw_asrad_r": {
+      "missiles": [
+        {
+          "bullet_name": "105mm_bolide",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_asrad_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        },
+        {
+          "bullet_name": "105mm_rb_70_2",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_asrad_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_asrad_launcher_user_cannon.blkx#/105mm_bolide_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_asrad_launcher_user_cannon.blkx#/105mm_rb_70_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_asrad_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "sw_crotale_ng": {
+      "missiles": [
+        {
+          "bullet_name": "165mm_vt_1",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_vt_1_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_vt_1_launcher_user_cannon.blkx#/163mm_roland_1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_vt_1_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "sw_eldenhet_98": {
+      "missiles": [
+        {
+          "bullet_name": "us_iris_t",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_iris_t_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_iris_t_user_cannon.blkx#/127mm_iris_t_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_iris_t_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "sw_lvrbv_701": {
+      "missiles": [
+        {
+          "bullet_name": "105mm_rb_70",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        },
+        {
+          "bullet_name": "105mm_rb_70_2",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_launcher_user_cannon.blkx#/105mm_rb_70_2_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_launcher_user_cannon.blkx#/105mm_rb_70_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/105mm_rbs_70_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "sw_nasams_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "us_aim_120c_7_sam",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx",
+          "guidance": "radar"
+        },
+        {
+          "bullet_name": "us_aim_9x_block_2",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "us_amraam_er",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": false,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx#/127mm_aim_9x_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx#/178mm_aim_120c_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx#/254mm_amraam_er_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "sw_nomads": {
+      "missiles": [
+        {
+          "bullet_name": "us_aim_9x_block_2",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_aim_9x_nomads_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_aim_9x_nomads_user_cannon.blkx#/127mm_aim_9x_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_aim_9x_nomads_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "uk_9a33bm2": {
+      "missiles": [
+        {
+          "bullet_name": "209mm_9m33m3",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/209mm_9M33A3_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "uk_9a35_m": {
+      "missiles": [
+        {
+          "bullet_name": "120mm_9m37m",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "uk_adats_m113a3": {
+      "missiles": [
+        {
+          "bullet_name": "152mm_mim146",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/152mm_mim146_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/152mm_mim146_launcher_user_cannon.blkx#/152mm_mim_146_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/152mm_mim146_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "uk_ai_sam_rapier": {
+      "missiles": [
+        {
+          "bullet_name": "130mm_rapier_mk1e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        },
+        {
+          "bullet_name": "130mm_rapier_mk2",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx#/130mm_rapier_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx#/130mm_rapier_mk_2_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "uk_sky_sabre_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "166mm_camm",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/166mm_camm_user_cannon.blkx",
+          "guidance": "radar"
+        },
+        {
+          "bullet_name": "166mm_camm_er",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/166mm_camm_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/166mm_camm_user_cannon.blkx#/166mm_camm_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/166mm_camm_user_cannon.blkx#/166mm_camm_er_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/166mm_camm_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "uk_stormer_air_defence": {
+      "missiles": [
+        {
+          "bullet_name": "70mm_fim_92e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_stormer_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "70mm_fim_92k",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_stormer_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_stormer_launcher_user_cannon.blkx#/70mm_stinger_block1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_stormer_launcher_user_cannon.blkx#/70mm_stinger_block2_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_stormer_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "uk_stormer_hvm": {
+      "missiles": [
+        {
+          "bullet_name": "130mm_starstreak_hvm",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_starstreak_hvm_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_starstreak_hvm_launcher_user_cannon.blkx#/130mm_starstreak_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_starstreak_hvm_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "uk_tracked_rapier": {
+      "missiles": [
+        {
+          "bullet_name": "130mm_rapier_mk1e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        },
+        {
+          "bullet_name": "130mm_rapier_mk2",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx#/130mm_rapier_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx#/130mm_rapier_mk_2_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/130mm_rapier_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "us_adats_bradley": {
+      "missiles": [
+        {
+          "bullet_name": "152mm_mim146",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/152mm_mim146.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/152mm_mim146.blkx#/bullet/bulletName"
+      ]
+    },
+    "us_ai_sam_launcher_m192": {
+      "missiles": [
+        {
+          "bullet_name": "us_mim_23b",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/370mm_i_hawk_rocket_launcher.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/370mm_i_hawk_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/370mm_i_hawk_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "us_ai_sam_launcher_m192_early": {
+      "missiles": [
+        {
+          "bullet_name": "us_mim_23a",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/370mm_mim_23a_hawk_rocket_launcher.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/370mm_mim_23a_hawk_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/370mm_mim_23a_hawk_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "us_ai_sam_launcher_m901": {
+      "missiles": [
+        {
+          "bullet_name": "410mm_mim104b",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/410mm_patriot_mim_104_rocket_launcher.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/410mm_patriot_mim_104_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/410mm_patriot_mim_104_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "us_lav_ad": {
+      "missiles": [
+        {
+          "bullet_name": "70mm_fim_92e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_4_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "70mm_fim_92e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "70mm_fim_92k",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_4_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "70mm_fim_92k",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_4_launcher_user_cannon.blkx#/70mm_stinger_block1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_4_launcher_user_cannon.blkx#/70mm_stinger_block2_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_4_launcher_user_cannon.blkx#/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_launcher_user_cannon.blkx#/70mm_stinger_block1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_launcher_user_cannon.blkx#/70mm_stinger_block2_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/70mm_fim_92e_stinger_lav_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "us_mim_72_chaparral": {
+      "missiles": [
+        {
+          "bullet_name": "127mm_mim72c",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "127mm_mim72e",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "127mm_mim72g",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72_launcher_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72_launcher_user_cannon.blkx#/127mm_MIM72A_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72_launcher_user_cannon.blkx#/127mm_MIM72C_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72_launcher_user_cannon.blkx#/127mm_MIM72G_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_mim_72_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "us_nasams_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "us_aim_120c_7_sam",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx",
+          "guidance": "radar"
+        },
+        {
+          "bullet_name": "us_aim_9x_block_2",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "us_amraam_er",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": false,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx#/127mm_aim_9x_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx#/178mm_aim_120c_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx#/254mm_amraam_er_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_nasams_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "us_sl_amraam_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "us_aim_120c_7_sam",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_sl_amraam_user_cannon.blkx",
+          "guidance": "radar"
+        },
+        {
+          "bullet_name": "us_aim_9x_block_2",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_aim_9x_user_cannon.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_aim_9x_user_cannon.blkx#/127mm_aim_9x_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/127mm_aim_9x_user_cannon.blkx#/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_sl_amraam_user_cannon.blkx#/178mm_aim_120c_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/178mm_sl_amraam_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "us_xm_975_roland": {
+      "missiles": [
+        {
+          "bullet_name": "163mm_roland_1",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        },
+        {
+          "bullet_name": "163mm_roland_3",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx#/163mm_roland_1_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx#/163mm_roland_3_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/163mm_roland_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_9a33bm3": {
+      "missiles": [
+        {
+          "bullet_name": "209mm_9m33m3",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/209mm_9M33A3_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/209mm_9m33a3_launcher_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_9a35_m2": {
+      "missiles": [
+        {
+          "bullet_name": "120mm_9m37m",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/120mm_9m37m_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_ai_sam_launcher_5p85se": {
+      "missiles": [
+        {
+          "bullet_name": "508mm_5v55r",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/508mm_s300ps_5v55_rocket_launcher.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/508mm_s300ps_5v55_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/508mm_s300ps_5v55_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_ai_sam_launcher_9a310": {
+      "missiles": [
+        {
+          "bullet_name": "400mm_9m38",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/400mm_buk_9m38_early_rocket_launcher.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/400mm_buk_9m38_early_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/400mm_buk_9m38_early_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_ai_sam_launcher_9a310m1": {
+      "missiles": [
+        {
+          "bullet_name": "400mm_9m38m1",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/400mm_buk_9m38_rocket_launcher.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/400mm_buk_9m38_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/400mm_buk_9m38_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_ai_sam_launcher_s_75": {
+      "missiles": [
+        {
+          "bullet_name": "V_759",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/654mm_s_75_v_755_20ds_rocket_launcher.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/654mm_s_75_v_755_20ds_rocket_launcher.blkx#/120mm_9m37m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/654mm_s_75_v_755_20ds_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_buk_m3_launcher": {
+      "missiles": [
+        {
+          "bullet_name": "360mm_9m317ma",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/360mm_9m317m_user_cannon.blkx",
+          "guidance": "radar"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/360mm_9m317m_user_cannon.blkx#/360mm_9m317m_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/360mm_9m317m_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_pantsyr_s1": {
+      "missiles": [
+        {
+          "bullet_name": "170mm_zur_95ya6",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/170mm_57e6_rocket_launcher.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/170mm_57e6_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_tor_m1": {
+      "missiles": [
+        {
+          "bullet_name": "239mm_9m331",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_9m331_user_cannon.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_9m331_user_cannon.blkx#/239mm_9m331_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/239mm_9m331_user_cannon.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_zprk_2s6": {
+      "missiles": [
+        {
+          "bullet_name": "152mm_zur_9m311",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/152mm_9m311_rocket_launcher.blkx",
+          "guidance": "saclos"
+        },
+        {
+          "bullet_name": "152mm_zur_9m311_1m",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/152mm_9m311_1m_rocket_launcher.blkx",
+          "guidance": "saclos"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/152mm_9m311_1m_rocket_launcher.blkx#/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/152mm_9m311_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    },
+    "ussr_zsu_23_4m4": {
+      "missiles": [
+        {
+          "bullet_name": "72mm_9m342",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/72mm_9s846_4_rocket_launcher.blkx",
+          "guidance": "optical"
+        },
+        {
+          "bullet_name": "72mm_9m39",
+          "weapon_path": "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/72mm_9s846_4_rocket_launcher.blkx",
+          "guidance": "optical"
+        }
+      ],
+      "candidates_complete": true,
+      "candidate_sources": [
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/72mm_9s846_4_rocket_launcher.blkx#/72mm_9m342_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/72mm_9s846_4_rocket_launcher.blkx#/72mm_9m39_aam/bullet/bulletName",
+        "aces.vromfs.bin_u/gamedata/weapons/groundmodels_weapons/72mm_9s846_4_rocket_launcher.blkx#/bullet/bulletName"
+      ]
+    }
+  }
+}

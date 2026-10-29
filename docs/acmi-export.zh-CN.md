@@ -83,6 +83,9 @@
 | `-alt` | `0` | 垂直高度偏移，单位为米，不改变水平位置。 |
 | `-ecshashes` | `embedded` | ECS 组件名称表；可指定 JSON 路径覆盖，或传入空字符串关闭。 |
 | `-missile-models` | `embedded` | 导弹型号补全表；可选 `off` 或 schema 1 JSON 路径。 |
+| `-bomb-models` | `embedded` | 炸弹型号别名；可选 `off` 或仅含别名的 schema 1 JSON 表（`replays` 为空）。独立于导弹命名。 |
+| `-estimate-bomb-trajectories` | `true` | 对仅有投放点的炸弹，以有效载机初速和重力估算运动，并明确标记；设为 `false` 保留静态投放点。 |
+| `-sam-model-fallback` | `latest` | 未确定的 SAM 型号优先选雷达弹及同类最新已核对改进型，标记 `Assumed`；`off` 保留不确定身份。不覆盖已有识别和实时导引头状态。 |
 | `-missile-guidance` | `embedded` | 静态制导信息表；可选 `off` 或 schema 1 JSON 路径。 |
 
 ### 导出内容开关
@@ -138,7 +141,9 @@ PhiPhi 的 8 条竞速任务为空中出发，未提供陆地跑道；Caribbean 
 
 导弹轨迹来自同步位置，速度、加速度、转向率和 G 值由位置序列计算。型号候选、静态制导类型与 INS 时长另行保留；运动估算和型号资料的来源不能混为一谈。详见[导弹型号](ACMI_MODELS.md)和[制导信息](ACMI_GUIDANCE.md)。
 
-炸弹存在 WeaponSync 时导出实际位置序列；只有构造记录时，仅标注 `Release position only`，不推算飞行轨迹或命中时刻。详见[炸弹导出](ACMI_BOMBS.md)。
+炸弹存在 WeaponSync 时导出实际位置序列；只有构造记录时，默认 `-estimate-bomb-trajectories=true` 会在载机初速有效的情况下添加明确标记的弹道估算，不作为真实飞行或测得的命中。关闭此开关或缺少有效载机时保留 `Release position only`。详见[估算规则](acmi-information.zh-CN.md#炸弹运动估算)及[炸弹导出](ACMI_BOMBS.md)。
+
+炸弹默认结合已校验的 Datamine 别名目录、武器报告和载机唯一实际挂载补全名称。型号显示在原生 `Name/CallSign`，`WT_BombModel*` 保留来源及置信度；证据缺失或冲突时保留 `Bomb`。见[型号识别规则](acmi-information.zh-CN.md#炸弹型号)；使用 `-bomb-models off` 仅关闭命名，不关闭炸弹轨迹。
 
 干扰物只有在发射者弹药证据足以确定单一类型时，才被识别为 Flare 或 Chaff。混装或未知情况按 Chaff 显示，并注明 `fallback` 及 `UnknownAsChaff` 来源。有同步位置时使用实际轨迹，否则使用明确标记的短时估算轨迹。详见[干扰物类型](ACMI_COUNTERMEASURES.zh-CN.md)。
 

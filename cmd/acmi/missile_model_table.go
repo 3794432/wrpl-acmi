@@ -23,6 +23,12 @@ const missileModelTableMaxFileBytes = 1 << 20
 //go:embed data/missile_models.json
 var embeddedMissileModelsJSON []byte
 
+//go:embed data/aam_models.json
+var embeddedAAMModelsJSON []byte
+
+//go:embed data/agm_models.json
+var embeddedAGMModelsJSON []byte
+
 type missileModelEntry struct {
 	Model        string   `json:"model"`
 	InternalName string   `json:"internal_name"`
@@ -36,6 +42,7 @@ type missileModelAliasEntry struct {
 	InternalName string `json:"internal_name"`
 	Confidence   string `json:"confidence"`
 	Source       string `json:"source"`
+	Role         string `json:"role,omitempty"`
 }
 
 type missileModelReplay struct {
@@ -54,7 +61,40 @@ func loadMissileModels(spec string) (*missileModelTable, error) {
 	case "", "off":
 		return nil, nil
 	case "embedded":
-		return parseMissileModelsJSON(embeddedMissileModelsJSON)
+		table, err := parseMissileModelsJSON(embeddedMissileModelsJSON)
+		if err != nil {
+			return nil, err
+		}
+		// Preserve reviewed display names across every spelling of the same
+		// internal identity; generated aliases retain their asset provenance.
+		reviewed := make(map[string]missileModelAliasEntry)
+		for _, entry := range table.Aliases {
+			reviewed[normalizeMissileWeaponAliasKey(entry.InternalName)] = entry
+		}
+		for _, raw := range [][]byte{embeddedAAMModelsJSON, embeddedAGMModelsJSON} {
+			catalog, err := parseMissileModelsJSON(raw)
+			if err != nil {
+				return nil, err
+			}
+			for key, entry := range catalog.Aliases {
+				if old, ok := reviewed[normalizeMissileWeaponAliasKey(entry.InternalName)]; ok {
+					if old.Role != entry.Role {
+						return nil, fmt.Errorf("conflicting embedded missile role %q", key)
+					}
+					entry.Model = old.Model
+				}
+				if old, exists := table.Aliases[key]; exists &&
+					(normalizeMissileWeaponAliasKey(old.InternalName) != normalizeMissileWeaponAliasKey(entry.InternalName) || old.Role != entry.Role) {
+					return nil, fmt.Errorf("conflicting embedded missile alias %q", key)
+				}
+				table.Aliases[key] = entry
+			}
+			table.GeneratedFrom = append(table.GeneratedFrom, catalog.GeneratedFrom...)
+		}
+		if err := validateMissileModelTable(table); err != nil {
+			return nil, err
+		}
+		return table, nil
 	default:
 		data, err := readMissileModelsFile(spec)
 		if err != nil {
@@ -146,7 +186,7 @@ func validateMissileModelTable(table *missileModelTable) error {
 				// they identify the same model at the same confidence.
 				defaultVariant := strings.HasSuffix(strings.ToLower(key), "_default") ||
 					strings.HasSuffix(strings.ToLower(previous.key), "_default")
-				if !defaultVariant || previous.entry.Model != entry.Model || previous.entry.Confidence != entry.Confidence {
+				if !defaultVariant || previous.entry.Model != entry.Model || previous.entry.Confidence != entry.Confidence || previous.entry.Role != entry.Role {
 					return fmt.Errorf("missile models has conflicting duplicate alias %q", normalizedKey)
 				}
 			}
@@ -241,6 +281,9 @@ func validateMissileModelEntry(label string, entry missileModelEntry) error {
 }
 
 func validateMissileModelAliasEntry(label string, entry missileModelAliasEntry) error {
+	if entry.Role != "" && entry.Role != "AGM" {
+		return fmt.Errorf("missile models %s has invalid role %q", label, entry.Role)
+	}
 	if err := validateMissileModelText(label+".model", entry.Model, 128); err != nil {
 		return err
 	}
@@ -342,7 +385,7 @@ func (table *missileModelTable) killAliases() map[string]missileWeaponAlias {
 				continue
 			}
 			aliases[normalizeMissileWeaponAliasKey(key)] = missileWeaponAlias{
-				model: entry.Model, internal: entry.InternalName,
+				model: entry.Model, internal: entry.InternalName, role: entry.Role,
 			}
 		}
 	}

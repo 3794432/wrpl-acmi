@@ -45,12 +45,14 @@ type KillEntry struct {
 	CurrentTime uint32
 
 	KillerPid              uint32
+	HasKillerPID           bool
 	KillerUid              uint16
 	HasKillerUID           bool
 	ResolvedKiller         *ecs2.Entity
 	ResolvedKillerPosition *game.SpaceTime
 
 	VictimPid              uint32
+	HasVictimPID           bool
 	VictimUid              uint16
 	HasVictimUID           bool
 	ResolvedVictim         *ecs2.Entity
@@ -171,6 +173,7 @@ func parseKillEntry(pk *packet.Packet) (KillEntry, error) {
 				return parsed, fmt.Errorf("killer PID field is too short")
 			}
 			parsed.KillerPid, err = fr.ReadU32LE()
+			parsed.HasKillerPID = err == nil
 		case 2:
 			parsed.PlayerVehicle, err = readKillString(fr, size)
 		case killVictimField:
@@ -194,6 +197,7 @@ func parseKillEntry(pk *packet.Packet) (KillEntry, error) {
 				return parsed, fmt.Errorf("victim PID field is too short")
 			}
 			parsed.VictimPid, err = fr.ReadU32LE()
+			parsed.HasVictimPID = err == nil
 		case 0xc:
 			parsed.DestroyedWeapon, err = readKillString(fr, size)
 		}

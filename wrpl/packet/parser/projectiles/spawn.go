@@ -459,7 +459,7 @@ func (p *MetadataParser) readProjectileConstruction(eid uint64, r *danet.BitRead
 			Z:    coords[2],
 		},
 	}
-	// Countermeasures, AAMs and AGMs all need the owner's exact storage
+	// Countermeasures, missiles and bombs all need the owner's exact storage
 	// snapshot. The map is cleared for a replacement construction of the same
 	// EID and on destruction, so a later generation can never supply or inherit
 	// ammunition for an earlier release.
@@ -482,6 +482,9 @@ func finiteCoordinates(x, y, z float64) bool {
 }
 
 func projectileUsesOwnerWeapons(weaponRef uint32, kind string) bool {
+	if kind == projectileKindBomb {
+		return true
+	}
 	switch weaponRef >> 16 {
 	case 14: // countermeasures
 		return true

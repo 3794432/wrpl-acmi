@@ -93,6 +93,10 @@ Different layouts or reference configurations cause tracks and terrain to diverg
 
 The 71-map catalogue includes Japanese Port (`avn_japan`) and Red Desert (`avg_red_desert`). This installer change does not expand runway geometry. The installer supports upgrading older terrain installations, including the 1.9.4 format. A failed format-selection step does not complete installation; retain its reported log.
 
+## Release naming
+
+Use `wrpl-acmi - <game version>-<YYYY.MM.DD>` for release titles, for example `wrpl-acmi - 2.60.0.21-2026.11.02`. Read the game version from the Datamine repository's [`version` file](https://github.com/gszabi99/War-Thunder-Datamine/blob/master/version) when preparing the release. Use the corresponding tag `acmi-<game version>-<YYYY.MM.DD>` and attach the two standalone EXEs. The title identifies the Datamine version at release time; the embedded catalogues retain their own pinned source commits, and the title does not certify compatibility with every replay revision.
+
 ## Distribution and licenses
 
 Release the newly built runtime-bearing installer. Historical installers containing 69- or 71-map terrain payloads, and workflows that copy those assets, do not produce this local-game installer.

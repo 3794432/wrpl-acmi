@@ -91,7 +91,7 @@ func writeTestReplayPart(t *testing.T, dir string, cfg testReplayConfig) string 
 	if cfg.compression == "" {
 		cfg.compression = "zstd"
 	}
-	if cfg.version != replayVersionZstd && len(cfg.settings) != 0 {
+	if cfg.version < replayVersionZstd && len(cfg.settings) != 0 {
 		t.Fatal("legacy test header layout is tested without settings")
 	}
 
@@ -181,7 +181,7 @@ func encodeTestReplayHeader(t *testing.T, cfg testReplayConfig, resultsOffset in
 	}
 	out := make([]byte, replayHeaderSize)
 	copy(out, buf.Bytes())
-	if cfg.version == replayVersionZstd {
+	if cfg.version >= replayVersionZstd {
 		binary.LittleEndian.PutUint16(out[newSettingsSizeOffset:newSettingsSizeOffset+2], uint16(len(cfg.settings)))
 		binary.LittleEndian.PutUint32(out[newResultsOffsetOffset:newResultsOffsetOffset+4], uint32(resultsOffset))
 	}

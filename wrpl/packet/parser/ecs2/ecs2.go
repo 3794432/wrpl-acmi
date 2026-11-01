@@ -73,11 +73,11 @@ type HashedComponent struct {
 }
 
 type PacketECSParser struct {
-	// Replay 0x00018C1C inserts a reserved zero byte between the template
+	// Replays from 0x00018C1C insert a reserved zero byte between the template
 	// definition/reference and construction component count. Opt in explicitly
 	// so older replays keep their original wire layout.
 	ConstructionReservedByte bool
-	// AllowMissingPODDataComponents lets a caller tolerate server data
+	// AllowMissingPODDataComponents lets a caller tolerate additional data
 	// components that are absent from ecshashes when their component type is a
 	// fixed-width POD. The bytes are retained as OpaqueDataComponent. This is
 	// opt-in because the default model should keep rejecting unknown layouts.

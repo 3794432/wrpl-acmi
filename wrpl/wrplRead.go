@@ -38,6 +38,14 @@ const (
 	newResultsOffsetOffset = 684
 )
 
+// UsesModernLayout reports whether the header and ECS construction layout
+// introduced in 0x00018C1C applies. Treat later revisions as modern too, rather
+// than silently falling back to the legacy format on a version bump.
+// Individual packet/component parsers still validate their wire data.
+func (h WRPLHeader) UsesModernLayout() bool {
+	return h.Version >= replayVersionZstd
+}
+
 type zstdReadCloser struct {
 	*zstd.Decoder
 }
@@ -174,14 +182,14 @@ func OpenReplay(r io.ReadSeeker, readSettings, openPackets, readResults bool) (r
 	// stream to zstd. Keep the old layout for older replays.
 	settingsSize := ret.Header.SettingsBLKSize
 	resultsOffset := ret.Header.ResultsBlkOffset
-	if ret.Header.Version == replayVersionZstd {
+	if ret.Header.UsesModernLayout() {
 		settingsSize = binary.LittleEndian.Uint16(headerBytes[newSettingsSizeOffset : newSettingsSizeOffset+2])
 		resultsOffset = int32(binary.LittleEndian.Uint32(headerBytes[newResultsOffsetOffset : newResultsOffsetOffset+4]))
 		ret.Header.SettingsBLKSize = settingsSize
 		ret.Header.ResultsBlkOffset = resultsOffset
 	}
 	settingsOffset := int64(replayHeaderSize)
-	if ret.Header.Version != replayVersionZstd {
+	if !ret.Header.UsesModernLayout() {
 		// Legacy replays place the settings block directly after the encoded
 		// header struct (binary.Size), while the full header reserves 8 more bytes.
 		settingsOffset = int64(binary.Size(ret.Header))

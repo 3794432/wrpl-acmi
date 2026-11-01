@@ -296,13 +296,12 @@ func runACMIMain() (retErr error) {
 	var missileMetadata *projectiles.MetadataParser
 	var groundMetadata *groundmeta.Parser
 	if chms != nil {
-		ecs = packetecs2.NewPacketECSParser(*chms)
-		ecs.ConstructionReservedByte = replay.Header.Version == 0x00018C1C
+		ecs = newReplayECSParser(replay.Header, *chms)
 		mgr = &ecs.Mgr
-		missileMetadata = projectiles.NewMetadataParser(*chms, replay.Header.Version == 0x00018C1C)
+		missileMetadata = projectiles.NewMetadataParser(*chms, replay.Header.UsesModernLayout())
 		// SAM identity and coalition also need ground owner metadata when the
 		// user disables ground-object and airfield output.
-		groundMetadata = groundmeta.NewParser(*chms, replay.Header.Version == 0x00018C1C)
+		groundMetadata = groundmeta.NewParser(*chms, replay.Header.UsesModernLayout())
 	}
 	slot := &packetslot.PacketSlotParser{}
 	fm := &packetfm.PacketFlightModelParser{KeepResults: true, ECS: mgr}
@@ -383,7 +382,7 @@ func runACMIMain() (retErr error) {
 		radarExport = newRadarLockExport(fm)
 	}
 	var radarModesExport *radarModeExport
-	if *radarModes && replay.Header.Version == 0x00018C1C {
+	if *radarModes && replay.Header.UsesModernLayout() {
 		radarModesExport = newRadarModeExport(fm)
 	}
 	if *missileFlightLogPath != "" {

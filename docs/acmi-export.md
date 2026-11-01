@@ -183,3 +183,5 @@ Repository workflows define parser, synthetic terrain, and package checks. Real 
 **Tracks do not align with terrain.** Check the layout and reference configuration on both sides, restart Tacview after installation, and re-export the original WRPL. The `-alt` option cannot repair horizontal alignment.
 
 **A model or telemetry value is absent.** Identification needs evidence, and estimates need valid samples. An empty value indicates insufficient information or a rejected sample.
+
+**A newer replay produces `air:<uid>` labels and no missiles.** Builds predating the replay-layout fix selected the modern ECS layout only for `0x00018C1C`. Replay `0x00018C28` also uses that layout and can introduce unnamed fixed-width components. Update the converter and re-export the original WRPL. The exporter now applies the modern layout from `0x00018C1C` onward and preserves unknown fixed-width POD bytes without assigning them meaning; unknown variable-width components still require parser support. Real replay checks cover `0x00018C1C` and `0x00018C28`, not every future game format.

@@ -20,6 +20,8 @@ func TestDisplayModelNameKnownClasses(t *testing.T) {
 		"su-7b":      "Su-7B",
 		"mig-21_f13": "MiG-21F-13",
 		"su_30mkk":   "␗Su-30MKK",
+		"f_15ex":     "F-15EX",
+		"f-15ex":     "F-15EX",
 	}
 	for className, want := range tests {
 		if got := displayModelName(className); got != want {

@@ -6,7 +6,8 @@ import (
 	"strings"
 )
 
-// English vehicle labels extracted from the installed game's lang/units.csv.
+// English vehicle labels extracted from the installed game's lang/units.csv,
+// with reviewed display-name additions for newer class IDs (such as f_15ex).
 // Embedding keeps the standalone exporter independent of the game installation.
 //
 //go:embed model_names.json

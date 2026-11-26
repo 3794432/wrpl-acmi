@@ -84,39 +84,44 @@ func seekerTestPacket(entity uint32, raw []byte, bitLength uint16, includeTraili
 	return directPositionPacket(rocketPositions, body)
 }
 
-func radarSeekerBits(length int, mode uint64, shift int, estimate [3]float32, los [3]int16) []byte {
+func radarSeekerBits(length int, mode uint64, targetShift, trailingShift int, estimate [3]float32, los [3]int16) []byte {
 	raw := newSeekerBits(length)
 	putSeekerMSBBits(raw, 8, 3, mode)
 	for i, value := range estimate {
-		putSeekerFloat(raw, 11+shift+i*32, value)
+		putSeekerFloat(raw, 11+targetShift+i*32, value)
 	}
 	for i, value := range los {
-		putSeekerInt16(raw, 340+shift+i*16, value)
+		putSeekerInt16(raw, 340+trailingShift+i*16, value)
 	}
-	putSeekerLEBits(raw, 454+shift, 16, 1234)
+	putSeekerLEBits(raw, 454+trailingShift, 16, 1234)
 	return raw
 }
 
 func TestSeekerStateDecodesFixedLayouts(t *testing.T) {
 	tests := []struct {
-		name       string
-		length     uint16
-		mode       uint64
-		shift      int
-		wantKind   SeekerKind
-		wantMode   SeekerMode
-		transition bool
+		name          string
+		length        uint16
+		mode          uint64
+		targetShift   int
+		trailingShift int
+		wantKind      SeekerKind
+		wantMode      SeekerMode
+		transition    bool
 	}{
 		{name: "radar search", length: 607, mode: 0b001, wantKind: SeekerKindRadar, wantMode: SeekerModeSearch},
 		{name: "radar track", length: 607, mode: 0b111, wantKind: SeekerKindRadar, wantMode: SeekerModeTrack},
-		{name: "radar acquisition transition", length: 639, mode: 0b100, shift: 32, wantKind: SeekerKindRadar, wantMode: SeekerModeTrack, transition: true},
+		{name: "legacy radar transition", length: 639, mode: 0b100, targetShift: 32, trailingShift: 32, wantKind: SeekerKindRadar, wantMode: SeekerModeTrack, transition: true},
+		{name: "modern radar search", length: 609, mode: 0b001, targetShift: 1, trailingShift: 2, wantKind: SeekerKindRadar, wantMode: SeekerModeSearch},
+		{name: "modern radar track", length: 609, mode: 0b111, targetShift: 1, trailingShift: 2, wantKind: SeekerKindRadar, wantMode: SeekerModeTrack},
+		{name: "modern radar transition 100", length: 641, mode: 0b100, targetShift: 33, trailingShift: 34, wantKind: SeekerKindRadar, wantMode: SeekerModeUnknown, transition: true},
+		{name: "modern radar transition 101", length: 641, mode: 0b101, targetShift: 33, trailingShift: 34, wantKind: SeekerKindRadar, wantMode: SeekerModeUnknown, transition: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			const entity = uint32(0x001f8c02)
 			estimate := [3]float32{-1200, 340, 560}
 			los := [3]int16{32767, 0, 0}
-			raw := radarSeekerBits(int(tt.length), tt.mode, tt.shift, estimate, los)
+			raw := radarSeekerBits(int(tt.length), tt.mode, tt.targetShift, tt.trailingShift, estimate, los)
 			p, added, err := parseOne(t, seekerTestPacket(entity, raw, tt.length, true), 1)
 			if err != nil || added != 1 {
 				t.Fatalf("added=%d err=%v", added, err)
@@ -224,7 +229,7 @@ func TestDeclaredSeekerLengthMustFitBeforeRead(t *testing.T) {
 
 func TestSeekerInvalidNumbersDoNotBecomeDecodedValues(t *testing.T) {
 	const entity = uint32(0x001f8c06)
-	raw := radarSeekerBits(607, 0b111, 0, [3]float32{float32(math.NaN()), 2, 3}, [3]int16{0, 12000, 0})
+	raw := radarSeekerBits(607, 0b111, 0, 0, [3]float32{float32(math.NaN()), 2, 3}, [3]int16{0, 12000, 0})
 	p, added, err := parseOne(t, seekerTestPacket(entity, raw, 607, true), 1)
 	if err != nil || added != 1 {
 		t.Fatalf("added=%d err=%v", added, err)

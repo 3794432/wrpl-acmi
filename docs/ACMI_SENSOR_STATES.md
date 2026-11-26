@@ -27,8 +27,12 @@ in the attempted batch run; its runtime import is not claimed as verified.
 
 ## Evidence and interpretation
 
-The projectile parser retains bounded raw seeker blocks. The supported layouts
-are 607-bit radar search/track, 639-bit acquisition transition, and 283-bit IR.
+The projectile parser retains bounded raw seeker blocks. It supports 607-bit
+and 609-bit radar search/track, 639-bit and 641-bit radar transitions, and
+283-bit IR. In replay revision `0x00018C2D`, the 609-bit radar layout keeps the
+mode at bits 8–10 and moves the target estimate, line of sight, and range to
+bit offsets 12, 342, and 456. The 641-bit transition moves those values another
+32 bits forward. Its geometry is available, while its lock state is unknown.
 Unknown lengths remain opaque. Finite coordinates and plausible unit line-of-sight
 vectors are required before values are exported. No target object is guessed
 from proximity, and no body-relative missile angles are fabricated from its course.

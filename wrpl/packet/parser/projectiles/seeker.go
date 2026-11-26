@@ -3,9 +3,11 @@ package projectiles
 import "math"
 
 const (
-	seekerRadarBits           = 607
-	seekerRadarTransitionBits = 639
-	seekerIRBits              = 283
+	seekerRadarBits                 = 607
+	seekerRadarTransitionBits       = 639
+	seekerRadarModernBits           = 609
+	seekerRadarModernTransitionBits = 641
+	seekerIRBits                    = 283
 )
 
 // SeekerKind identifies only the fixed layouts established for the in-flight
@@ -66,11 +68,10 @@ func (m RawMotion) SeekerState() (SeekerState, bool) {
 		RawBits:   append([]byte(nil), m.SeekerRawBits...),
 	}
 	switch m.SeekerBitLength {
-	case seekerRadarBits:
+	case seekerRadarBits, seekerRadarModernBits:
 		state.Kind = SeekerKindRadar
-		mode := uint64(0)
-		var ok bool
-		if mode, ok = readSeekerMSBBits(state.RawBits, state.BitLength, 8, 3); !ok {
+		mode, ok := readSeekerMSBBits(state.RawBits, state.BitLength, 8, 3)
+		if !ok {
 			return state, true
 		}
 		switch mode {
@@ -81,7 +82,11 @@ func (m RawMotion) SeekerState() (SeekerState, bool) {
 		default:
 			return state, true
 		}
-		decodeRadarSeekerValues(&state, 0)
+		if state.BitLength == seekerRadarModernBits {
+			decodeRadarSeekerValues(&state, 12, 342, 456)
+		} else {
+			decodeRadarSeekerValues(&state, 11, 340, 454)
+		}
 	case seekerRadarTransitionBits:
 		state.Kind = SeekerKindRadar
 		mode, ok := readSeekerMSBBits(state.RawBits, state.BitLength, 8, 3)
@@ -90,7 +95,17 @@ func (m RawMotion) SeekerState() (SeekerState, bool) {
 		}
 		state.Mode = SeekerModeTrack
 		state.Transition = true
-		decodeRadarSeekerValues(&state, 32)
+		decodeRadarSeekerValues(&state, 43, 372, 486)
+	case seekerRadarModernTransitionBits:
+		state.Kind = SeekerKindRadar
+		mode, ok := readSeekerMSBBits(state.RawBits, state.BitLength, 8, 3)
+		if !ok || (mode != 0b100 && mode != 0b101) {
+			return state, true
+		}
+		// Both codes occur when the following sample resumes either search or
+		// track. Recover the geometry without asserting a lock for this frame.
+		state.Transition = true
+		decodeRadarSeekerValues(&state, 44, 374, 488)
 	case seekerIRBits:
 		state.Kind = SeekerKindIR
 		readSeekerLOS(&state, 58)
@@ -98,10 +113,10 @@ func (m RawMotion) SeekerState() (SeekerState, bool) {
 	return state, true
 }
 
-func decodeRadarSeekerValues(state *SeekerState, shift uint16) {
+func decodeRadarSeekerValues(state *SeekerState, targetOffset int, losOffset uint16, rangeOffset int) {
 	var estimate [3]float32
 	for i := range estimate {
-		bits, ok := readSeekerLEBits(state.RawBits, state.BitLength, int(11+shift)+i*32, 32)
+		bits, ok := readSeekerLEBits(state.RawBits, state.BitLength, targetOffset+i*32, 32)
 		if !ok {
 			return
 		}
@@ -111,8 +126,8 @@ func decodeRadarSeekerValues(state *SeekerState, shift uint16) {
 		state.TargetEstimate = estimate
 		state.HasTargetEstimate = true
 	}
-	readSeekerLOS(state, 340+shift)
-	if value, ok := readSeekerLEBits(state.RawBits, state.BitLength, int(454+shift), 16); ok {
+	readSeekerLOS(state, losOffset)
+	if value, ok := readSeekerLEBits(state.RawBits, state.BitLength, rangeOffset, 16); ok {
 		state.RangeMeters = uint16(value)
 		state.HasRange = true
 	}

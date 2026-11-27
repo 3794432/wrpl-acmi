@@ -33,3 +33,15 @@ func displayModelName(className string) string {
 	}
 	return className
 }
+
+// Tacview's FixedWing.Typhoon database entry recognizes "Eurofighter Typhoon".
+// The game's localized variant name is still available in CallSign.
+func aircraftACMIName(className, displayName string) string {
+	switch strings.ReplaceAll(strings.TrimSpace(className), "-", "_") {
+	case "ef_2000_aesa", "ef_2000_block_10", "ef_2000_fgr4",
+		"ef_2000_typhoon_aesa", "ef_2000a", "ef_2000a_aesa":
+		return "Eurofighter Typhoon"
+	default:
+		return displayName
+	}
+}

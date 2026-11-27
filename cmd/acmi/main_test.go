@@ -37,6 +37,51 @@ func TestACMINameManualOverrideWinsAndStillSeparatesPilot(t *testing.T) {
 	}
 }
 
+func TestACMITyphoonMatchesTacviewDatabase(t *testing.T) {
+	for _, className := range []string{
+		"ef_2000_aesa", "ef_2000_block_10", "ef_2000_fgr4",
+		"ef_2000_typhoon_aesa", "ef_2000a", "ef_2000a_aesa",
+		"ef-2000-block-10",
+	} {
+		t.Run(className, func(t *testing.T) {
+			tr, slot := newTestTrack(true, 42, className, "Alpha", 1)
+			line := renderFirstTrack(t, tr, slot, nil)
+			want := "Name=Eurofighter Typhoon,CallSign=" + displayModelName(className) + ",Pilot=Alpha"
+			if !strings.Contains(line, want) {
+				t.Fatalf("expected %q in %q", want, line)
+			}
+			line = renderFirstTrack(t, tr, slot, map[string]string{"air:42": "My Typhoon"})
+			if !strings.Contains(line, "Name=My Typhoon,CallSign=My Typhoon,") {
+				t.Fatalf("manual override was lost: %q", line)
+			}
+		})
+	}
+
+	tr, slot := newTestTrack(true, 42, "typhoon_mk1b", "Alpha", 1)
+	if line := renderFirstTrack(t, tr, slot, nil); !strings.Contains(line, "Name="+displayModelName("typhoon_mk1b")+",") {
+		t.Fatalf("Hawker Typhoon name changed: %q", line)
+	}
+}
+
+func TestAircraftCoalitionUsesRecordedEntityTeam(t *testing.T) {
+	tr, slot := newTestTrack(true, 42, "ef_2000_block_10", "Alpha", 2)
+	tr.entity.Data.AddComponent(&packetecs2.Component{Value: int32(1)}, "team")
+	line := renderFirstTrack(t, tr, slot, nil)
+	if !strings.Contains(line, "Coalition=Blue,Color=Blue") {
+		t.Fatalf("final slot team overrode aircraft team: %q", line)
+	}
+
+	bomb := &track{key: trackKey{bomb: true, id: 51}, parent: tr}
+	if got := trackCoalition(bomb, slot); got != "Blue" {
+		t.Fatalf("bomb coalition=%q, want owner's recorded team", got)
+	}
+
+	noTeam, slot := newTestTrack(true, 42, "ef_2000_block_10", "Alpha", 2)
+	if got := trackCoalition(noTeam, slot); got != "Red" {
+		t.Fatalf("coalition without ECS team=%q, want slot fallback", got)
+	}
+}
+
 func TestACMIValueEscapingPreservesUnicodeAndEscapesSyntax(t *testing.T) {
 	input := "MïG\\29, Series\nA"
 	want := "MïG\\\\29\\, Series\\nA"

@@ -1241,8 +1241,13 @@ func acmiTrackProperties(tr *track, slot *packetslot.PacketSlotParser, names map
 		typ = countermeasureType(tr)
 	}
 	name := trackName(tr, slot, names)
+	acmiName := groundACMIName(tr, name)
+	if tr.key.air && tr.entity != nil && manualTrackName(tr, names) == "" {
+		className, _ := packetecs2.GetObjectData[string](&tr.entity.Data, "unit__className")
+		acmiName = aircraftACMIName(className, name)
+	}
 	props := []string{
-		"Name=" + escapeACMIValue(groundACMIName(tr, name)),
+		"Name=" + escapeACMIValue(acmiName),
 		"CallSign=" + escapeACMIValue(name),
 	}
 	if pilot := trackPilot(tr, slot); pilot != "" {
@@ -1590,14 +1595,14 @@ func trackCoalition(tr *track, slot *packetslot.PacketSlotParser) string {
 		}
 	}
 	if tr.entity != nil {
-		if isGroundTrack(tr) {
-			if team, ok := packetecs2.GetObjectData[int32](&tr.entity.Data, "team"); ok {
-				switch team {
-				case 1:
-					return "Blue"
-				case 2:
-					return "Red"
-				}
+		// Aircraft sorties already carry the entity selected for their
+		// lifetime. The final player slot can have switched teams later.
+		if team, ok := packetecs2.GetObjectData[int32](&tr.entity.Data, "team"); ok {
+			switch team {
+			case 1:
+				return "Blue"
+			case 2:
+				return "Red"
 			}
 		}
 		if p := entityPlayer(tr.entity, slot); p != nil {

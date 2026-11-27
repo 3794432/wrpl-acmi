@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/danet"
+	"github.com/maxsupermanhd/wrpl-inspector/v3/wrpl/packet"
 )
 
 const (
@@ -90,6 +91,46 @@ func TestConstructionReservedByteRejectsNonzero(t *testing.T) {
 	_, err := parser.ParseECSConstructMessage(messageReader(0x789, block))
 	if err == nil || !strings.Contains(err.Error(), "unsupported construction reserved byte: 0x01") {
 		t.Fatalf("error=%v, want nonzero reserved byte rejection", err)
+	}
+}
+
+func TestConstructionPacketContinuesAfterComponentError(t *testing.T) {
+	parser := missingComponentParser()
+	bad := messageReader(0x501, opaqueBlock()).Data
+	good := messageReader(0x502, []byte{1, 0, 1, 2, 8, 0, 0, 0}).Data
+	payload := append([]byte{0x24, 1}, bad...)
+	payload = append(payload, good...)
+
+	result, err := parser.Parse(&packet.Packet{PacketPayload: payload})
+	if err == nil || !strings.Contains(err.Error(), "serializer not found") {
+		t.Fatalf("error=%v, want missing serializer rejection", err)
+	}
+	parsed, ok := result.(*ParsedPacketECS)
+	if !ok || len(parsed.Messages) != 1 || parsed.Messages[0].EID != 0x502 {
+		t.Fatalf("result=%+v, want the second construction", result)
+	}
+	if len(parser.Mgr.Entities) != 1 || parser.Mgr.Uid_lookup[8] == nil {
+		t.Fatalf("entities=%v, UID lookup=%v", parser.Mgr.Entities, parser.Mgr.Uid_lookup)
+	}
+	if len(parser.Messages) != 1 || len(parser.Messages[0].Messages) != 1 {
+		t.Fatalf("stored packets=%+v", parser.Messages)
+	}
+}
+
+func TestConstructionPacketStopsAfterInvalidBlockSize(t *testing.T) {
+	parser := newClassUIDParser()
+	bad := messageReader(0x501, nil).Data
+	bad[len(bad)-1] = 127 // Declared block extends past the end of the packet.
+	good := messageReader(0x502, syntheticClassUIDBlock(false)).Data
+	payload := append([]byte{0x24, 1}, bad...)
+	payload = append(payload, good...)
+
+	result, err := parser.Parse(&packet.Packet{PacketPayload: payload})
+	if result != nil || err == nil || !strings.Contains(err.Error(), "reading compressed block size") {
+		t.Fatalf("result=%+v error=%v, want framing failure", result, err)
+	}
+	if len(parser.Mgr.Entities) != 0 || len(parser.Messages) != 0 {
+		t.Fatal("parser continued after losing the message boundary")
 	}
 }
 

@@ -53,3 +53,29 @@ func TestOpenReplayModernRevisions(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenReplayReadSeekerStopsAtResults(t *testing.T) {
+	packets := encodeTestPackets(t, []testPacketSpec{{packetType: replayPacketEndMarker}})
+	results := []byte("results bytes outside the Zstd stream")
+	path := writeTestReplayPart(t, t.TempDir(), testReplayConfig{
+		version: 0x00018C1C, packetStream: packets, results: results,
+	})
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Hide ReadAt to exercise the sequential packet-stream path.
+	reader := struct{ io.ReadSeeker }{bytes.NewReader(raw)}
+	replay, err := OpenReplay(reader, false, true, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer replay.Close()
+	got, err := io.ReadAll(replay.PacketStream)
+	if err != nil || !bytes.Equal(got, packets) {
+		t.Fatalf("packet stream=%x error=%v, want %x", got, err, packets)
+	}
+	if !bytes.Equal(replay.Results, results) {
+		t.Fatalf("results=%q, want %q", replay.Results, results)
+	}
+}

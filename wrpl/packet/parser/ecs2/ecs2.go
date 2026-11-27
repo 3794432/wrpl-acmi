@@ -267,7 +267,7 @@ func (p *PacketECSParser) deserializeConstruction(r *danet.BitReader, templ *Tem
 	return &Payload, nil
 }
 
-func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (ret *Message, err error) {
+func readECSConstructBlock(r *danet.BitReader) (ret *Message, err error) {
 	ret = &Message{}
 	ret.EID, err = packet.ReadEID(r)
 	if err != nil {
@@ -286,29 +286,40 @@ func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (ret *Mes
 	if err != nil {
 		return ret, fmt.Errorf("reading block (size %d): %w", blockSize, err)
 	}
-	br := danet.NewBitReader(ret.Data)
+	return ret, nil
+}
+
+func (p *PacketECSParser) ParseECSConstructMessage(r *danet.BitReader) (*Message, error) {
+	msg, err := readECSConstructBlock(r)
+	if err != nil {
+		return msg, err
+	}
+	return msg, p.decodeECSConstruction(msg)
+}
+
+func (p *PacketECSParser) decodeECSConstruction(msg *Message) error {
+	br := danet.NewBitReader(msg.Data)
 	templ, err := p.ParseECSTemplate(br)
 	if err != nil {
-		return ret, fmt.Errorf("reading template: %w", err)
+		return fmt.Errorf("reading template: %w", err)
 	}
-	ret.Template = templ.ID
+	msg.Template = templ.ID
 	if p.ConstructionReservedByte {
 		reserved, readErr := br.ReadByte()
 		if readErr != nil {
-			return ret, fmt.Errorf("reading construction reserved byte: %w", readErr)
+			return fmt.Errorf("reading construction reserved byte: %w", readErr)
 		}
 		if reserved != 0 {
-			return ret, fmt.Errorf("unsupported construction reserved byte: 0x%02x", reserved)
+			return fmt.Errorf("unsupported construction reserved byte: 0x%02x", reserved)
 		}
 	}
-	entitiy, err := p.deserializeConstruction(br, templ)
+	entity, err := p.deserializeConstruction(br, templ)
 	if err != nil {
-		return ret, fmt.Errorf("parsing entity: %w", err)
+		return fmt.Errorf("parsing entity: %w", err)
 	}
-	eid := EntityID(ret.EID)
-	p.Mgr.AddEntity(eid, entitiy)
-	ret.Parsed = append(ret.Parsed, entitiy)
-	return
+	p.Mgr.AddEntity(EntityID(msg.EID), entity)
+	msg.Parsed = append(msg.Parsed, entity)
+	return nil
 }
 
 func (p *PacketECSParser) Parse(pk *packet.Packet) (any, error) {
@@ -341,6 +352,7 @@ func (p *PacketECSParser) Parse(pk *packet.Packet) (any, error) {
 		r = danet.NewBitReader(decomp[:dat.DecompressSize])
 		dat.Control = 0x24
 	}
+	var constructionErr error
 	if dat.Control == 0x24 {
 		dat.MessageCount, err = r.ReadByte()
 		if err != nil {
@@ -351,15 +363,23 @@ func (p *PacketECSParser) Parse(pk *packet.Packet) (any, error) {
 			return nil, err
 		}
 		for i := 0; i < messageLoopCount; i++ {
-			msg, err := p.ParseECSConstructMessage(r)
+			msg, err := readECSConstructBlock(r)
 			if err != nil {
 				return nil, fmt.Errorf("reading ecs construct message: %w", err)
+			}
+			// The reader is already at the next block. A body error affects
+			// this entity, but the following constructions remain readable.
+			if err := p.decodeECSConstruction(msg); err != nil {
+				if constructionErr == nil {
+					constructionErr = fmt.Errorf("reading ecs construct message %d: %w", i+1, err)
+				}
+				continue
 			}
 			dat.Messages = append(dat.Messages, msg)
 		}
 	}
 	p.Messages = append(p.Messages, *dat)
-	return dat, nil
+	return dat, constructionErr
 }
 
 func deserialize_init_component_typeless(r *danet.BitReader, mgr *PacketECSParser, comp_type ComponentHash, datacomp_type DataComponentHash) (ret *Component, err error) {

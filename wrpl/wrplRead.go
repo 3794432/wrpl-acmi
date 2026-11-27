@@ -161,9 +161,9 @@ func OpenPartedReplay(replayBytes [][]byte) (ret *ReplayReader, err error) {
 	return
 }
 
-// OpenReplay reads header and conditionally settings, packets and resuls blobs
+// OpenReplay reads the header and optionally the settings, packets and results.
 //
-// If openPackets is true then Replay will have zlib-backed io that needs to be closed via Close
+// If openPackets is true, the caller must close the replay's packet stream.
 func OpenReplay(r io.ReadSeeker, readSettings, openPackets, readResults bool) (ret *ReplayReader, err error) {
 	ret = &ReplayReader{}
 	headerBytes := make([]byte, replayHeaderSize)
@@ -220,11 +220,15 @@ func OpenReplay(r io.ReadSeeker, readSettings, openPackets, readResults bool) (r
 	if openPackets {
 		streamOffset := int64(replayHeaderSize) + int64(settingsSize)
 		streamLength := int64(1 << 62)
-		if endOffset, seekErr := r.Seek(0, io.SeekEnd); seekErr == nil && endOffset > streamOffset {
+		endOffset, seekErr := r.Seek(0, io.SeekEnd)
+		if seekErr == nil && endOffset > streamOffset {
 			streamLength = endOffset - streamOffset
-			if resultsOffset > 0 && int64(resultsOffset) > streamOffset && int64(resultsOffset) <= endOffset {
-				streamLength = int64(resultsOffset) - streamOffset
-			}
+		}
+		if resultsStart := int64(resultsOffset); resultsStart > streamOffset && (seekErr != nil || resultsStart <= endOffset) {
+			streamLength = resultsStart - streamOffset
+		}
+		if streamLength < 4 {
+			return ret, fmt.Errorf("packet stream is too short for its compression header: %d bytes", streamLength)
 		}
 
 		var src io.Reader
@@ -244,7 +248,7 @@ func OpenReplay(r io.ReadSeeker, readSettings, openPackets, readResults bool) (r
 			if _, err := r.Seek(streamOffset, io.SeekStart); err != nil {
 				return ret, fmt.Errorf("rewinding packet stream: %w", err)
 			}
-			src = r
+			src = io.LimitReader(r, streamLength)
 		}
 		if bytes.Equal(magic, []byte{0x28, 0xb5, 0x2f, 0xfd}) {
 			dec, err := zstd.NewReader(src)
